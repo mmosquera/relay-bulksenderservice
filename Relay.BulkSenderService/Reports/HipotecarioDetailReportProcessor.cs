@@ -7,55 +7,15 @@ using System.Linq;
 
 namespace Relay.BulkSenderService.Reports
 {
-    public class DailyReportProcessor : ReportProcessor
+    public class HipotecarioDetailReportProcessor : HipotecarioReportProcessor
     {
-        public DailyReportProcessor(IConfiguration configuration, ILog logger, ReportTypeConfiguration reportTypeConfiguration)
-            : base(logger, configuration, reportTypeConfiguration)
+        public HipotecarioDetailReportProcessor(ILog logger, IConfiguration configuration, ReportTypeConfiguration reportTypeConfiguration) : base(logger, configuration, reportTypeConfiguration)
         {
-
         }
 
-        protected override List<string> GetFilesToProcess(IUserConfiguration user)
+        public override bool GenerateForcedReport(List<string> files, IUserConfiguration user)
         {
-            DateTime now = DateTime.UtcNow.AddHours(user.UserGMT);
-
-            if (!IsTimeToExecute(user.Name, now))
-            {
-                return new List<string>();
-            }
-
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
-            var directoryInfo = new DirectoryInfo(filePathHelper.GetResultsFilesFolder());
-
-            DateTime end = new DateTime(now.Year, now.Month, now.Day);
-            DateTime start = end.AddDays(-1);
-
-            var fileInfoList = directoryInfo.GetFiles("*.sent")
-                .Where(f => f.LastWriteTimeUtc >= start && f.LastWriteTimeUtc < end)
-                .OrderBy(f => f.CreationTimeUtc);
-
-            return FilterFilesByTemplate(fileInfoList.Select(x => x.FullName).ToList(), user);
-
-        }
-
-        public bool IsTimeToExecute(string userName, DateTime now)
-        {
-            string fixPart = _reportTypeConfiguration.Name.Parts.OfType<FixReportNamePart>().Select(x => x.Value).FirstOrDefault();
-
-            var filePathHelper = new FilePathHelper(_configuration, userName);
-
-            var directoryInfo = new DirectoryInfo(filePathHelper.GetReportsFilesFolder());
-
-            FileInfo lastReport = directoryInfo.GetFiles().Where(x => x.Name.Contains(fixPart)).OrderByDescending(x => x.CreationTime).FirstOrDefault();
-
-            DateTime date = new DateTime(now.Year, now.Month, now.Day, _reportTypeConfiguration.Hour, 0, 0);
-
-            if (date <= now && (lastReport == null || DateTime.UtcNow.Subtract(lastReport.CreationTimeUtc).TotalHours >= 24))
-            {
-                return true;
-            }
-
-            return false;
+            return true;
         }
 
         protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user)
@@ -65,21 +25,20 @@ namespace Relay.BulkSenderService.Reports
                 return;
             }
 
-            _logger.Debug($"Create daily report for user {user.Name}.");
+            _logger.Debug($"Create Detail Report for user {user.Name}.");
 
-            var ftpHelper = user.Ftp.GetFtpHelper(_logger);
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            var report = new CsvReport(_logger)
+            var report = new ZipCsvReport(_logger)
             {
-                SourceFiles = files,
                 Separator = _reportTypeConfiguration.FieldSeparator,
                 ReportPath = filePathHelper.GetReportsFilesFolder(),
+                ReportName = _reportTypeConfiguration.Name.GetReportName(),
                 ReportGMT = user.UserGMT,
                 UserId = user.Credentials.AccountId
             };
 
-            report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, null));
+            report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields));
 
             foreach (string file in files)
             {
@@ -94,6 +53,8 @@ namespace Relay.BulkSenderService.Reports
 
             if (File.Exists(reportFileName))
             {
+                var ftpHelper = user.Ftp.GetFtpHelper(_logger);
+
                 UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
 
                 foreach (string file in files)
@@ -102,35 +63,6 @@ namespace Relay.BulkSenderService.Reports
                     File.Move(file, renameFile);
                 }
             }
-        }
-
-        public override bool GenerateForcedReport(List<string> files, IUserConfiguration user)
-        {
-            List<string> filteredFiles = FilterFilesByTemplate(files, user);
-
-            if (filteredFiles.Count == 0)
-            {
-                return false;
-            }
-
-            _logger.Debug($"Create daily report for user {user.Name}.");
-
-            var ftpHelper = user.Ftp.GetFtpHelper(_logger);
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
-            var report = new CsvReport(_logger)
-            {
-                SourceFiles = filteredFiles,
-                // TODO: get from configuration template.
-                Separator = ',',
-                ReportPath = filePathHelper.GetForcedReportsFolder(),
-                ReportGMT = user.UserGMT,
-                UserId = user.Credentials.AccountId
-            };
-
-            report.Generate();
-
-            return true;
         }
 
         protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat)
@@ -193,11 +125,6 @@ namespace Relay.BulkSenderService.Reports
                 _logger.Error("Error trying to get report items");
                 throw;
             }
-        }
-
-        protected override bool IsTimeToRun(IUserConfiguration user)
-        {
-            return true;
-        }
+        }        
     }
 }

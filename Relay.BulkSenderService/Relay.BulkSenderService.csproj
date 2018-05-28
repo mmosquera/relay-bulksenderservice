@@ -202,6 +202,8 @@
     <Compile Include="Classes\ApiResponse.cs" />
     <Compile Include="Classes\CustomHeader.cs" />
     <Compile Include="Classes\ApiRecipient.cs" />
+    <Compile Include="Classes\Enums\DeliveryStatus.cs" />
+    <Compile Include="Classes\Enums\MailStatus.cs" />
     <Compile Include="Classes\ExcelHelper.cs" />
     <Compile Include="Classes\IFtpHelper.cs" />
     <Compile Include="Classes\ILog.cs" />
@@ -212,6 +214,7 @@
     <Compile Include="Classes\SftpHelper.cs" />
     <Compile Include="Classes\SMTPRecipient.cs" />
     <Compile Include="Classes\SqlHelper.cs" />
+    <Compile Include="Classes\ZipHelper.cs" />
     <Compile Include="Configuration\AckConfiguration.cs" />
     <Compile Include="Configuration\AdminEmailConfiguration.cs" />
     <Compile Include="Configuration\AppConfiguration.cs" />
@@ -220,6 +223,9 @@
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\FilePathHelper.cs" />
     <Compile Include="Configuration\CredentialsConfiguration.cs" />
+    <Compile Include="Configuration\HipotecarioCabeceraReportTypeConfiguration.cs" />
+    <Compile Include="Configuration\HipotecarioClicksReportTypeConfiguration.cs" />
+    <Compile Include="Configuration\HipotecarioDetailReportTypeConfiguration.cs" />
     <Compile Include="Configuration\EdesurReportTypeConfiguration.cs" />
     <Compile Include="Configuration\ErrorConfiguration.cs" />
     <Compile Include="Configuration\FieldConfiguration.cs" />
@@ -275,9 +281,14 @@
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reports\ZipCsvReport.cs" />
     <Compile Include="Reports\CsvReport.cs" />
     <Compile Include="Reports\EdesurReport.cs" />
     <Compile Include="Reports\ExcelReport.cs" />
+    <Compile Include="Reports\HipotecarioCabeceraReportProcessor.cs" />
+    <Compile Include="Reports\HipotecarioClicksReportProcessor.cs" />
+    <Compile Include="Reports\HipotecarioDetailReportProcessor.cs" />
+    <Compile Include="Reports\HipotecarioReportProcessor.cs" />
     <Compile Include="Reports\ReportProcessor.cs" />
     <Compile Include="Reports\ReportBase.cs" />
     <Compile Include="Reports\DailyReportProcessor.cs" />
@@ -313,6 +324,7 @@
     <None Include="Configs\gire.config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="Configs\hipotecario.config.json" />
     <None Include="Configs\lmontano.config.json" />
     <None Include="Configs\makinthal.config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -355,6 +367,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="DB\BulkSender_GetDeliveriesReport.sql" />
+    <Content Include="DB\BulkSender_GetClicksReport.sql" />
+    <Content Include="DB\BulkSender_GetSumarizedByTemplateReport.sql" />
     <Content Include="EmailTemplates\ErrorDownload.es.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

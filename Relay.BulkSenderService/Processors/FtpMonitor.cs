@@ -315,26 +315,13 @@ namespace Relay.BulkSenderService.Processors
         private int UnzipFile(string fileName, string path)
         {
             int count = 0;
-            string newFileName = null;
-
             try
             {
-                using (ZipArchive zipArchive = ZipFile.OpenRead(fileName))
-                {
-                    foreach (ZipArchiveEntry entry in zipArchive.Entries)
-                    {
-                        newFileName = $@"{path}\{Path.GetFileNameWithoutExtension(entry.FullName)}.processing";
-
-                        entry.ExtractToFile(newFileName, true);
-
-                        count++;
-                    }
-                }
+                count = new ZipHelper().UnzipFile(fileName, path, "processing");
             }
             catch (Exception e)
             {
                 _logger.Error($"Error trying to unzip file -- {e}");
-                return count;
             }
 
             return count;

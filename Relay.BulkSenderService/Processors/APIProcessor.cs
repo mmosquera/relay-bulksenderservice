@@ -54,7 +54,6 @@ namespace Relay.BulkSenderService.Processors
                         return resultsFileName;
                     }
 
-
                     string line = templateConfiguration.HasHeaders ? reader.ReadLine() : null;
 
                     string headers = GetHeaderLine(line, templateConfiguration);

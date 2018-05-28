@@ -48,6 +48,23 @@ namespace Relay.BulkSenderService.Configuration
         public void Reset() { }
     }
 
+    public class DateTimeReportNamePart : IReportNamePart
+    {
+        public IReportNamePart Clone()
+        {
+            return new DateTimeReportNamePart();
+        }
+
+        public string GetValue()
+        {
+            return DateTime.UtcNow.AddHours(-3).ToString("yyyyMMddHHmmss");
+        }
+
+        public void Reset()
+        {
+        }
+    }
+
     public class NumberReportNamePart : IReportNamePart
     {
         private int digits = 1;

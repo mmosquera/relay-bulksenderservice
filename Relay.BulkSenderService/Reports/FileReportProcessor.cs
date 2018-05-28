@@ -51,8 +51,9 @@ namespace Relay.BulkSenderService.Reports
                 _logger.Debug($"Create report file with {file} for user {user.Name}.");
 
                 var report = new ExcelReport(_logger, _reportTypeConfiguration);
-                report.SourceFile = file;
-                report.Separator = _reportTypeConfiguration.FieldSeparator;
+                //report.SourceFile = file;
+                //report.Separator = _reportTypeConfiguration.FieldSeparator;
+                report.CustomItems = GetCustomItems(file, user.UserGMT);
                 report.ReportPath = filePathHelper.GetReportsFilesFolder();
                 report.ReportGMT = user.UserGMT;
                 report.UserId = user.Credentials.AccountId;
@@ -85,8 +86,9 @@ namespace Relay.BulkSenderService.Reports
 
                 var report = new ExcelReport(_logger, _reportTypeConfiguration)
                 {
-                    SourceFile = file,
-                    Separator = _reportTypeConfiguration.FieldSeparator,
+                    //SourceFile = file,
+                    //Separator = _reportTypeConfiguration.FieldSeparator,
+                    CustomItems = GetCustomItems(file, user.UserGMT),
                     ReportPath = filePathHelper.GetForcedReportsFolder(),
                     ReportGMT = user.UserGMT,
                     UserId = user.Credentials.AccountId
@@ -95,6 +97,45 @@ namespace Relay.BulkSenderService.Reports
                 report.Generate();
             }
 
+            return true;
+        }
+
+        private Dictionary<int, List<string>> GetCustomItems(string sourceFile, int reportGMT)
+        {
+            var customItems = new Dictionary<int, List<string>>();
+
+            if (_reportTypeConfiguration.ReportItems != null)
+            {
+                foreach (ReportItemConfiguration riConfiguration in _reportTypeConfiguration.ReportItems)
+                {
+                    customItems.Add(riConfiguration.Row, riConfiguration.Values);
+                }
+            }
+
+            string sendDate = new FileInfo(sourceFile).CreationTimeUtc.AddHours(reportGMT).ToString("yyyyMMdd");
+            var customValues = new List<List<string>>()
+            {
+                new List<string>() { "Información de envio" },
+                new List<string>() { "Nombre", Path.GetFileNameWithoutExtension(sourceFile) },
+                new List<string>() { "Fecha de envio", sendDate },
+                new List<string>() { "Detalle suscriptores" }
+            };
+            int index = 0;
+            foreach (List<string> value in customValues)
+            {
+                while (customItems.ContainsKey(index))
+                {
+                    index++;
+                }
+                customItems.Add(index, value);
+                index++;
+            }
+
+            return customItems;
+        }
+
+        protected override bool IsTimeToRun(IUserConfiguration user)
+        {
             return true;
         }
     }

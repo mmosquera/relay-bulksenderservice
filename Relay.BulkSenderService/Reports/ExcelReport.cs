@@ -10,25 +10,26 @@ namespace Relay.BulkSenderService.Reports
     public class ExcelReport : ReportBase
     {
         private ExcelHelper _excelHelper;
-        public string SourceFile;
+        //public string SourceFile;
+        public Dictionary<int, List<string>> CustomItems { get; set; }
 
         public ExcelReport(ILog logger, ReportTypeConfiguration reportConfiguration)
-            : base(logger, reportConfiguration)
+            : base(logger)
         {
             _dateFormat = "yyyy-MM-dd HH:mm:ss";
         }
 
         protected override void FillReport()
         {
-            string reportName = _reportConfiguration.Name.GetReportName(Path.GetFileName(SourceFile), ReportPath);
-            _reportFileName = $@"{ReportPath}\{reportName}";
+            //string reportName = _reportConfiguration.Name.GetReportName(Path.GetFileName(SourceFile), ReportPath);
+            _reportFileName = $@"{ReportPath}\{ReportName}";
             _excelHelper = new ExcelHelper(_reportFileName, "Delivery Report");
 
-            Dictionary<int, List<string>> customItems = GetCustomItems();
+            //Dictionary<int, List<string>> customItems = GetCustomItems();
 
-            foreach (int key in customItems.Keys.OrderBy(t => t))
+            foreach (int key in CustomItems.Keys.OrderBy(t => t))
             {
-                _excelHelper.GenerateReportRow(customItems[key]);
+                _excelHelper.GenerateReportRow(CustomItems[key]);
             }
 
             _excelHelper.GenerateReportRow(_headerList);
@@ -44,87 +45,54 @@ namespace Relay.BulkSenderService.Reports
             _excelHelper.Save();
         }
 
-        protected override void FillItems()
-        {
-            Dictionary<string, int> headers;
+        //protected void FillItems()
+        //{
+        //    Dictionary<string, int> headers;
 
-            try
-            {
-                using (StreamReader streamReader = new StreamReader(SourceFile))
-                {
-                    int processedIndex;
-                    int resultIndex;
+        //    try
+        //    {
+        //        using (StreamReader streamReader = new StreamReader(SourceFile))
+        //        {
+        //            int processedIndex;
+        //            int resultIndex;
 
-                    headers = GetHeadersIndexes(_reportConfiguration.ReportFields, streamReader.ReadLine().Split(Separator).ToList(), out processedIndex, out resultIndex);
+        //            headers = GetHeadersIndexes(_reportConfiguration.ReportFields, streamReader.ReadLine().Split(Separator).ToList(), out processedIndex, out resultIndex);
 
-                    while (!streamReader.EndOfStream)
-                    {
-                        string[] lineArray = streamReader.ReadLine().Split(Separator);
+        //            while (!streamReader.EndOfStream)
+        //            {
+        //                string[] lineArray = streamReader.ReadLine().Split(Separator);
 
-                        if (processedIndex == -1 || resultIndex == -1 || lineArray.Length <= resultIndex)
-                        {
-                            continue;
-                        }
+        //                if (processedIndex == -1 || resultIndex == -1 || lineArray.Length <= resultIndex)
+        //                {
+        //                    continue;
+        //                }
 
-                        if (lineArray[processedIndex] != Constants.PROCESS_RESULT_OK)
-                        {
-                            continue;
-                        }
+        //                if (lineArray[processedIndex] != Constants.PROCESS_RESULT_OK)
+        //                {
+        //                    continue;
+        //                }
 
-                        var item = new ReportItem();
+        //                var item = new ReportItem();
 
-                        foreach (int value in headers.Values)
-                        {
-                            item.AddValue(lineArray[value].Trim());
-                        }
+        //                foreach (int value in headers.Values)
+        //                {
+        //                    item.AddValue(lineArray[value].Trim());
+        //                }
 
-                        item.ResultId = lineArray[resultIndex];
+        //                item.ResultId = lineArray[resultIndex];
 
-                        _items.Add(item);
-                    }
-                }
+        //                _items.Add(item);
+        //            }
+        //        }
 
-                GetDataFromDB(_items, _dateFormat);
-            }
-            catch (Exception)
-            {
-                _logger.Error("Error trying to get report items");
-                throw;
-            }
-        }
-
-        private Dictionary<int, List<string>> GetCustomItems()
-        {
-            var customItems = new Dictionary<int, List<string>>();
-
-            if (_reportConfiguration.ReportItems != null)
-            {
-                foreach (ReportItemConfiguration riConfiguration in _reportConfiguration.ReportItems)
-                {
-                    customItems.Add(riConfiguration.Row, riConfiguration.Values);
-                }
-            }
-
-            string sendDate = new FileInfo(SourceFile).CreationTimeUtc.AddHours(ReportGMT).ToString("yyyyMMdd");
-            var customValues = new List<List<string>>()
-            {
-                new List<string>() { "Información de envio" },
-                new List<string>() { "Nombre", Path.GetFileNameWithoutExtension(SourceFile) },
-                new List<string>() { "Fecha de envio", sendDate },
-                new List<string>() { "Detalle suscriptores" }
-            };
-            int index = 0;
-            foreach (List<string> value in customValues)
-            {
-                while (customItems.ContainsKey(index))
-                {
-                    index++;
-                }
-                customItems.Add(index, value);
-                index++;
-            }
-
-            return customItems;
-        }
+        //        GetDataFromDB(_items, _dateFormat);
+        //    }
+        //    catch (Exception)
+        //    {
+        //        _logger.Error("Error trying to get report items");
+        //        throw;
+        //    }
+        //}
+                
     }
 }

@@ -11,87 +11,88 @@ namespace Relay.BulkSenderService.Reports
     public class EdesurReport : ReportBase
     {
         private StringBuilder _stringBuilder;
+        public string Separator { get; set; }
 
         public EdesurReport(ILog logger, ReportTypeConfiguration reportConfiguration)
-            : base(logger, reportConfiguration)
+            : base(logger)
         {
             _stringBuilder = new StringBuilder();
             _dateFormat = "dd/MM/yyyy hh:mm:ss tt";
         }
 
-        protected override void FillItems()
-        {
-            Dictionary<string, int> headers;
-            List<Dictionary<string, int>> headersList;
-            try
-            {
-                foreach (string file in SourceFiles)
-                {
-                    using (var reader = new StreamReader(file))
-                    {
-                        int processedIndex;
-                        int resultIndex;
+        //protected void FillItems()
+        //{
+        //    Dictionary<string, int> headers;
+        //    List<Dictionary<string, int>> headersList;
+        //    try
+        //    {
+        //        foreach (string file in SourceFiles)
+        //        {
+        //            using (var reader = new StreamReader(file))
+        //            {
+        //                int processedIndex;
+        //                int resultIndex;
 
-                        List<string> fileHeaders = reader.ReadLine().Split(Separator).ToList();
+        //                List<string> fileHeaders = reader.ReadLine().Split(Separator).ToList();
 
-                        headers = GetHeadersIndexes(_reportConfiguration.ReportFields, fileHeaders, out processedIndex, out resultIndex);
+        //                headers = GetHeadersIndexes(_reportConfiguration.ReportFields, fileHeaders, out processedIndex, out resultIndex);
 
-                        //headersList = GetHeadersList(_reportConfiguration.Fields.Except(headers.Keys).ToList(), fileHeaders);
-                        List<string> fields = _reportConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInFile)).Select(x => x.HeaderName).Except(headers.Keys).ToList();
-                        headersList = GetHeadersList(fields, fileHeaders);
+        //                //headersList = GetHeadersList(_reportConfiguration.Fields.Except(headers.Keys).ToList(), fileHeaders);
+        //                List<string> fields = _reportConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInFile)).Select(x => x.HeaderName).Except(headers.Keys).ToList();
+        //                headersList = GetHeadersList(fields, fileHeaders);
 
-                        while (!reader.EndOfStream)
-                        {
-                            string[] lineArray = reader.ReadLine().Split(Separator);
+        //                while (!reader.EndOfStream)
+        //                {
+        //                    string[] lineArray = reader.ReadLine().Split(Separator);
 
-                            if (processedIndex == -1 || resultIndex == -1 || lineArray.Length <= resultIndex)
-                            {
-                                continue;
-                            }
+        //                    if (processedIndex == -1 || resultIndex == -1 || lineArray.Length <= resultIndex)
+        //                    {
+        //                        continue;
+        //                    }
 
-                            if (lineArray[processedIndex] != Constants.PROCESS_RESULT_OK)
-                            {
-                                continue;
-                            }
+        //                    if (lineArray[processedIndex] != Constants.PROCESS_RESULT_OK)
+        //                    {
+        //                        continue;
+        //                    }
 
-                            string resultId = lineArray[resultIndex];
+        //                    string resultId = lineArray[resultIndex];
 
-                            foreach (var dHeader in headersList)
-                            {
-                                bool hasValue = false;
-                                var item = new ReportItem();
-                                foreach (int specialValue in dHeader.Values)
-                                {
-                                    string fileValue = lineArray[specialValue];
-                                    if (!string.IsNullOrEmpty(fileValue))
-                                    {
-                                        item.AddValue(fileValue.Trim());
-                                        hasValue = true;
-                                    }
-                                }
+        //                    foreach (var dHeader in headersList)
+        //                    {
+        //                        bool hasValue = false;
+        //                        var item = new ReportItem();
+        //                        foreach (int specialValue in dHeader.Values)
+        //                        {
+        //                            string fileValue = lineArray[specialValue];
+        //                            if (!string.IsNullOrEmpty(fileValue))
+        //                            {
+        //                                item.AddValue(fileValue.Trim());
+        //                                hasValue = true;
+        //                            }
+        //                        }
 
-                                if (hasValue)
-                                {
-                                    foreach (int fixValue in headers.Values)
-                                    {
-                                        item.AddValue(lineArray[fixValue].Trim(), fixValue);
-                                    }
-                                    item.ResultId = resultId;
-                                    _items.Add(item);
-                                }
-                            }
-                        }
-                    }
-                }
+        //                        if (hasValue)
+        //                        {
+        //                            foreach (int fixValue in headers.Values)
+        //                            {
+        //                                item.AddValue(lineArray[fixValue].Trim(), fixValue);
+        //                            }
+        //                            item.ResultId = resultId;
+        //                            _items.Add(item);
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //        }
 
-                GetDataFromDB(_items, _dateFormat);
-            }
-            catch (Exception e)
-            {
-                _logger.Error("Error trying to get report items");
-                throw;
-            }
-        }
+        //        GetDataFromDB(_items, _dateFormat);
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        _logger.Error("Error trying to get report items");
+        //        throw;
+        //    }
+        //}
 
         private List<Dictionary<string, int>> GetHeadersList(List<string> fields, List<string> fileHeaders)
         {
@@ -146,7 +147,7 @@ namespace Relay.BulkSenderService.Reports
 
         protected override void Save()
         {
-            _reportFileName = $@"{ReportPath}\{_reportConfiguration.Name.GetReportName("", ReportPath)}";
+            _reportFileName = $@"{ReportPath}\{ReportName}";
 
             using (var streamWriter = new StreamWriter(_reportFileName))
             {
