@@ -11,6 +11,7 @@ namespace Relay.BulkSenderService.Configuration
             var hipotecarioDetailReportTypeConfiguration = new HipotecarioDetailReportTypeConfiguration();
 
             hipotecarioDetailReportTypeConfiguration.Hour = this.Hour;
+            hipotecarioDetailReportTypeConfiguration.DateFormat = this.DateFormat;
 
             if (this.Name != null)
             {

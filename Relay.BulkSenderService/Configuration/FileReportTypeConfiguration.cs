@@ -14,6 +14,7 @@ namespace Relay.BulkSenderService.Configuration
 
             fileReportConfiguration.HoursAfterProcess = this.HoursAfterProcess;
             fileReportConfiguration.Hour = this.Hour;
+            fileReportConfiguration.DateFormat = this.DateFormat;
 
             if (this.Name != null)
             {

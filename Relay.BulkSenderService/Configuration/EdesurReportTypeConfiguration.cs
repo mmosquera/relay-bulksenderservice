@@ -11,6 +11,7 @@ namespace Relay.BulkSenderService.Configuration
             var edesurReportConfiguration = new EdesurReportTypeConfiguration();
 
             edesurReportConfiguration.Hour = this.Hour;
+            edesurReportConfiguration.DateFormat = this.DateFormat;
 
             if (this.Name != null)
             {

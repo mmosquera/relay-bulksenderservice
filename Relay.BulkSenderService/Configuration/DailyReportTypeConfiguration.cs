@@ -11,6 +11,7 @@ namespace Relay.BulkSenderService.Configuration
             var dailyReportTypeConfiguration = new DailyReportTypeConfiguration();
 
             dailyReportTypeConfiguration.Hour = this.Hour;
+            dailyReportTypeConfiguration.DateFormat = this.DateFormat;
 
             if (this.Name != null)
             {

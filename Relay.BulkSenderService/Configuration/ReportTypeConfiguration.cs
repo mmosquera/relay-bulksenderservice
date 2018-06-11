@@ -10,7 +10,7 @@ namespace Relay.BulkSenderService.Configuration
         public IReportName Name { get; set; }
         public char FieldSeparator { get; set; }
         public List<string> Templates { get; set; }
-        //public List<List<string>> CustomInformation { get; set; }
+        public string DateFormat { get; set; }
         public List<ReportItemConfiguration> ReportItems { get; set; }
         public List<ReportFieldConfiguration> ReportFields { get; set; }
 
