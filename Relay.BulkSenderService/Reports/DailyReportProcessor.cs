@@ -160,7 +160,7 @@ namespace Relay.BulkSenderService.Reports
                             continue;
                         }
 
-                        var item = new ReportItem();
+                        var item = new ReportItem(_reportTypeConfiguration.ReportFields.Count);
 
                         foreach (string key in headers.Keys)
                         {

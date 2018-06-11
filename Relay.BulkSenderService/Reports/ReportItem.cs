@@ -1,26 +1,27 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Relay.BulkSenderService.Reports
 {
     public class ReportItem
     {
-        private List<string> _values;
+        private string[] _values;
 
         public string ResultId { get; set; }
 
-        public ReportItem()
+        public ReportItem(int count)
         {
-            _values = new List<string>();
+            _values = new string[count];
         }
 
         public void AddValue(string value)
         {
-            _values.Add(value);
+            //_values.Add(value);
         }
 
         public List<string> GetValues()
         {
-            return _values;
+            return _values.ToList();
         }
 
         public void AddValue(string value, int position)
@@ -30,13 +31,9 @@ namespace Relay.BulkSenderService.Reports
                 return;
             }
 
-            if (position >= 0 && position <= _values.Count)
+            if (position >= 0 && position <= _values.Length)
             {
-                _values.Insert(position, value);
-            }
-            else
-            {
-                _values.Add(value);
+                _values[position] = value;
             }
         }
     }

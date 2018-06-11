@@ -163,7 +163,8 @@ namespace Relay.BulkSenderService.Reports
                             foreach (var dHeader in headersList)
                             {
                                 bool hasValue = false;
-                                var item = new ReportItem();
+                                // TODO use headers count
+                                var item = new ReportItem(100);
                                 foreach (int specialValue in dHeader.Values)
                                 {
                                     string fileValue = lineArray[specialValue];
@@ -284,7 +285,7 @@ namespace Relay.BulkSenderService.Reports
             return headers;
         }
 
-        protected void GetDataFromDB(List<ReportItem> items, string dateFormat, int userId, int reportGMT)
+        protected override void GetDataFromDB(List<ReportItem> items, string dateFormat, int userId, int reportGMT)
         {
             List<string> guids = items.Select(it => it.ResultId).Distinct().ToList();
 
@@ -331,6 +332,9 @@ namespace Relay.BulkSenderService.Reports
                                         break;
                                     case "OpenEventsCount":
                                         item.AddValue(dbReportItem.OpenEventsCount.ToString(), reportField.Position);
+                                        break;
+                                    case "SentAt":
+                                        item.AddValue(dbReportItem.SentAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
                                         break;
                                     case "Subject":
                                         item.AddValue(dbReportItem.Subject, reportField.Position);

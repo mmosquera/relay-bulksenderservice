@@ -77,7 +77,7 @@ namespace Relay.BulkSenderService.Reports
             return filteredFiles;
         }
 
-        protected void GetDataFromDB(List<ReportItem> items, string dateFormat, int userId, int reportGMT)
+        protected virtual void GetDataFromDB(List<ReportItem> items, string dateFormat, int userId, int reportGMT)
         {
             List<string> guids = items.Select(it => it.ResultId).Distinct().ToList();
 
@@ -125,6 +125,9 @@ namespace Relay.BulkSenderService.Reports
                                     case "OpenEventsCount":
                                         item.AddValue(dbReportItem.OpenEventsCount.ToString(), reportField.Position);
                                         break;
+                                    case "SentAt":
+                                        item.AddValue(dbReportItem.SentAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                                        break;
                                     case "Subject":
                                         item.AddValue(dbReportItem.Subject, reportField.Position);
                                         break;
@@ -145,6 +148,9 @@ namespace Relay.BulkSenderService.Reports
                                         break;
                                     case "BounceDate":
                                         item.AddValue(dbReportItem.BounceDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                                        break;
+                                    case "Unsubscribed":
+                                        item.AddValue(dbReportItem.Unsubscribed.ToString(), reportField.Position);
                                         break;
                                 }
                             }
