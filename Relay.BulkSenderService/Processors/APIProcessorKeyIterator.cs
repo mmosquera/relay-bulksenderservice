@@ -36,7 +36,7 @@ namespace Relay.BulkSenderService.Processors
 
         protected override void AddRecipient(List<ApiRecipient> recipients, ApiRecipient recipient)
         {
-            if (!recipients.Exists(x => x.Key.Equals(recipient.Key, StringComparison.InvariantCultureIgnoreCase)))
+            if (!recipients.Exists(x => !x.HasError && x.Key.Equals(recipient.Key, StringComparison.InvariantCultureIgnoreCase)))
             {
                 recipients.Add(recipient);
             }
@@ -100,7 +100,7 @@ namespace Relay.BulkSenderService.Processors
 
             string key = recipientArray[position];
 
-            ApiRecipient recipient = recipients.Where(x => x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
+            ApiRecipient recipient = recipients.Where(x => !x.HasError && x.Key.Equals(key, StringComparison.InvariantCultureIgnoreCase)).FirstOrDefault();
 
             if (recipient == null)
             {
