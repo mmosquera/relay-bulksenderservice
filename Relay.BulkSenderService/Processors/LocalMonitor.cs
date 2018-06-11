@@ -63,7 +63,7 @@ namespace Relay.BulkSenderService.Processors
                     _logger.Error($"GENERAL LOCAL MONITOR ERROR: {ex}");
                 }
 
-                Thread.Sleep(_configuration.FtpListInterval);
+                Thread.Sleep(_configuration.LocalFilesInterval);
             }
         }
 
