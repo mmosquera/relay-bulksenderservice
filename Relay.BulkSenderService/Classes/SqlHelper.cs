@@ -80,6 +80,7 @@ namespace Relay.BulkSenderService.Classes
                             Status = Convert.ToInt32(sqlDataReader["Status"]),
                             ClickEventsCount = Convert.ToInt32(sqlDataReader["ClickEventsCount"]),
                             OpenEventsCount = Convert.ToInt32(sqlDataReader["OpenEventsCount"]),
+                            SentAt = Convert.ToDateTime(sqlDataReader["SentAt"]),
                             FromEmail = sqlDataReader["FromEmail"] != DBNull.Value ? Convert.ToString(sqlDataReader["FromEmail"]) : string.Empty,
                             FromName = sqlDataReader["FromName"] != DBNull.Value ? Convert.ToString(sqlDataReader["FromName"]) : string.Empty,
                             Subject = sqlDataReader["Subject"] != DBNull.Value ? Convert.ToString(sqlDataReader["Subject"]) : string.Empty,
@@ -89,7 +90,8 @@ namespace Relay.BulkSenderService.Classes
                             MailStatus = Convert.ToInt32(sqlDataReader["MailStatus"]),
                             OpenDate = Convert.ToDateTime(sqlDataReader["OpenDate"]),
                             ClickDate = Convert.ToDateTime(sqlDataReader["ClickDate"]),
-                            BounceDate = Convert.ToDateTime(sqlDataReader["BounceDate"])
+                            BounceDate = Convert.ToDateTime(sqlDataReader["BounceDate"]),
+                            Unsubscribed = Convert.ToBoolean(sqlDataReader["Unsubscribed"])
                         };
                         items.Add(item);
                     }
@@ -117,7 +119,7 @@ namespace Relay.BulkSenderService.Classes
                 dataTable.Rows.Add(row);
             }
 
-            var command = new SqlCommand("BulkSender_GetDeliveriesReport", Connection);
+            var command = new SqlCommand("BulkSender_GetClicksReport", Connection);
             command.CommandType = CommandType.StoredProcedure;
 
             command.Parameters.Add(new SqlParameter
@@ -162,7 +164,7 @@ namespace Relay.BulkSenderService.Classes
             return items;
         }
 
-        public List<DBSummarizedReportItem> GetZummarizedByDate(int userId, DateTime startDate, DateTime endDate)
+        public List<DBSummarizedReportItem> GetSummarizedByDate(int userId, DateTime startDate, DateTime endDate)
         {
             var items = new List<DBSummarizedReportItem>();
 
@@ -174,6 +176,20 @@ namespace Relay.BulkSenderService.Classes
                 ParameterName = "@UserId",
                 SqlDbType = SqlDbType.Int,
                 Value = userId
+            });
+
+            command.Parameters.Add(new SqlParameter
+            {
+                ParameterName = "@StartDate",
+                SqlDbType = SqlDbType.DateTime,
+                Value = startDate
+            });
+
+            command.Parameters.Add(new SqlParameter
+            {
+                ParameterName = "@EndDate",
+                SqlDbType = SqlDbType.DateTime,
+                Value = endDate
             });
 
             using (SqlDataReader sqlDataReader = command.ExecuteReader())
@@ -194,10 +210,10 @@ namespace Relay.BulkSenderService.Classes
                             TotalRetries = Convert.ToInt32(sqlDataReader["TotalRetriesCount"]),
                             TotalOpens = Convert.ToInt32(sqlDataReader["TotalOpensCount"]),
                             TotalUniqueOpens = Convert.ToInt32(sqlDataReader["UniqueOpensCount"]),
-                            LastOpenDate = Convert.ToDateTime(sqlDataReader["LastOpen"]),
+                            LastOpenDate = sqlDataReader["LastOpen"] != DBNull.Value ? Convert.ToDateTime(sqlDataReader["LastOpen"]) : DateTime.MinValue,
                             TotalClicks = Convert.ToInt32(sqlDataReader["TotalClicksCount"]),
                             TotalUniqueClicks = Convert.ToInt32(sqlDataReader["UniqueClicksCount"]),
-                            LastClickDate = Convert.ToDateTime(sqlDataReader["LastClick"]),
+                            LastClickDate = sqlDataReader["LastClick"] != DBNull.Value ? Convert.ToDateTime(sqlDataReader["LastClick"]) : DateTime.MinValue,
                             TotalUnsubscriptions = Convert.ToInt32(sqlDataReader["TotalUnsubscriptionsCount"]),
                             TotalHardBounces = Convert.ToInt32(sqlDataReader["HardBouncesCount"]),
                             TotalSoftBounces = Convert.ToInt32(sqlDataReader["SoftBouncesCount"])
@@ -228,6 +244,8 @@ namespace Relay.BulkSenderService.Classes
         public DateTime ClickDate { get; set; }
         public DateTime BounceDate { get; set; }
         public string LinkUrl { get; set; }
+        public DateTime SentAt { get; set; }
+        public bool Unsubscribed { get; set; }
     }
 
     public class DBSummarizedReportItem
