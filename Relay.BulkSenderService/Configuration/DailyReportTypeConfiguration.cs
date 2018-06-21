@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Reports;
+using System;
 using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
@@ -10,7 +11,9 @@ namespace Relay.BulkSenderService.Configuration
         {
             var dailyReportTypeConfiguration = new DailyReportTypeConfiguration();
 
-            dailyReportTypeConfiguration.Hour = this.Hour;
+            dailyReportTypeConfiguration.ReportId = this.ReportId;
+            dailyReportTypeConfiguration.OffsetHour = this.OffsetHour;
+            dailyReportTypeConfiguration.RunHour = this.RunHour;
             dailyReportTypeConfiguration.DateFormat = this.DateFormat;
 
             if (this.Name != null)
@@ -48,9 +51,41 @@ namespace Relay.BulkSenderService.Configuration
             return dailyReportTypeConfiguration;
         }
 
+        public override ReportExecution GetReportExecution(IUserConfiguration user, ReportExecution reportExecution)
+        {
+            if (reportExecution != null)
+            {
+                reportExecution.LastRun = reportExecution.NextRun;
+                reportExecution.NextRun = reportExecution.NextRun.AddDays(1);
+            }
+            else
+            {
+                DateTime now = DateTime.UtcNow.AddHours(user.UserGMT);
+
+                DateTime nextRun = new DateTime(now.Year, now.Month, now.Day, this.RunHour, 0, 0);
+
+                if (nextRun < now)
+                {
+                    nextRun = nextRun.AddDays(1);
+                }
+
+                nextRun = nextRun.AddHours(-user.UserGMT);                
+
+                reportExecution = new ReportExecution()
+                {
+                    UserName = user.Name,
+                    ReportId = this.ReportId,
+                    NextRun = nextRun,
+                    LastRun = nextRun.AddDays(-1)
+                };
+            }
+
+            return reportExecution;
+        }
+
         public override ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger)
         {
-            return new DailyReportProcessor(configuration, logger, this);
+            return new DailyReportProcessor(logger, configuration, this);
         }
     }
 }

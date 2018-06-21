@@ -12,10 +12,9 @@ namespace Relay.BulkSenderService.Reports
         protected StringBuilder _stringBuilder;
         public char Separator { get; set; }
 
-        public CsvReport(ILog logger) : base(logger)
+        public CsvReport()
         {
             _stringBuilder = new StringBuilder();
-            _dateFormat = "dd/MM/yyyy HH:mm";
         }
 
         protected override void FillReport()

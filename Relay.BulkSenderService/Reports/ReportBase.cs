@@ -1,26 +1,20 @@
-﻿using Relay.BulkSenderService.Classes;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Reports
 {
     public abstract class ReportBase
     {
-        protected readonly ILog _logger;
         protected List<ReportItem> _items;
         protected List<string> _headerList;
         protected string _reportFileName;
-        protected string _dateFormat;
         public string ReportName { get; set; }
-
-        public List<string> SourceFiles { get; set; }
         public string ReportPath { get; set; }
         public int ReportGMT { get; set; }
         public int UserId { get; set; }
 
-        public ReportBase(ILog logger)
+        public ReportBase()
         {
-            _logger = logger;
             _items = new List<ReportItem>();
             _headerList = new List<string>();
         }

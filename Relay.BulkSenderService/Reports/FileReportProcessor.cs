@@ -15,7 +15,7 @@ namespace Relay.BulkSenderService.Reports
 
         }
 
-        protected override List<string> GetFilesToProcess(IUserConfiguration user)
+        protected override List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution)
         {
             var fileList = new List<string>();
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
@@ -28,7 +28,7 @@ namespace Relay.BulkSenderService.Reports
                 ITemplateConfiguration templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(file.FullName);
 
                 if (_reportTypeConfiguration.Templates.Contains(templateConfiguration.TemplateName)
-                    && DateTime.UtcNow.Subtract(file.CreationTimeUtc).TotalHours > _reportTypeConfiguration.Hour)
+                    && reportExecution.NextRun.Subtract(file.LastWriteTimeUtc).TotalHours >= _reportTypeConfiguration.OffsetHour)
                 {
                     fileList.Add(file.FullName);
                 }
@@ -37,7 +37,7 @@ namespace Relay.BulkSenderService.Reports
             return fileList;
         }
 
-        protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user)
+        protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
         {
             if (files.Count == 0)
             {
@@ -51,14 +51,24 @@ namespace Relay.BulkSenderService.Reports
             {
                 _logger.Debug($"Create report file with {file} for user {user.Name}.");
 
-                var report = new ExcelReport(_logger, _reportTypeConfiguration);
-                //report.SourceFile = file;
-                //report.Separator = _reportTypeConfiguration.FieldSeparator;
-                report.ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file));
-                report.CustomItems = GetCustomItems(file, user.UserGMT);
-                report.ReportPath = filePathHelper.GetReportsFilesFolder();
-                report.ReportGMT = user.UserGMT;
-                report.UserId = user.Credentials.AccountId;
+                var report = new ExcelReport()
+                {
+                    ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file)),
+                    CustomItems = GetCustomItems(file, user.UserGMT),
+                    ReportPath = filePathHelper.GetReportsFilesFolder(),
+                    ReportGMT = user.UserGMT,
+                    UserId = user.Credentials.AccountId
+                };
+
+                report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, null));
+
+                ITemplateConfiguration template = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
+
+                List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, "dd/MM/yyyy HH:mm");
+
+                report.AppendItems(items);
+
+                report.Generate();
 
                 string reportFileName = report.Generate();
 
@@ -71,7 +81,7 @@ namespace Relay.BulkSenderService.Reports
             }
         }
 
-        public override bool GenerateForcedReport(List<string> files, IUserConfiguration user)
+        public override bool GenerateForcedReport(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
         {
             List<string> filteredFiles = FilterFilesByTemplate(files, user);
 
@@ -86,10 +96,8 @@ namespace Relay.BulkSenderService.Reports
             {
                 _logger.Debug($"Create report file with {file} for user {user.Name}.");
 
-                var report = new ExcelReport(_logger, _reportTypeConfiguration)
+                var report = new ExcelReport()
                 {
-                    //SourceFile = file,
-                    //Separator = _reportTypeConfiguration.FieldSeparator,
                     ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file)),
                     CustomItems = GetCustomItems(file, user.UserGMT),
                     ReportPath = filePathHelper.GetForcedReportsFolder(),
@@ -143,11 +151,6 @@ namespace Relay.BulkSenderService.Reports
             }
 
             return customItems;
-        }
-
-        protected override bool IsTimeToRun(IUserConfiguration user)
-        {
-            return true;
         }
 
         protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat)

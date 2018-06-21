@@ -1,12 +1,18 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.IO;
 
 namespace Relay.BulkSenderService.Processors
 {
+    /// <summary>
+    /// Read commands from file commands.txt. Read one command on first line.
+    /// There are 3 commands separted with whitespaces ( ). 
+    ///  - date
+    ///  - user
+    ///  - args
+    /// Args are parameters separated with commas (,)
+    /// </summary>
     public class FileCommandsWatcher : IWatcher
     {
-        //private Commands _commands;
         private FileSystemWatcher _fileSystemWatcher;
         private const string FILENAME = "commands.txt";
 
@@ -15,7 +21,7 @@ namespace Relay.BulkSenderService.Processors
         public event EventHandler<CommandsEventArgs> AddThreadEvent;
         public event EventHandler<CommandsEventArgs> RemoveThreadEvent;
         public event EventHandler<CommandsEventArgs> StopSendEvent;
-        public event EventHandler<CommandsEventArgs> GenerateReportEvent;
+        public event EventHandler<ReportCommandsEventArgs> GenerateReportEvent;
         public event EventHandler ChangeConfigurationEvent;
 
         public FileCommandsWatcher()
@@ -57,7 +63,7 @@ namespace Relay.BulkSenderService.Processors
             StopSendEvent?.Invoke(this, args);
         }
 
-        protected virtual void OnGenerateReport(CommandsEventArgs args)
+        protected virtual void OnGenerateReport(ReportCommandsEventArgs args)
         {
             GenerateReportEvent?.Invoke(this, args);
         }
@@ -84,8 +90,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 return;
             }
-            //_fileSystemWatcher.EnableRaisingEvents = false;
-            //Commands newCommands = GetCommands();
+
             string command = GetCommnd();
 
             if (string.IsNullOrEmpty(command))
@@ -104,54 +109,62 @@ namespace Relay.BulkSenderService.Processors
                 switch (commandName.ToUpper())
                 {
                     case "STARTPROCESS":
-                        var args = new CommandsEventArgs()
+                        var startProcessArgs = new CommandsEventArgs()
                         {
                             User = commandParams
                         };
-                        OnStartProcess(args);
+                        OnStartProcess(startProcessArgs);
                         break;
                     case "STOPPROCESS":
-                        args = new CommandsEventArgs()
+                        var stopProcessArgs = new CommandsEventArgs()
                         {
                             User = commandParams
                         };
-                        OnStopProcess(args);
+                        OnStopProcess(stopProcessArgs);
                         break;
                     case "ADDTHREAD":
-                        args = new CommandsEventArgs()
+                        var addThreadArgs = new CommandsEventArgs()
                         {
                             User = commandParams
                         };
-                        OnAddThread(args);
+                        OnAddThread(addThreadArgs);
                         break;
                     case "REMOVETHREAD":
-                        args = new CommandsEventArgs()
+                        var removeThreadArgs = new CommandsEventArgs()
                         {
                             User = commandParams
                         };
-                        OnRemoveThread(args);
+                        OnRemoveThread(removeThreadArgs);
                         break;
                     case "CHANGECONFIGURATION":
                         OnChangeConfiguration();
                         break;
                     case "STOPSEND":
-                        args = new CommandsEventArgs()
+                        var stopSendArgs = new CommandsEventArgs()
                         {
                             User = commandParams
                         };
-                        OnStopSend(args);
+                        OnStopSend(stopSendArgs);
                         break;
                     case "GENERATEREPORT":
-                        args = new CommandsEventArgs()
-                        {
-                            User = commandParams
-                        };
-                        OnGenerateReport(args);
+                        ReportCommandsEventArgs reportArgs = GetReportCommandsEventArgs(commandParams);
+                        OnGenerateReport(reportArgs);
                         break;
                 }
             }
+        }
 
-            //_fileSystemWatcher.EnableRaisingEvents = true;
+        private ReportCommandsEventArgs GetReportCommandsEventArgs(string commandParams)
+        {
+            string[] paramArray = commandParams.Split(',');
+            var reportArgs = new ReportCommandsEventArgs();
+
+            reportArgs.User = paramArray[0] != null ? paramArray[0] : string.Empty;
+            reportArgs.Report = paramArray[1] != null ? paramArray[1] : string.Empty;
+            reportArgs.Start = paramArray[2] != null ? DateTime.Parse(paramArray[2]) : DateTime.MinValue;
+            reportArgs.End = paramArray[3] != null ? DateTime.Parse(paramArray[3]) : DateTime.MinValue;
+
+            return reportArgs;
         }
 
         private string GetCommnd()
@@ -169,46 +182,17 @@ namespace Relay.BulkSenderService.Processors
                 return null;
             }
         }
-
-        private Commands GetCommands()
-        {
-            string filePath = $"{AppDomain.CurrentDomain.BaseDirectory}{FILENAME}";
-
-            bool read = false;
-            string json = "";
-            while (!read)
-            {
-                try
-                {
-                    json = File.ReadAllText(filePath);
-                    read = true;
-                }
-                catch (IOException) { }
-            }
-
-            Commands commands = JsonConvert.DeserializeObject<Commands>(json);
-
-            return commands;
-        }
-    }
-
-    public class Commands
-    {
-        [JsonProperty(PropertyName = "stopProcess")]
-        public bool StopProcess { get; set; }
-
-        [JsonProperty(PropertyName = "changeConfiguration")]
-        public bool ChangeConfiguration { get; set; }
-
-        [JsonProperty(PropertyName = "executeFile")]
-        public string ExecuteFile { get; set; }
-
-        [JsonProperty(PropertyName = "freeUser")]
-        public string FreeUser { get; set; }
     }
 
     public class CommandsEventArgs : EventArgs
     {
         public string User { get; set; }
+    }
+
+    public class ReportCommandsEventArgs : CommandsEventArgs
+    {
+        public string Report { get; set; }
+        public DateTime Start { get; set; }
+        public DateTime End { get; set; }
     }
 }

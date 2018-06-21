@@ -31,9 +31,9 @@ namespace Relay.BulkSenderService.Classes
             }
         }
 
-        public List<DBStatusReportItem> GetResultsByDeliveryList(int userId, List<string> guidList)
+        public List<DBStatusDto> GetResultsByDeliveryList(int userId, List<string> guidList)
         {
-            var items = new List<DBStatusReportItem>();
+            var items = new List<DBStatusDto>();
 
             if (guidList.Count == 0)
             {
@@ -73,7 +73,7 @@ namespace Relay.BulkSenderService.Classes
                 {
                     while (sqlDataReader.Read())
                     {
-                        var item = new DBStatusReportItem()
+                        var item = new DBStatusDto()
                         {
                             DeliveryId = Convert.ToInt32(sqlDataReader["Id"]),
                             CreatedAt = Convert.ToDateTime(sqlDataReader["CreatedAt"]),
@@ -100,9 +100,9 @@ namespace Relay.BulkSenderService.Classes
             return items;
         }
 
-        public List<DBStatusReportItem> GetClicksByDeliveryList(int userId, List<string> guidList)
+        public List<DBStatusDto> GetClicksByDeliveryList(int userId, List<string> guidList)
         {
-            var items = new List<DBStatusReportItem>();
+            var items = new List<DBStatusDto>();
 
             if (guidList.Count == 0)
             {
@@ -142,7 +142,7 @@ namespace Relay.BulkSenderService.Classes
                 {
                     while (sqlDataReader.Read())
                     {
-                        var item = new DBStatusReportItem()
+                        var item = new DBStatusDto()
                         {
                             DeliveryId = Convert.ToInt32(sqlDataReader["Id"]),
                             CreatedAt = Convert.ToDateTime(sqlDataReader["CreatedAt"]),
@@ -164,9 +164,9 @@ namespace Relay.BulkSenderService.Classes
             return items;
         }
 
-        public List<DBSummarizedReportItem> GetSummarizedByDate(int userId, DateTime startDate, DateTime endDate)
+        public List<DBSummarizedDto> GetSummarizedByDate(int userId, DateTime startDate, DateTime endDate)
         {
-            var items = new List<DBSummarizedReportItem>();
+            var items = new List<DBSummarizedDto>();
 
             var command = new SqlCommand("BulkSender_GetSumarizedByTemplateReport", Connection);
             command.CommandType = CommandType.StoredProcedure;
@@ -198,7 +198,7 @@ namespace Relay.BulkSenderService.Classes
                 {
                     while (sqlDataReader.Read())
                     {
-                        var item = new DBSummarizedReportItem()
+                        var item = new DBSummarizedDto()
                         {
                             TemplateId = Convert.ToInt32(sqlDataReader["Id"]),
                             TemplateName = Convert.ToString(sqlDataReader["Name"]),
@@ -226,7 +226,7 @@ namespace Relay.BulkSenderService.Classes
         }
     }
 
-    public class DBStatusReportItem
+    public class DBStatusDto
     {
         public int DeliveryId { get; set; }
         public DateTime CreatedAt { get; set; }
@@ -248,7 +248,7 @@ namespace Relay.BulkSenderService.Classes
         public bool Unsubscribed { get; set; }
     }
 
-    public class DBSummarizedReportItem
+    public class DBSummarizedDto
     {
         public int TemplateId { get; set; }
         public string TemplateName { get; set; }

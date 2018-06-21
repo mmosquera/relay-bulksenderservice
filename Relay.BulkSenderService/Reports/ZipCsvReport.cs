@@ -1,4 +1,5 @@
 ﻿using Relay.BulkSenderService.Classes;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
@@ -6,7 +7,7 @@ namespace Relay.BulkSenderService.Reports
 {
     public class ZipCsvReport : CsvReport
     {
-        public ZipCsvReport(ILog logger) : base(logger)
+        public ZipCsvReport()
         {
         }
 
@@ -14,9 +15,10 @@ namespace Relay.BulkSenderService.Reports
         {
             _reportFileName = $@"{ReportPath}\{ReportName}";
 
-            if (Path.GetExtension(_reportFileName).Equals(".zip"))
+            if (Path.GetExtension(_reportFileName).Equals(".zip", StringComparison.InvariantCultureIgnoreCase))
             {
-                string tempCsv = _reportFileName.Replace(".zip", ".csv");
+                // TODO: Improve entry file name. Using type for extension.
+                string tempCsv = _reportFileName.Replace(".zip", ".TXT");
 
                 using (var streamWriter = new StreamWriter(tempCsv))
                 {

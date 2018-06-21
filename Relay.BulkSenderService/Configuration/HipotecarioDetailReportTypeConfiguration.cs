@@ -4,13 +4,15 @@ using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
 {
-    public class HipotecarioDetailReportTypeConfiguration : ReportTypeConfiguration
+    public class HipotecarioDetailReportTypeConfiguration : DailyReportTypeConfiguration
     {
         public override ReportTypeConfiguration Clone()
         {
             var hipotecarioDetailReportTypeConfiguration = new HipotecarioDetailReportTypeConfiguration();
 
-            hipotecarioDetailReportTypeConfiguration.Hour = this.Hour;
+            hipotecarioDetailReportTypeConfiguration.ReportId = this.ReportId;
+            hipotecarioDetailReportTypeConfiguration.OffsetHour = this.OffsetHour;
+            hipotecarioDetailReportTypeConfiguration.RunHour = this.RunHour;
             hipotecarioDetailReportTypeConfiguration.DateFormat = this.DateFormat;
 
             if (this.Name != null)

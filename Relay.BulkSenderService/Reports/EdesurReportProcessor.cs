@@ -15,19 +15,13 @@ namespace Relay.BulkSenderService.Reports
 
         }
 
-        protected override List<string> GetFilesToProcess(IUserConfiguration user)
+        protected override List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution)
         {
-            DateTime nextRun = GetNextRun(user.Name);
-
-            if (nextRun > DateTime.UtcNow)
-            {
-                return new List<string>();
-            }
-
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
             var directoryInfo = new DirectoryInfo(filePathHelper.GetResultsFilesFolder());
 
-            DateTime date = DateTime.UtcNow.AddDays(-21);
+            //DateTime date = DateTime.UtcNow.AddDays(-21);
+            DateTime date = reportExecution.NextRun.AddHours(-_reportTypeConfiguration.OffsetHour);
 
             var fileInfoList = directoryInfo.GetFiles("*.report").Concat(directoryInfo.GetFiles("*.sent"))
                 .Where(f => f.CreationTimeUtc > date)
@@ -36,22 +30,7 @@ namespace Relay.BulkSenderService.Reports
             return FilterFilesByTemplate(fileInfoList.Select(x => x.FullName).ToList(), user);
         }
 
-        private DateTime GetNextRun(string userName)
-        {
-            var filePathHelper = new FilePathHelper(_configuration, userName);
-            var directoryInfo = new DirectoryInfo(filePathHelper.GetReportsFilesFolder());
-
-            FileInfo fileInfo = directoryInfo.GetFiles("*EDESUR*").OrderByDescending(x => x.CreationTime).FirstOrDefault();
-
-            if (fileInfo != null)
-            {
-                return fileInfo.CreationTimeUtc.AddHours(3);
-            }
-
-            return DateTime.UtcNow;
-        }
-
-        protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user)
+        protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
         {
             if (files.Count == 0)
             {
@@ -63,13 +42,7 @@ namespace Relay.BulkSenderService.Reports
             var ftpHelper = user.Ftp.GetFtpHelper(_logger);
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            //var report = new EdesurReport(_logger, _reportTypeConfiguration);
-            //report.SourceFiles = files;
-            //report.Separator = _reportTypeConfiguration.FieldSeparator;
-            //report.ReportPath = filePathHelper.GetReportsFilesFolder();
-            //report.ReportGMT = user.UserGMT;
-            //report.UserId = user.Credentials.AccountId;
-            var report = new CsvReport(_logger)
+            var report = new CsvReport()
             {
                 ReportGMT = user.UserGMT,
                 ReportName = _reportTypeConfiguration.Name.GetReportName(),
@@ -93,7 +66,7 @@ namespace Relay.BulkSenderService.Reports
             }
         }
 
-        public override bool GenerateForcedReport(List<string> files, IUserConfiguration user)
+        public override bool GenerateForcedReport(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
         {
             List<string> filteredFiles = FilterFilesByTemplate(files, user);
 
@@ -104,17 +77,23 @@ namespace Relay.BulkSenderService.Reports
 
             _logger.Debug($"Crete Edesur report for user {user.Name}.");
 
-            var ftpHelper = user.Ftp.GetFtpHelper(_logger);
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            var report = new EdesurReport(_logger, _reportTypeConfiguration)
+            var report = new CsvReport()
             {
-                SourceFiles = files,
-                //Separator = _reportTypeConfiguration.FieldSeparator,
-                ReportPath = filePathHelper.GetForcedReportsFolder(),
                 ReportGMT = user.UserGMT,
+                ReportName = _reportTypeConfiguration.Name.GetReportName(),
+                ReportPath = filePathHelper.GetForcedReportsFolder(),
+                Separator = _reportTypeConfiguration.FieldSeparator,
                 UserId = user.Credentials.AccountId
             };
+
+            foreach (string file in files)
+            {
+                ITemplateConfiguration template = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
+                List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT);
+                report.AppendItems(items);
+            }
 
             report.Generate();
 
@@ -163,7 +142,7 @@ namespace Relay.BulkSenderService.Reports
                             foreach (var dHeader in headersList)
                             {
                                 bool hasValue = false;
-                                // TODO use headers count
+                                // TODO use headers count and index
                                 var item = new ReportItem(100);
                                 foreach (int specialValue in dHeader.Values)
                                 {
@@ -304,61 +283,13 @@ namespace Relay.BulkSenderService.Reports
                         i++;
                     }
 
-                    List<DBStatusReportItem> dbReportItemList = sqlHelper.GetResultsByDeliveryList(userId, aux);
-                    foreach (DBStatusReportItem dbReportItem in dbReportItemList)
+                    List<DBStatusDto> dbReportItemList = sqlHelper.GetResultsByDeliveryList(userId, aux);
+                    foreach (DBStatusDto dbReportItem in dbReportItemList)
                     {
                         ReportItem item = items.FirstOrDefault(x => x.ResultId == dbReportItem.MessageGuid);
                         if (item != null)
                         {
-                            string status;
-                            string description;
-                            GetStatusAndDescription(dbReportItem, out status, out description);
-
-                            foreach (ReportFieldConfiguration reportField in _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)))
-                            {
-                                switch (reportField.NameInDB)
-                                {
-                                    case "CreatedAt":
-                                        item.AddValue(dbReportItem.CreatedAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "Status":
-                                        item.AddValue(status, reportField.Position);
-                                        break;
-                                    case "Description":
-                                        item.AddValue(description, reportField.Position);
-                                        break;
-                                    case "ClickEventsCount":
-                                        item.AddValue(dbReportItem.ClickEventsCount.ToString(), reportField.Position);
-                                        break;
-                                    case "OpenEventsCount":
-                                        item.AddValue(dbReportItem.OpenEventsCount.ToString(), reportField.Position);
-                                        break;
-                                    case "SentAt":
-                                        item.AddValue(dbReportItem.SentAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "Subject":
-                                        item.AddValue(dbReportItem.Subject, reportField.Position);
-                                        break;
-                                    case "FromEmail":
-                                        item.AddValue(dbReportItem.FromEmail, reportField.Position);
-                                        break;
-                                    case "FromName":
-                                        item.AddValue(dbReportItem.FromName, reportField.Position);
-                                        break;
-                                    case "Address":
-                                        item.AddValue(dbReportItem.Address, reportField.Position);
-                                        break;
-                                    case "OpenDate":
-                                        item.AddValue(dbReportItem.OpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "ClickDate":
-                                        item.AddValue(dbReportItem.ClickDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "BounceDate":
-                                        item.AddValue(dbReportItem.BounceDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                }
-                            }
+                            MapDBStatusDtoToReportItem(dbReportItem, item, reportGMT, dateFormat);
                         }
                     }
 
@@ -372,11 +303,6 @@ namespace Relay.BulkSenderService.Reports
                 _logger.Error($"Error on get data from DB {e}");
                 throw;
             }
-        }
-
-        protected override bool IsTimeToRun(IUserConfiguration user)
-        {
-            return true;
         }
     }
 }

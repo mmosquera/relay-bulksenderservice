@@ -13,11 +13,9 @@ namespace Relay.BulkSenderService.Reports
         private StringBuilder _stringBuilder;
         public string Separator { get; set; }
 
-        public EdesurReport(ILog logger, ReportTypeConfiguration reportConfiguration)
-            : base(logger)
+        public EdesurReport()
         {
-            _stringBuilder = new StringBuilder();
-            _dateFormat = "dd/MM/yyyy hh:mm:ss tt";
+            _stringBuilder = new StringBuilder();            
         }
 
         //protected void FillItems()

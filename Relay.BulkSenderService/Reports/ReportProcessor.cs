@@ -21,23 +21,23 @@ namespace Relay.BulkSenderService.Reports
             _reportTypeConfiguration = reportTypeConfiguration;
         }
 
-        protected abstract bool IsTimeToRun(IUserConfiguration user);
-
         /// <summary>
         /// Retorna la lista de archivos para generarle los reportes necesarios.
         /// </summary>
         /// <param name="user">Configuracion del usuario.</param>
+        /// <param name="reportExecution">Datos de la ejecucion.</param>
         /// <returns></returns>
-        protected abstract List<string> GetFilesToProcess(IUserConfiguration user);
+        protected abstract List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution);
 
         /// <summary>
         /// Procesa los arhivos generando el reporte correspondiente.
         /// </summary>
         /// <param name="files">Lista de archivos para generar reporte.</param>
         /// <param name="user">Confuracion del usuario.</param>
-        protected abstract void ProcessFilesForReports(List<string> files, IUserConfiguration user);
+        /// <param name="reportExecution">Datos de la ejecucion.</param>
+        protected abstract void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution);
 
-        public abstract bool GenerateForcedReport(List<string> files, IUserConfiguration user);
+        public abstract bool GenerateForcedReport(List<string> files, IUserConfiguration user, ReportExecution reportExecution);
 
         protected void UploadFileToFtp(string fileName, string ftpFolder, IFtpHelper ftpHelper)
         {
@@ -51,14 +51,11 @@ namespace Relay.BulkSenderService.Reports
             }
         }
 
-        public void Process(IUserConfiguration user)
+        public void Process(IUserConfiguration user, ReportExecution reportExecution)
         {
-            if (IsTimeToRun(user))
-            {
-                List<string> files = GetFilesToProcess(user);
+            List<string> files = GetFilesToProcess(user, reportExecution);
 
-                ProcessFilesForReports(files, user);
-            }
+            ProcessFilesForReports(files, user, reportExecution);
         }
 
         protected List<string> FilterFilesByTemplate(List<string> files, IUserConfiguration user)
@@ -96,64 +93,13 @@ namespace Relay.BulkSenderService.Reports
                         i++;
                     }
 
-                    List<DBStatusReportItem> dbReportItemList = sqlHelper.GetResultsByDeliveryList(userId, aux);
-                    foreach (DBStatusReportItem dbReportItem in dbReportItemList)
+                    List<DBStatusDto> dbReportItemList = sqlHelper.GetResultsByDeliveryList(userId, aux);
+                    foreach (DBStatusDto dbReportItem in dbReportItemList)
                     {
                         ReportItem item = items.FirstOrDefault(x => x.ResultId == dbReportItem.MessageGuid);
                         if (item != null)
                         {
-                            string status;
-                            string description;
-                            GetStatusAndDescription(dbReportItem, out status, out description);
-
-                            foreach (ReportFieldConfiguration reportField in _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)))
-                            {
-                                switch (reportField.NameInDB)
-                                {
-                                    case "CreatedAt":
-                                        item.AddValue(dbReportItem.CreatedAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "Status":
-                                        item.AddValue(status, reportField.Position);
-                                        break;
-                                    case "Description":
-                                        item.AddValue(description, reportField.Position);
-                                        break;
-                                    case "ClickEventsCount":
-                                        item.AddValue(dbReportItem.ClickEventsCount.ToString(), reportField.Position);
-                                        break;
-                                    case "OpenEventsCount":
-                                        item.AddValue(dbReportItem.OpenEventsCount.ToString(), reportField.Position);
-                                        break;
-                                    case "SentAt":
-                                        item.AddValue(dbReportItem.SentAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "Subject":
-                                        item.AddValue(dbReportItem.Subject, reportField.Position);
-                                        break;
-                                    case "FromEmail":
-                                        item.AddValue(dbReportItem.FromEmail, reportField.Position);
-                                        break;
-                                    case "FromName":
-                                        item.AddValue(dbReportItem.FromName, reportField.Position);
-                                        break;
-                                    case "Address":
-                                        item.AddValue(dbReportItem.Address, reportField.Position);
-                                        break;
-                                    case "OpenDate":
-                                        item.AddValue(dbReportItem.OpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "ClickDate":
-                                        item.AddValue(dbReportItem.ClickDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "BounceDate":
-                                        item.AddValue(dbReportItem.BounceDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-                                        break;
-                                    case "Unsubscribed":
-                                        item.AddValue(dbReportItem.Unsubscribed.ToString(), reportField.Position);
-                                        break;
-                                }
-                            }
+                            MapDBStatusDtoToReportItem(dbReportItem, item, reportGMT, dateFormat);
                         }
                     }
 
@@ -170,7 +116,7 @@ namespace Relay.BulkSenderService.Reports
         }
 
         // TODO: internationalize messages.
-        protected void GetStatusAndDescription(DBStatusReportItem item, out string status, out string description)
+        private void GetStatusAndDescription(DBStatusDto item, out string status, out string description)
         {
             description = string.Empty;
             status = string.Empty;
@@ -313,6 +259,132 @@ namespace Relay.BulkSenderService.Reports
             resultIndex = fileHeaders.IndexOf(Constants.HEADER_MESSAGE_ID);
 
             return headers;
+        }
+
+        protected void MapDBStatusDtoToReportItem(DBStatusDto dbStatusDto, ReportItem reportItem, int reportGMT = 0, string dateFormat = "")
+        {
+            string status;
+            string description;
+            GetStatusAndDescription(dbStatusDto, out status, out description);
+
+            foreach (ReportFieldConfiguration reportField in _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)))
+            {
+                switch (reportField.NameInDB)
+                {
+                    case "CreatedAt":
+                        reportItem.AddValue(dbStatusDto.CreatedAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "Status":
+                        reportItem.AddValue(status, reportField.Position);
+                        break;
+                    case "Description":
+                        reportItem.AddValue(description, reportField.Position);
+                        break;
+                    case "ClickEventsCount":
+                        reportItem.AddValue(dbStatusDto.ClickEventsCount.ToString(), reportField.Position);
+                        break;
+                    case "OpenEventsCount":
+                        reportItem.AddValue(dbStatusDto.OpenEventsCount.ToString(), reportField.Position);
+                        break;
+                    case "SentAt":
+                        reportItem.AddValue(dbStatusDto.SentAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "Subject":
+                        reportItem.AddValue(dbStatusDto.Subject, reportField.Position);
+                        break;
+                    case "FromEmail":
+                        reportItem.AddValue(dbStatusDto.FromEmail, reportField.Position);
+                        break;
+                    case "FromName":
+                        reportItem.AddValue(dbStatusDto.FromName, reportField.Position);
+                        break;
+                    case "Address":
+                        reportItem.AddValue(dbStatusDto.Address, reportField.Position);
+                        break;
+                    case "OpenDate":
+                        reportItem.AddValue(dbStatusDto.OpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "ClickDate":
+                        reportItem.AddValue(dbStatusDto.ClickDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "BounceDate":
+                        reportItem.AddValue(dbStatusDto.BounceDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "LinkUrl":
+                        reportItem.AddValue(dbStatusDto.LinkUrl, reportField.Position);
+                        break;
+                    case "Unsubscribed":
+                        reportItem.AddValue(dbStatusDto.Unsubscribed.ToString(), reportField.Position);
+                        break;
+                }
+            }
+        }
+
+        protected void MapDBSummarizedDtoToReportItem(DBSummarizedDto dbSummarizedDto, ReportItem reportItem, int reportGMT = 0, string dateFormat = "")
+        {
+            foreach (ReportFieldConfiguration reportField in _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)))
+            {
+                switch (reportField.NameInDB)
+                {
+                    case "TemplateId":
+                        reportItem.AddValue(dbSummarizedDto.TemplateId.ToString(), reportField.Position);
+                        break;
+                    case "TemplateName":
+                        reportItem.AddValue(dbSummarizedDto.TemplateName, reportField.Position);
+                        break;
+                    case "TemplateGuid":
+                        reportItem.AddValue(dbSummarizedDto.TemplateGuid, reportField.Position);
+                        break;
+                    case "TemplateFromEmail":
+                        reportItem.AddValue(dbSummarizedDto.TemplateFromEmail, reportField.Position);
+                        break;
+                    case "TemplateFromName":
+                        reportItem.AddValue(dbSummarizedDto.TemplateFromName, reportField.Position);
+                        break;
+                    case "TemplateSubject":
+                        reportItem.AddValue(dbSummarizedDto.TemplateSubject, reportField.Position);
+                        break;
+                    case "TotalDeliveries":
+                        reportItem.AddValue(dbSummarizedDto.TotalDeliveries.ToString(), reportField.Position);
+                        break;
+                    case "TotalRetries":
+                        reportItem.AddValue(dbSummarizedDto.TotalRetries.ToString(), reportField.Position);
+                        break;
+                    case "TotalOpens":
+                        reportItem.AddValue(dbSummarizedDto.TotalOpens.ToString(), reportField.Position);
+                        break;
+                    case "TotalUniqueOpens":
+                        reportItem.AddValue(dbSummarizedDto.TotalUniqueOpens.ToString(), reportField.Position);
+                        break;
+                    case "LastOpenDate":
+                        if (dbSummarizedDto.LastOpenDate != DateTime.MinValue)
+                        {
+                            reportItem.AddValue(dbSummarizedDto.LastOpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        }
+                        break;
+                    case "TotalClicks":
+                        reportItem.AddValue(dbSummarizedDto.TotalClicks.ToString(), reportField.Position);
+                        break;
+                    case "TotalUniqueClicks":
+                        reportItem.AddValue(dbSummarizedDto.TotalUniqueClicks.ToString(), reportField.Position);
+                        break;
+                    case "LastClickDate":
+                        if (dbSummarizedDto.LastClickDate != DateTime.MinValue)
+                        {
+                            reportItem.AddValue(dbSummarizedDto.LastClickDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        }
+                        break;
+                    case "TotalUnsubscriptions":
+                        reportItem.AddValue(dbSummarizedDto.TotalUnsubscriptions.ToString(), reportField.Position);
+                        break;
+                    case "TotalHardBounces":
+                        reportItem.AddValue(dbSummarizedDto.TotalHardBounces.ToString(), reportField.Position);
+                        break;
+                    case "TotalSoftBounces":
+                        reportItem.AddValue(dbSummarizedDto.TotalSoftBounces.ToString(), reportField.Position);
+                        break;
+                }
+            }
         }
     }
 }

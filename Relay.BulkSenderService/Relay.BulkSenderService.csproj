@@ -262,6 +262,7 @@
     <Compile Include="Processors\FtpMonitor.cs" />
     <Compile Include="Processors\LocalMonitor.cs" />
     <Compile Include="Processors\IWatcher.cs" />
+    <Compile Include="Classes\ReportExecution.cs" />
     <Compile Include="Processors\ReportGenerator.cs" />
     <Compile Include="Processors\SMTPProcessor.cs" />
     <Compile Include="Configuration\IConfiguration.cs" />

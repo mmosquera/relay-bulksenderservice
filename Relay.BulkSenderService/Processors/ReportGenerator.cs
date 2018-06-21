@@ -11,9 +11,63 @@ namespace Relay.BulkSenderService.Processors
 {
     public class ReportGenerator : BaseWorker
     {
+        private List<ReportExecution> _reports;
+        private object _lockObj;
+
         public ReportGenerator(ILog logger, IConfiguration configuration, IWatcher watcher) : base(logger, configuration, watcher)
         {
+            _reports = new List<ReportExecution>();
+            _lockObj = new object();
+            ((FileCommandsWatcher)_watcher).GenerateReportEvent += ReportGenerator_GenerateReportEvent;
+            LoadUserReports();
+        }
+        
+        // TODO: check if needed use lock.
+        private void ReportGenerator_GenerateReportEvent(object sender, ReportCommandsEventArgs e)
+        {
+            IUserConfiguration user = _users.FirstOrDefault(x => x.Name.Equals(e.User, StringComparison.InvariantCultureIgnoreCase));
+            ReportTypeConfiguration reportType = user?.Reports?.ReportsList.FirstOrDefault(x => x.ReportId.Equals(e.Report, StringComparison.InvariantCultureIgnoreCase));
 
+            if (reportType != null)
+            {
+                var reportExecution = new ReportExecution()
+                {
+                    UserName = user.Name,
+                    ReportId = reportType.ReportId,
+                    NextRun = e.End,
+                    LastRun = e.Start
+                };
+
+                var directoryInfo = new DirectoryInfo(new FilePathHelper(_configuration, user.Name).GetForcedReportsFolder());
+
+                FileInfo[] files = directoryInfo.GetFiles("*.report");
+
+                ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
+
+                bool result = reportProcessor.GenerateForcedReport(files.Select(x => x.FullName).ToList(), user, reportExecution);
+
+                if (result)
+                {
+                    foreach (FileInfo fileInfo in files)
+                    {
+                        File.Delete(fileInfo.FullName);
+                    }
+                }
+            }
+        }
+
+        private void LoadUserReports()
+        {
+            List<IUserConfiguration> reportUsers = _users.Where(x => x.Reports != null).ToList();
+
+            foreach (IUserConfiguration user in reportUsers)
+            {
+                foreach (ReportTypeConfiguration reportType in user.Reports.ReportsList)
+                {
+                    ReportExecution reportExecution = reportType.GetReportExecution(user, null);
+                    _reports.Add(reportExecution);
+                }
+            }
         }
 
         public void Process()
@@ -23,18 +77,27 @@ namespace Relay.BulkSenderService.Processors
                 try
                 {
                     CheckConfigChanges();
-
-                    List<IUserConfiguration> reportUsers = _users.Where(x => x.Reports != null).ToList();
-
-                    foreach (IUserConfiguration user in reportUsers)
+                    
+                    foreach (ReportExecution reportExecution in _reports)
                     {
-                        GenerateForcedReport(user);
-
-                        foreach (ReportTypeConfiguration reportType in user.Reports.ReportsList)
+                        if (DateTime.UtcNow >= reportExecution.NextRun)
                         {
-                            ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
+                            try
+                            {
+                                IUserConfiguration user = _users.Where(x => x.Name == reportExecution.UserName).FirstOrDefault();
 
-                            reportProcessor.Process(user);
+                                ReportTypeConfiguration reportType = user.Reports.ReportsList.Where(x => x.ReportId == reportExecution.ReportId).FirstOrDefault();
+
+                                ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
+
+                                reportProcessor.Process(user, reportExecution);
+
+                                reportType.GetReportExecution(user, reportExecution);
+                            }
+                            catch (Exception e)
+                            {
+                                _logger.Error($"Error to find report processor for report:{reportExecution.ReportId} user:{reportExecution.UserName} -- {e}");
+                            }
                         }
                     }
                 }
@@ -44,33 +107,6 @@ namespace Relay.BulkSenderService.Processors
                 }
 
                 Thread.Sleep(_configuration.ReportsInterval);
-            }
-        }
-
-        private void GenerateForcedReport(IUserConfiguration user)
-        {
-            var directoryInfo = new DirectoryInfo(new FilePathHelper(_configuration, user.Name).GetForcedReportsFolder());
-
-            FileInfo[] files = directoryInfo.GetFiles("*.report");
-
-            if (files.Count() > 0)
-            {
-                _logger.Debug($"Force report generation for use {user.Name}");
-
-                foreach (ReportTypeConfiguration reportType in user.Reports.ReportsList)
-                {
-                    ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
-
-                    if (reportProcessor.GenerateForcedReport(files.Select(x => x.FullName).ToList(), user))
-                    {
-                        break;
-                    }
-                }
-
-                foreach (FileInfo fileInfo in files)
-                {
-                    File.Delete(fileInfo.FullName);
-                }
             }
         }
     }

@@ -9,17 +9,17 @@ BEGIN
 		,t.FromEmail
 		,t.FromName
 		,tc.Subject
-		,Deliveries.SentCount AS TotalSentCount
-		,Deliveries.RetryCount AS TotalRetriesCount
-		,Opens.TotalCount AS TotalOpensCount
-		,Opens.UniqueCount AS UniqueOpensCount
+		,isnull(Deliveries.SentCount, 0) AS TotalSentCount
+		,isnull(Deliveries.RetryCount, 0) AS TotalRetriesCount
+		,isnull(Opens.TotalCount, 0) AS TotalOpensCount
+		,isnull(Opens.UniqueCount, 0) AS UniqueOpensCount
 		,Opens.LastOpen
-		,Clicks.TotalCount AS TotalClicksCount
-		,Clicks.UniqueCount AS UniqueClicksCount
+		,isnull(Clicks.TotalCount, 0) AS TotalClicksCount
+		,isnull(Clicks.UniqueCount, 0) AS UniqueClicksCount
 		,Clicks.LastClick
-		,Unsubscriptions.TotalCount AS TotalUnsubscriptionsCount
-		,Bounces.HardCount AS HardBouncesCount
-		,Bounces.SoftCount AS SoftBouncesCount
+		,isnull(Unsubscriptions.TotalCount, 0) AS TotalUnsubscriptionsCount
+		,isnull(Bounces.HardCount, 0) AS HardBouncesCount
+		,isnull(Bounces.SoftCount, 0) AS SoftBouncesCount
 	FROM Template t
 	JOIN TemplateContent tc ON t.TemplateContentId = tc.Id
 	OUTER APPLY (
