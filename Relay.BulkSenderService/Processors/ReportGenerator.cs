@@ -12,16 +12,14 @@ namespace Relay.BulkSenderService.Processors
     public class ReportGenerator : BaseWorker
     {
         private List<ReportExecution> _reports;
-        private object _lockObj;
 
         public ReportGenerator(ILog logger, IConfiguration configuration, IWatcher watcher) : base(logger, configuration, watcher)
         {
             _reports = new List<ReportExecution>();
-            _lockObj = new object();
             ((FileCommandsWatcher)_watcher).GenerateReportEvent += ReportGenerator_GenerateReportEvent;
             LoadUserReports();
         }
-        
+
         // TODO: check if needed use lock.
         private void ReportGenerator_GenerateReportEvent(object sender, ReportCommandsEventArgs e)
         {
@@ -38,21 +36,35 @@ namespace Relay.BulkSenderService.Processors
                     LastRun = e.Start
                 };
 
-                var directoryInfo = new DirectoryInfo(new FilePathHelper(_configuration, user.Name).GetForcedReportsFolder());
-
-                FileInfo[] files = directoryInfo.GetFiles("*.report");
-
-                ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
-
-                bool result = reportProcessor.GenerateForcedReport(files.Select(x => x.FullName).ToList(), user, reportExecution);
-
-                if (result)
+                Thread threadReport = new Thread(new ThreadStart(() =>
                 {
-                    foreach (FileInfo fileInfo in files)
+                    try
                     {
-                        File.Delete(fileInfo.FullName);
+                        _logger.Debug(string.Format("Start to generate forced report:{0} for user:{1}", reportType.ReportId, user.Name));
+
+                        var directoryInfo = new DirectoryInfo(new FilePathHelper(_configuration, user.Name).GetForcedReportsFolder());
+
+                        FileInfo[] files = directoryInfo.GetFiles("*.report");
+
+                        ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
+
+                        bool result = reportProcessor.GenerateForcedReport(files.Select(x => x.FullName).ToList(), user, reportExecution);
+
+                        if (result)
+                        {
+                            foreach (FileInfo fileInfo in files)
+                            {
+                                File.Delete(fileInfo.FullName);
+                            }
+                        }
                     }
-                }
+                    catch (Exception ex)
+                    {
+                        _logger.Error(string.Format("Error to generate force report:{0}", ex));
+                    }
+                }));
+
+                threadReport.Start();
             }
         }
 
@@ -77,7 +89,7 @@ namespace Relay.BulkSenderService.Processors
                 try
                 {
                     CheckConfigChanges();
-                    
+
                     foreach (ReportExecution reportExecution in _reports)
                     {
                         if (DateTime.UtcNow >= reportExecution.NextRun)

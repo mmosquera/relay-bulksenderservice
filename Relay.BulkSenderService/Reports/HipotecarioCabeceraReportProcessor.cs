@@ -2,6 +2,7 @@
 using Relay.BulkSenderService.Configuration;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Relay.BulkSenderService.Reports
 {
@@ -64,6 +65,19 @@ namespace Relay.BulkSenderService.Reports
             report.AppendItems(items);
 
             string reportFileName = report.Generate();
+
+            if (File.Exists(reportFileName))
+            {
+                var ftpHelper = user.Ftp.GetFtpHelper(_logger);
+
+                UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
+
+                foreach (string file in files)
+                {
+                    string renameFile = file.Replace(".sent", ".report");
+                    File.Move(file, renameFile);
+                }
+            }
         }
 
         protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat, DateTime start, DateTime end)
