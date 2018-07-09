@@ -3,7 +3,6 @@ using Relay.BulkSenderService.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Threading;
 
 namespace Relay.BulkSenderService.Processors
@@ -113,13 +112,15 @@ namespace Relay.BulkSenderService.Processors
                 return;
             }
 
+            int totalFiles = _configuration.MaxNumberOfThreads * 2;
+
             Thread threadDownload = new Thread(new ThreadStart(() =>
             {
                 string downloadFolder = new FilePathHelper(_configuration, user.Name).GetDownloadsFolder();
 
                 foreach (string file in files)
                 {
-                    if (Directory.GetFiles(downloadFolder).Length >= 4)
+                    if (Directory.GetFiles(downloadFolder).Length >= totalFiles)
                     {
                         break;
                     }

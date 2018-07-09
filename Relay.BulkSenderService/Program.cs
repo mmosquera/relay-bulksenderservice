@@ -9,7 +9,7 @@ namespace Relay.BulkSenderService
     static class Program
     {
         private static UnityContainer _container;
-        //private static ITimeCollector _timeCollector = new TimeCollector();
+
         /// <summary>
         /// The main entry point for the application.
         /// </summary>
@@ -47,9 +47,7 @@ namespace Relay.BulkSenderService
             _container.RegisterType<BaseWorker, FtpMonitor>();
             _container.RegisterType<BaseWorker, ReportGenerator>();
             _container.RegisterType<BaseWorker, CleanProcessor>();
-            //_container.RegisterType<IDateTimeProvider, DateTimeProvider>();
             _container.RegisterType<IWatcher, FileCommandsWatcher>();
-            //_container.RegisterInstance(_timeCollector);
 
             var logManager = _container.Resolve<ILogManager>();
             _container.RegisterInstance<ILog>(logManager.GetLogger("BulkSenderService"));
