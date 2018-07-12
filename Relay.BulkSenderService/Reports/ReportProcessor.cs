@@ -305,7 +305,14 @@ namespace Relay.BulkSenderService.Reports
                         reportItem.AddValue(dbStatusDto.OpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
                         break;
                     case "ClickDate":
-                        reportItem.AddValue(dbStatusDto.ClickDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        if (dbStatusDto.ClickDate.HasValue)
+                        {
+                            reportItem.AddValue(dbStatusDto.ClickDate.Value.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        }
+                        else
+                        {
+                            reportItem.AddValue(string.Empty, reportField.Position);
+                        }
                         break;
                     case "BounceDate":
                         reportItem.AddValue(dbStatusDto.BounceDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
@@ -315,6 +322,12 @@ namespace Relay.BulkSenderService.Reports
                         break;
                     case "Unsubscribed":
                         reportItem.AddValue(dbStatusDto.Unsubscribed.ToString(), reportField.Position);
+                        break;
+                    case "TemplateId":
+                        reportItem.AddValue(dbStatusDto.TemplateId.ToString(), reportField.Position);
+                        break;
+                    case "TemplateName":
+                        reportItem.AddValue(dbStatusDto.TemplateName, reportField.Position);
                         break;
                 }
             }

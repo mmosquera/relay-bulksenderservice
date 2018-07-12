@@ -85,11 +85,13 @@ namespace Relay.BulkSenderService.Classes
                             FromName = sqlDataReader["FromName"] != DBNull.Value ? Convert.ToString(sqlDataReader["FromName"]) : string.Empty,
                             Subject = sqlDataReader["Subject"] != DBNull.Value ? Convert.ToString(sqlDataReader["Subject"]) : string.Empty,
                             MessageGuid = Convert.ToString(sqlDataReader["Guid"]),
+                            TemplateId = sqlDataReader["TemplateId"] != DBNull.Value ? Convert.ToInt32(sqlDataReader["TemplateId"]) : 0,
+                            TemplateName = sqlDataReader["TemplateName"] != DBNull.Value ? Convert.ToString(sqlDataReader["TemplateName"]) : string.Empty,
                             Address = Convert.ToString(sqlDataReader["Address"]),
                             IsHard = Convert.ToBoolean(sqlDataReader["IsHard"]),
                             MailStatus = Convert.ToInt32(sqlDataReader["MailStatus"]),
                             OpenDate = Convert.ToDateTime(sqlDataReader["OpenDate"]),
-                            ClickDate = Convert.ToDateTime(sqlDataReader["ClickDate"]),
+                            ClickDate = sqlDataReader["ClickDate"] != DBNull.Value ? Convert.ToDateTime(sqlDataReader["ClickDate"]) : (DateTime?)null,
                             BounceDate = Convert.ToDateTime(sqlDataReader["BounceDate"]),
                             Unsubscribed = Convert.ToBoolean(sqlDataReader["Unsubscribed"])
                         };
@@ -153,8 +155,10 @@ namespace Relay.BulkSenderService.Classes
                             FromName = sqlDataReader["FromName"] != DBNull.Value ? Convert.ToString(sqlDataReader["FromName"]) : string.Empty,
                             Subject = sqlDataReader["Subject"] != DBNull.Value ? Convert.ToString(sqlDataReader["Subject"]) : string.Empty,
                             MessageGuid = Convert.ToString(sqlDataReader["Guid"]),
+                            TemplateId = sqlDataReader["TemplateId"] != DBNull.Value ? Convert.ToInt32(sqlDataReader["TemplateId"]) : 0,
+                            TemplateName = sqlDataReader["TemplateName"] != DBNull.Value ? Convert.ToString(sqlDataReader["TemplateName"]) : string.Empty,
                             Address = Convert.ToString(sqlDataReader["Address"]),
-                            ClickDate = Convert.ToDateTime(sqlDataReader["ClickDate"]),
+                            ClickDate = sqlDataReader["ClickDate"] != DBNull.Value ? Convert.ToDateTime(sqlDataReader["ClickDate"]) : (DateTime?)null,
                             LinkUrl = Convert.ToString(sqlDataReader["Url"])
                         };
                         items.Add(item);
@@ -241,11 +245,13 @@ namespace Relay.BulkSenderService.Classes
         public bool IsHard { get; set; }
         public int MailStatus { get; set; }
         public DateTime OpenDate { get; set; }
-        public DateTime ClickDate { get; set; }
+        public DateTime? ClickDate { get; set; }
         public DateTime BounceDate { get; set; }
         public string LinkUrl { get; set; }
         public DateTime SentAt { get; set; }
         public bool Unsubscribed { get; set; }
+        public int TemplateId { get; set; }
+        public string TemplateName { get; set; }
     }
 
     public class DBSummarizedDto

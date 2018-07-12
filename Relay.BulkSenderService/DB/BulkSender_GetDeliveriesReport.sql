@@ -15,6 +15,8 @@ BEGIN
 		,m.FromName
 		,m.Subject
 		,m.Guid
+		,t.Id AS TemplateId
+		,t.Name AS TemplateName
 		,ea.Address
 		,isnull(be.IsHard, 0) AS IsHard
 		,isnull(be.MailStatus, 0) AS MailStatus
@@ -30,6 +32,7 @@ BEGIN
 	JOIN EmailAddress ea ON d.RecipientId = ea.Id
 	JOIN Message m ON d.MessageId = m.Id
 	JOIN @Guids g ON m.[Guid] = g.[Guid]
+	LEFT JOIN Template t ON m.TemplateId = t.Id
 	LEFT JOIN Unsubscription u ON u.UserId = d.UserId
 		AND u.DomainId = d.DomainId
 		AND u.EmailAddressId = d.RecipientId
