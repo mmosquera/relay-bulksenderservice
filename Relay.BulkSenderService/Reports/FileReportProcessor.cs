@@ -60,15 +60,15 @@ namespace Relay.BulkSenderService.Reports
                     UserId = user.Credentials.AccountId
                 };
 
-                report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, null));
-
                 ITemplateConfiguration template = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
+
+                List<string> fileHeaders = GetFileHeaders(file, template.FieldSeparator);
+
+                report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, fileHeaders));
 
                 List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, "dd/MM/yyyy HH:mm");
 
                 report.AppendItems(items);
-
-                report.Generate();
 
                 string reportFileName = report.Generate();
 
@@ -78,6 +78,15 @@ namespace Relay.BulkSenderService.Reports
                     File.Move(file, renameFile);
                     UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
                 }
+            }
+        }
+
+        private List<string> GetFileHeaders(string file, char separator)
+        {
+            using (var streamReader = new StreamReader(file))
+            {
+                List<string> fileHeaders = streamReader.ReadLine().Split(separator).ToList();
+                return fileHeaders;
             }
         }
 
@@ -105,9 +114,11 @@ namespace Relay.BulkSenderService.Reports
                     UserId = user.Credentials.AccountId
                 };
 
-                report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, null));
-
                 ITemplateConfiguration template = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
+
+                List<string> fileHeaders = GetFileHeaders(file, template.FieldSeparator);
+
+                report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, fileHeaders));
 
                 List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, "dd/MM/yyyy HH:mm");
 
@@ -171,6 +182,10 @@ namespace Relay.BulkSenderService.Reports
                         return items;
                     }
 
+                    List<int> dbIds = _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)).Select(x => x.Position).ToList();
+
+                    int count = headers.Count + dbIds.Count();
+
                     while (!streamReader.EndOfStream)
                     {
                         string[] lineArray = streamReader.ReadLine().Split(separator);
@@ -180,22 +195,21 @@ namespace Relay.BulkSenderService.Reports
                             continue;
                         }
 
-                        var item = new ReportItem(_reportTypeConfiguration.ReportFields.Count);
+                        var item = new ReportItem(count);
 
-                        foreach (string key in headers.Keys)
+                        int index = 0;
+
+                        foreach (int value in headers.Values)
                         {
-                            //index in original file.
-                            int value = headers[key];
-
-                            //index in report
-                            int index = value;
-                            ReportFieldConfiguration field = _reportTypeConfiguration.ReportFields.FirstOrDefault(x => x.NameInFile == key);
-                            if (field != null)
+                            //value es el indice en el archivo original.
+                            while (dbIds.Contains(value + index))
                             {
-                                index = field.Position;
+                                index++;
                             }
 
-                            item.AddValue(lineArray[value].Trim(), index);
+                            //index es el desfasaje por la base
+                            //value + index es el indice para el reporte
+                            item.AddValue(lineArray[value].Trim(), value + index);
                         }
 
                         item.ResultId = lineArray[resultIndex];
