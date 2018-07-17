@@ -313,7 +313,7 @@ namespace Relay.BulkSenderService.Processors
 
                 string errorsPath = filePathHelper.GetResultsFilesFolder();
 
-                errorsFilePath = $@"{errorsPath}\{user.Errors.Name.GetReportName(file)}";
+                errorsFilePath = $@"{errorsPath}\{user.Errors.Name.GetReportName(file, errorsPath)}";
             }
 
             return errorsFilePath;
