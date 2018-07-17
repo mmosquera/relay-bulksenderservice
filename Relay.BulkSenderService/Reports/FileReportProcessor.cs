@@ -53,7 +53,7 @@ namespace Relay.BulkSenderService.Reports
 
                 var report = new ExcelReport()
                 {
-                    ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file)),
+                    ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file), filePathHelper.GetReportsFilesFolder()),
                     CustomItems = GetCustomItems(file, user.UserGMT),
                     ReportPath = filePathHelper.GetReportsFilesFolder(),
                     ReportGMT = user.UserGMT,
@@ -66,7 +66,7 @@ namespace Relay.BulkSenderService.Reports
 
                 report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, fileHeaders));
 
-                List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, "dd/MM/yyyy HH:mm");
+                List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat);
 
                 report.AppendItems(items);
 
@@ -107,7 +107,7 @@ namespace Relay.BulkSenderService.Reports
 
                 var report = new ExcelReport()
                 {
-                    ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file)),
+                    ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file), filePathHelper.GetForcedReportsFolder()),
                     CustomItems = GetCustomItems(file, user.UserGMT),
                     ReportPath = filePathHelper.GetForcedReportsFolder(),
                     ReportGMT = user.UserGMT,
@@ -120,7 +120,7 @@ namespace Relay.BulkSenderService.Reports
 
                 report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, fileHeaders));
 
-                List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, "dd/MM/yyyy HH:mm");
+                List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat);
 
                 report.AppendItems(items);
 
