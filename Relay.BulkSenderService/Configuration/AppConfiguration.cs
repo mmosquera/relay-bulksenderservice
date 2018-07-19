@@ -83,5 +83,10 @@ namespace Relay.BulkSenderService.Configuration
         {
             get { return int.Parse(ConfigurationManager.AppSettings["LocalFilesInterval"]); }
         }
+
+        public int CleanAttachmentsDays
+        {
+            get { return int.Parse(ConfigurationManager.AppSettings["CleanAttachmentsDays"]); }
+        }
     }
 }

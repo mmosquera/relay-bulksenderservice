@@ -17,6 +17,7 @@
         string AdminPass { get; }
         int CleanInterval { get; }
         int CleanDays { get; }
+        int CleanAttachmentsDays { get; }
         int LocalFilesInterval { get; }
     }
 }

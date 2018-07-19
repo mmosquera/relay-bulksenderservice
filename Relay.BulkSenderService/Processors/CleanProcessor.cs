@@ -26,6 +26,8 @@ namespace Relay.BulkSenderService.Processors
 
                     foreach (IUserConfiguration user in _users)
                     {
+                        DeleteAttachmentsFiles(user);
+
                         DeleteLocalFiles(user);
                     }
                 }
@@ -35,6 +37,30 @@ namespace Relay.BulkSenderService.Processors
                 }
 
                 Thread.Sleep(_configuration.CleanInterval);
+            }
+        }
+
+        private void DeleteAttachmentsFiles(IUserConfiguration user)
+        {
+            string attachmentsFolder = new FilePathHelper(_configuration, user.Name).GetAttachmentsFilesFolder();
+
+            DateTime filterDate = DateTime.UtcNow.AddDays(-_configuration.CleanAttachmentsDays);
+
+            DirectoryInfo directory = new DirectoryInfo(attachmentsFolder);
+            if (directory.Exists)
+            {
+                FileInfo[] files = directory.GetFiles().Where(f => f.CreationTimeUtc < filterDate).ToArray();
+                foreach (FileInfo file in files)
+                {
+                    try
+                    {
+                        file.Delete();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Error($"Error trying to delete attach file {file.FullName} -- {e}");
+                    }
+                }
             }
         }
 
@@ -55,8 +81,6 @@ namespace Relay.BulkSenderService.Processors
                     {
                         try
                         {
-                            //_logger.Debug($"Delete local file {file.FullName}");
-
                             file.Delete();
                         }
                         catch (Exception e)
