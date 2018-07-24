@@ -102,6 +102,66 @@ namespace Relay.BulkSenderService.Classes
             return items;
         }
 
+        public List<DBStatusDto> GetResultsByDeliveryDate(int userId, DateTime startDate, DateTime endDate)
+        {
+            var items = new List<DBStatusDto>();
+
+            var command = new SqlCommand("BulkSender_GetDeliveriesReportByDate", Connection);
+            command.CommandType = CommandType.StoredProcedure;
+
+            command.Parameters.Add(new SqlParameter
+            {
+                ParameterName = "@UserId",
+                SqlDbType = SqlDbType.Int,
+                Value = userId
+            });
+
+            command.Parameters.Add(new SqlParameter
+            {
+                ParameterName = "@StartDate",
+                SqlDbType = SqlDbType.DateTime,
+                Value = startDate
+            });
+
+            command.Parameters.Add(new SqlParameter
+            {
+                ParameterName = "@EndDate",
+                SqlDbType = SqlDbType.DateTime,
+                Value = endDate
+            });
+
+            using (SqlDataReader sqlDataReader = command.ExecuteReader())
+            {
+                if (sqlDataReader.HasRows)
+                {
+                    while (sqlDataReader.Read())
+                    {
+                        var item = new DBStatusDto()
+                        {
+                            DeliveryId = Convert.ToInt32(sqlDataReader["Id"]),
+                            CreatedAt = Convert.ToDateTime(sqlDataReader["CreatedAt"]),
+                            Status = Convert.ToInt32(sqlDataReader["Status"]),
+                            ClickEventsCount = Convert.ToInt32(sqlDataReader["ClickEventsCount"]),
+                            OpenEventsCount = Convert.ToInt32(sqlDataReader["OpenEventsCount"]),
+                            SentAt = Convert.ToDateTime(sqlDataReader["SentAt"]),
+                            FromEmail = sqlDataReader["FromEmail"] != DBNull.Value ? Convert.ToString(sqlDataReader["FromEmail"]) : string.Empty,
+                            FromName = sqlDataReader["FromName"] != DBNull.Value ? Convert.ToString(sqlDataReader["FromName"]) : string.Empty,
+                            Subject = sqlDataReader["Subject"] != DBNull.Value ? Convert.ToString(sqlDataReader["Subject"]) : string.Empty,
+                            MessageGuid = Convert.ToString(sqlDataReader["Guid"]),                            
+                            Address = Convert.ToString(sqlDataReader["Address"]),
+                            IsHard = Convert.ToBoolean(sqlDataReader["IsHard"]),
+                            MailStatus = Convert.ToInt32(sqlDataReader["MailStatus"]),
+                            OpenDate = Convert.ToDateTime(sqlDataReader["OpenDate"]),
+                            ClickDate = sqlDataReader["ClickDate"] != DBNull.Value ? Convert.ToDateTime(sqlDataReader["ClickDate"]) : (DateTime?)null,
+                            BounceDate = Convert.ToDateTime(sqlDataReader["BounceDate"])                            
+                        };
+                        items.Add(item);
+                    }
+                }
+            }
+            return items;
+        }
+
         public List<DBStatusDto> GetClicksByDeliveryList(int userId, List<string> guidList)
         {
             var items = new List<DBStatusDto>();
