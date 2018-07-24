@@ -6,10 +6,15 @@ using System.IO;
 
 namespace Relay.BulkSenderService.Reports
 {
-    public class HipotecarioCabeceraReportProcessor : HipotecarioReportProcessor
+    public class RicohStatusReportProcessor : DailyReportProcessor
     {
-        public HipotecarioCabeceraReportProcessor(ILog logger, IConfiguration configuration, ReportTypeConfiguration reportTypeConfiguration) : base(logger, configuration, reportTypeConfiguration)
+        public RicohStatusReportProcessor(ILog logger, IConfiguration configuration, ReportTypeConfiguration reportTypeConfiguration) : base(logger, configuration, reportTypeConfiguration)
         {
+        }
+
+        protected override List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution)
+        {
+            return new List<string>();
         }
 
         public override bool GenerateForcedReport(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
@@ -40,16 +45,11 @@ namespace Relay.BulkSenderService.Reports
 
         protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
         {
-            if (files.Count == 0)
-            {
-                return;
-            }
-
             _logger.Debug($"Process cabecera report for user {user.Name}.");
 
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            var report = new ZipCsvReport()
+            var report = new SplitCsvReport()
             {
                 Separator = _reportTypeConfiguration.FieldSeparator,
                 ReportPath = filePathHelper.GetReportsFilesFolder(),
@@ -64,18 +64,15 @@ namespace Relay.BulkSenderService.Reports
 
             report.AppendItems(items);
 
-            string reportFileName = report.Generate();
+            List<string> reports = report.SplitGenerate();
 
-            if (File.Exists(reportFileName))
+            foreach (string reportFileName in reports)
             {
-                var ftpHelper = user.Ftp.GetFtpHelper(_logger);
-
-                UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
-
-                foreach (string file in files)
+                if (File.Exists(reportFileName))
                 {
-                    string renameFile = file.Replace(".sent", ".report");
-                    File.Move(file, renameFile);
+                    //var ftpHelper = user.Ftp.GetFtpHelper(_logger);
+
+                    //UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
                 }
             }
         }
@@ -84,9 +81,11 @@ namespace Relay.BulkSenderService.Reports
         {
             var items = new List<ReportItem>();
 
+            DateTime startTime = end.AddHours(-_reportTypeConfiguration.OffsetHour);
+
             try
             {
-                GetDataFromDB(items, dateFormat, userId, reportGMT, start, end);
+                GetDataFromDB(items, dateFormat, userId, reportGMT, startTime, end);
 
                 return items;
             }
@@ -103,13 +102,13 @@ namespace Relay.BulkSenderService.Reports
 
             try
             {
-                List<DBSummarizedDto> dbReportItemList = sqlHelper.GetSummarizedByDate(userId, start, end);
+                List<DBStatusDto> dbReportItemList = sqlHelper.GetResultsByDeliveryDate(userId, start, end);
 
-                foreach (DBSummarizedDto dbReportItem in dbReportItemList)
+                foreach (DBStatusDto dbReportItem in dbReportItemList)
                 {
                     var item = new ReportItem(_reportTypeConfiguration.ReportFields.Count);
 
-                    MapDBSummarizedDtoToReportItem(dbReportItem, item, reportGMT, dateFormat);
+                    MapDBStatusDtoToReportItem(dbReportItem, item, reportGMT, dateFormat);
 
                     items.Add(item);
                 }

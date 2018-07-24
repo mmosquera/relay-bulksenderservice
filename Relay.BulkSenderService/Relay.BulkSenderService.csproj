@@ -223,6 +223,7 @@
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\FilePathHelper.cs" />
     <Compile Include="Configuration\CredentialsConfiguration.cs" />
+    <Compile Include="Configuration\RicohStatusReportTypeConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioCabeceraReportTypeConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioClicksReportTypeConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioDetailReportTypeConfiguration.cs" />
@@ -282,6 +283,8 @@
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reports\SplitCsvReport.cs" />
+    <Compile Include="Reports\RicohStatusReportProcessor.cs" />
     <Compile Include="Reports\ZipCsvReport.cs" />
     <Compile Include="Reports\CsvReport.cs" />
     <Compile Include="Reports\EdesurReport.cs" />
@@ -367,6 +370,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="DB\BulkSender_GetDeliveriesReportByDate.sql" />
     <Content Include="DB\BulkSender_GetDeliveriesReport.sql" />
     <Content Include="DB\BulkSender_GetClicksReport.sql" />
     <Content Include="DB\BulkSender_GetSumarizedByTemplateReport.sql" />

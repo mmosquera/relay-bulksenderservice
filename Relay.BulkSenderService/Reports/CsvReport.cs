@@ -1,5 +1,4 @@
-﻿using Relay.BulkSenderService.Classes;
-using System.IO;
+﻿using System.IO;
 using System.Text;
 
 namespace Relay.BulkSenderService.Reports

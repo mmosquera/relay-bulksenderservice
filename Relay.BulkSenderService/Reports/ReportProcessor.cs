@@ -329,6 +329,9 @@ namespace Relay.BulkSenderService.Reports
                     case "TemplateName":
                         reportItem.AddValue(dbStatusDto.TemplateName, reportField.Position);
                         break;
+                    case "MessageGuid":
+                        reportItem.AddValue(dbStatusDto.MessageGuid, reportField.Position);
+                        break;
                 }
             }
         }
