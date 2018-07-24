@@ -12,6 +12,7 @@ namespace Relay.BulkSenderService.Reports
         protected StringBuilder _stringBuilder;
         public char Separator { get; set; }
         private List<string> files;
+        private const int ITEMS_FOR_FILE = 100000;
 
         public SplitCsvReport()
         {
@@ -38,7 +39,7 @@ namespace Relay.BulkSenderService.Reports
                     count++;
                 }
 
-                if (count == 20)
+                if (count == ITEMS_FOR_FILE)
                 {
                     reportName = Save(numeric);
                     files.Add(reportName);

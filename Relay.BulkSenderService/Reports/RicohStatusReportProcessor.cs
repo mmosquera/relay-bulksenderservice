@@ -19,11 +19,11 @@ namespace Relay.BulkSenderService.Reports
 
         public override bool GenerateForcedReport(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
         {
-            _logger.Debug($"Process cabecera report for user {user.Name}.");
+            _logger.Debug($"Process forced status report for user {user.Name}.");
 
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            var report = new ZipCsvReport()
+            var report = new SplitCsvReport()
             {
                 Separator = _reportTypeConfiguration.FieldSeparator,
                 ReportPath = filePathHelper.GetForcedReportsFolder(),
@@ -38,14 +38,14 @@ namespace Relay.BulkSenderService.Reports
 
             report.AppendItems(items);
 
-            report.Generate();
+            report.SplitGenerate();
 
             return true;
         }
 
         protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
         {
-            _logger.Debug($"Process cabecera report for user {user.Name}.");
+            _logger.Debug($"Process Ricoh Status report for user {user.Name}.");
 
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
@@ -70,9 +70,9 @@ namespace Relay.BulkSenderService.Reports
             {
                 if (File.Exists(reportFileName))
                 {
-                    //var ftpHelper = user.Ftp.GetFtpHelper(_logger);
+                    var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
-                    //UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
+                    UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
                 }
             }
         }
