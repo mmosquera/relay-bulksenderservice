@@ -58,10 +58,7 @@ namespace Relay.BulkSenderService.Processors
 
         protected override void FillRecipientCustoms(ApiRecipient recipient, string[] data, List<CustomHeader> headerList, List<FieldConfiguration> fields)
         {
-            List<FieldConfiguration> listFields = fields.Where(x => x.IsForList).ToList();
-            List<CustomHeader> customFields = headerList.Where(x => !fields.Any(y => y.IsBasic && y.Position == x.Position) && !listFields.Any(z => z.Position == x.Position)).ToList();
-
-            foreach (CustomHeader customHeader in customFields)
+            foreach (CustomHeader customHeader in headerList)
             {
                 if (!recipient.Fields.ContainsKey(customHeader.HeaderName) && !string.IsNullOrEmpty(data[customHeader.Position]))
                 {
@@ -82,6 +79,8 @@ namespace Relay.BulkSenderService.Processors
             }
 
             var item = new Dictionary<string, object>();
+
+            List<FieldConfiguration> listFields = fields.Where(x => x.IsForList).ToList();
 
             foreach (FieldConfiguration fieldConfiguration in listFields)
             {
