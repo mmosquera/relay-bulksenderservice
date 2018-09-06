@@ -84,7 +84,7 @@ namespace Relay.BulkSenderService.Processors
 
             foreach (FieldConfiguration fieldConfiguration in listFields)
             {
-                if (!item.ContainsKey(fieldConfiguration.Name) && !string.IsNullOrEmpty(data[fieldConfiguration.Position]))
+                if (!item.ContainsKey(fieldConfiguration.Name))
                 {
                     item.Add(fieldConfiguration.Name, data[fieldConfiguration.Position]);
                 }
