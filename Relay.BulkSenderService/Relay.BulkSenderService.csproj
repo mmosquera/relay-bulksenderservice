@@ -246,6 +246,7 @@
     <Compile Include="Configuration\ReportName.cs" />
     <Compile Include="Configuration\ResultConfiguration.cs" />
     <Compile Include="Configuration\ResultMessageConfiguration.cs" />
+    <Compile Include="Configuration\TemplateBanorteConfiguration.cs" />
     <Compile Include="Configuration\TemplateGireConfiguration.cs" />
     <Compile Include="Configuration\TemplateConfiguration.cs" />
     <Compile Include="Configuration\TemplateCustomHeaderConfigurationBancor.cs" />
@@ -254,6 +255,7 @@
     <Compile Include="Configuration\UserApiConfiguration.cs" />
     <Compile Include="Configuration\UserSMTPConfiguration.cs" />
     <Compile Include="Classes\FTPHelper.cs" />
+    <Compile Include="Processors\APIProcessorBanorte.cs" />
     <Compile Include="Processors\APIProcessorCustomHeaderBancor.cs" />
     <Compile Include="Processors\APIProcessorCustomHeader.cs" />
     <Compile Include="Processors\ApiProcessorGire.cs" />
