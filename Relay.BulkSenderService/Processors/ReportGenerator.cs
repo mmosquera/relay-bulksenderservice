@@ -1,4 +1,5 @@
-﻿using Relay.BulkSenderService.Classes;
+﻿using Newtonsoft.Json;
+using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
 using Relay.BulkSenderService.Reports;
 using System;
@@ -9,117 +10,119 @@ using System.Threading;
 
 namespace Relay.BulkSenderService.Processors
 {
-    public class ReportGenerator : BaseWorker
-    {
-        private List<ReportExecution> _reports;
+	public class ReportGenerator : BaseWorker
+	{
+		public ReportGenerator(ILog logger, IConfiguration configuration, IWatcher watcher)
+			: base(logger, configuration, watcher)
+		{
+		}
 
-        public ReportGenerator(ILog logger, IConfiguration configuration, IWatcher watcher) : base(logger, configuration, watcher)
-        {
-            _reports = new List<ReportExecution>();
-            ((FileCommandsWatcher)_watcher).GenerateReportEvent += ReportGenerator_GenerateReportEvent;
-            LoadUserReports();
-        }
+		private void CreateReportsFile()
+		{
+			string reportFileName = $@"{_configuration.ReportsFolder}\reports.{DateTime.UtcNow.ToString("yyyyMMdd")}.json";
 
-        // TODO: check if needed use lock.
-        private void ReportGenerator_GenerateReportEvent(object sender, ReportCommandsEventArgs e)
-        {
-            IUserConfiguration user = _users.FirstOrDefault(x => x.Name.Equals(e.User, StringComparison.InvariantCultureIgnoreCase));
-            ReportTypeConfiguration reportType = user?.Reports?.ReportsList.FirstOrDefault(x => x.ReportId.Equals(e.Report, StringComparison.InvariantCultureIgnoreCase));
+			if (File.Exists(reportFileName))
+			{
+				return;
+			}
 
-            if (reportType != null)
-            {
-                var reportExecution = new ReportExecution()
-                {
-                    UserName = user.Name,
-                    ReportId = reportType.ReportId,
-                    NextRun = e.End,
-                    LastRun = e.Start
-                };
+			string[] files = Directory.GetFiles($"{_configuration.ReportsFolder}", "*.json");
 
-                Thread threadReport = new Thread(new ThreadStart(() =>
-                {
-                    try
-                    {
-                        _logger.Debug(string.Format("Start to generate forced report:{0} for user:{1}", reportType.ReportId, user.Name));
+			List<ReportExecution> allReports = new List<ReportExecution>();
 
-                        var directoryInfo = new DirectoryInfo(new FilePathHelper(_configuration, user.Name).GetForcedReportsFolder());
+			foreach (string file in files)
+			{
+				string json = File.ReadAllText(file);
 
-                        FileInfo[] files = directoryInfo.GetFiles("*.report");
+				List<ReportExecution> executions = JsonConvert.DeserializeObject<List<ReportExecution>>(json);
 
-                        ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
+				allReports.AddRange(executions);
+			}
 
-                        bool result = reportProcessor.GenerateForcedReport(files.Select(x => x.FullName).ToList(), user, reportExecution);
+			List<IUserConfiguration> reportUsers = _users.Where(x => x.Reports != null).ToList();
+			List<ReportExecution> requests = new List<ReportExecution>();
 
-                        if (result)
-                        {
-                            foreach (FileInfo fileInfo in files)
-                            {
-                                File.Delete(fileInfo.FullName);
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.Error(string.Format("Error to generate force report:{0}", ex));
-                    }
-                }));
+			foreach (IUserConfiguration user in reportUsers)
+			{
+				foreach (ReportTypeConfiguration reportType in user.Reports.ReportsList)
+				{
+					var lastExecution = allReports
+						.Where(x => x.UserName == user.Name && x.ReportId == reportType.ReportId)
+						.OrderByDescending(x => x.CreatedAt)
+						.FirstOrDefault();
 
-                threadReport.Start();
-            }
-        }
+					List<ReportExecution> executionLists = reportType.GetReportExecution(user, lastExecution);
+					requests.AddRange(executionLists);
+				}
+			}
 
-        private void LoadUserReports()
-        {
-            List<IUserConfiguration> reportUsers = _users.Where(x => x.Reports != null).ToList();
+			if (requests.Count > 0)
+			{
+				string reports = JsonConvert.SerializeObject(requests);
+				using (var streamWriter = new StreamWriter(reportFileName, false))
+				{
+					streamWriter.Write(reports);
+				}
+			}
+		}
 
-            foreach (IUserConfiguration user in reportUsers)
-            {
-                foreach (ReportTypeConfiguration reportType in user.Reports.ReportsList)
-                {
-                    ReportExecution reportExecution = reportType.GetReportExecution(user, null);
-                    _reports.Add(reportExecution);
-                }
-            }
-        }
+		public void Process()
+		{
+			while (true)
+			{
+				try
+				{
+					CheckConfigChanges();
 
-        public void Process()
-        {
-            while (true)
-            {
-                try
-                {
-                    CheckConfigChanges();
+					CreateReportsFile();
 
-                    foreach (ReportExecution reportExecution in _reports)
-                    {
-                        if (DateTime.UtcNow >= reportExecution.NextRun)
-                        {
-                            try
-                            {
-                                IUserConfiguration user = _users.Where(x => x.Name == reportExecution.UserName).FirstOrDefault();
+					string[] files = Directory.GetFiles($"{_configuration.ReportsFolder}", "*.json");
 
-                                ReportTypeConfiguration reportType = user.Reports.ReportsList.Where(x => x.ReportId == reportExecution.ReportId).FirstOrDefault();
+					foreach (string file in files)
+					{
+						string json = File.ReadAllText(file);
 
-                                ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
+						List<ReportExecution> reports = JsonConvert.DeserializeObject<List<ReportExecution>>(json);
 
-                                reportProcessor.Process(user, reportExecution);
+						bool hasChanges = false;
 
-                                reportType.GetReportExecution(user, reportExecution);
-                            }
-                            catch (Exception e)
-                            {
-                                _logger.Error($"Error to find report processor for report:{reportExecution.ReportId} user:{reportExecution.UserName} -- {e}");
-                            }
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"General error on Generate report -- {e}");
-                }
+						foreach (ReportExecution reportExecution in reports.Where(x => !x.Processed && x.RunDate < DateTime.UtcNow))
+						{
+							try
+							{
+								IUserConfiguration user = _users.Where(x => x.Name == reportExecution.UserName).FirstOrDefault();
 
-                Thread.Sleep(_configuration.ReportsInterval);
-            }
-        }
-    }
+								ReportTypeConfiguration reportType = user.Reports.ReportsList.Where(x => x.ReportId == reportExecution.ReportId).FirstOrDefault();
+
+								ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
+
+								reportProcessor.Process(user, reportExecution);
+
+								hasChanges = true;
+							}
+							catch (Exception e)
+							{
+								_logger.Error($"Error to generate report:{reportExecution.ReportId} for user:{reportExecution.UserName} -- {e}");
+							}
+						}
+
+						if (hasChanges)
+						{
+							json = JsonConvert.SerializeObject(reports);
+							using (var streamWriter = new StreamWriter(file, false))
+							{
+								streamWriter.Write(json);
+							}
+						}
+					}
+				}
+				catch (Exception e)
+				{
+					_logger.Error($"General error on Generate report -- {e}");
+				}
+
+				Thread.Sleep(_configuration.ReportsInterval);
+			}
+		}
+	}
 }

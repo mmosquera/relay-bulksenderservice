@@ -4,11 +4,11 @@ using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
 {
-	public class FileReportTypeConfiguration : ReportTypeConfiguration
+	public class CsvFileReportTypeConfiguration : FileReportTypeConfiguration
 	{
 		public override ReportTypeConfiguration Clone()
 		{
-			var fileReportConfiguration = new FileReportTypeConfiguration()
+			var fileReportConfiguration = new CsvFileReportTypeConfiguration()
 			{
 				ReportId = this.ReportId,
 				OffsetHour = this.OffsetHour,
@@ -55,13 +55,13 @@ namespace Relay.BulkSenderService.Configuration
 		}
 
 		public override List<ReportExecution> GetReportExecution(IUserConfiguration user, ReportExecution lastExecution)
-		{			
+		{
 			return new List<ReportExecution>();
 		}
 
 		public override ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger)
 		{
-			return new FileReportProcessor(configuration, logger, this);
+			return new CsvFileReportProcessor(configuration, logger, this);
 		}
 	}
 }

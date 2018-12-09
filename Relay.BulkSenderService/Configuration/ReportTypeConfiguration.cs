@@ -1,11 +1,10 @@
 ﻿using Relay.BulkSenderService.Classes;
-using Relay.BulkSenderService.Processors;
 using Relay.BulkSenderService.Reports;
 using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
 {
-    public abstract class ReportTypeConfiguration
+	public abstract class ReportTypeConfiguration
     {
         public string ReportId { get; set; }
         public int OffsetHour { get; set; }
@@ -21,6 +20,6 @@ namespace Relay.BulkSenderService.Configuration
 
         public abstract ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger);
 
-        public abstract ReportExecution GetReportExecution(IUserConfiguration user, ReportExecution reportExecution);
+        public abstract List<ReportExecution> GetReportExecution(IUserConfiguration user, ReportExecution lastExecution);
     }
 }

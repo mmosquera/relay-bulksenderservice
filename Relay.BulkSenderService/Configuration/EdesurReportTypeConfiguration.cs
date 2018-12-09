@@ -51,27 +51,28 @@ namespace Relay.BulkSenderService.Configuration
             return edesurReportTypeConfiguration;
         }
 
-        public override ReportExecution GetReportExecution(IUserConfiguration user, ReportExecution reportExecution)
+        public override List<ReportExecution> GetReportExecution(IUserConfiguration user, ReportExecution lastExecution)
         {
-            if (reportExecution != null)
+            if (lastExecution != null)
             {
-                reportExecution.LastRun = reportExecution.NextRun;
-                reportExecution.NextRun = reportExecution.NextRun.AddHours(3);
+                lastExecution.LastRun = lastExecution.NextRun;
+                lastExecution.NextRun = lastExecution.NextRun.AddHours(3);
             }
             else
             {
                 DateTime nextRun = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, 0, 0).AddHours(3);
 
-                reportExecution = new ReportExecution()
+                lastExecution = new ReportExecution()
                 {
                     UserName = user.Name,
                     ReportId = this.ReportId,
                     NextRun = nextRun,
-                    LastRun = nextRun.AddHours(-3)
+                    LastRun = nextRun.AddHours(-3),
+					CreatedAt = DateTime.UtcNow
                 };
             }
 
-            return reportExecution;
+            return new List<ReportExecution>() { lastExecution };
         }
 
         public override ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger)

@@ -7,226 +7,191 @@ using System.Linq;
 
 namespace Relay.BulkSenderService.Reports
 {
-    public class FileReportProcessor : ReportProcessor
-    {
-        public FileReportProcessor(IConfiguration configuration, ILog logger, ReportTypeConfiguration reportTypeConfiguration)
-            : base(logger, configuration, reportTypeConfiguration)
-        {
+	public class FileReportProcessor : ReportProcessor
+	{
+		public FileReportProcessor(IConfiguration configuration, ILog logger, ReportTypeConfiguration reportTypeConfiguration)
+			: base(logger, configuration, reportTypeConfiguration)
+		{
 
-        }
+		}
 
-        protected override List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution)
-        {
-            var fileList = new List<string>();
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
-            var directoryInfo = new DirectoryInfo(filePathHelper.GetResultsFilesFolder());
+		protected override List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution)
+		{
+			var fileList = new List<string>();
+			var filePathHelper = new FilePathHelper(_configuration, user.Name);
+			var directoryInfo = new DirectoryInfo(filePathHelper.GetResultsFilesFolder());
 
-            FileInfo[] files = directoryInfo.GetFiles("*.sent");
+			FileInfo file = new FileInfo($@"{filePathHelper.GetResultsFilesFolder()}\{reportExecution.FileName}");
 
-            foreach (var file in files)
-            {
-                ITemplateConfiguration templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(file.FullName);
+			ITemplateConfiguration templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(file.FullName);
 
-                if (_reportTypeConfiguration.Templates.Contains(templateConfiguration.TemplateName)
-                    && reportExecution.NextRun.Subtract(file.LastWriteTimeUtc).TotalHours >= _reportTypeConfiguration.OffsetHour)
-                {
-                    fileList.Add(file.FullName);
-                }
-            }
+			if (_reportTypeConfiguration.Templates.Contains(templateConfiguration.TemplateName))
+			{
+				fileList.Add(file.FullName);
+			}
 
-            return fileList;
-        }
+			return fileList;
+		}
 
-        protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
-        {
-            if (files.Count == 0)
-            {
-                return;
-            }
+		protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
+		{
+			if (files.Count == 0)
+			{
+				return;
+			}
 
-            var ftpHelper = user.Ftp.GetFtpHelper(_logger);
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+			var ftpHelper = user.Ftp.GetFtpHelper(_logger);
+			var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            foreach (string file in files)
-            {
-                _logger.Debug($"Create report file with {file} for user {user.Name}.");
+			foreach (string file in files)
+			{
+				_logger.Debug($"Create report file with {file} for user {user.Name}.");
 
-                var report = new ExcelReport()
-                {
-                    ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file), filePathHelper.GetReportsFilesFolder()),
-                    CustomItems = GetCustomItems(file, user.UserGMT),
-                    ReportPath = filePathHelper.GetReportsFilesFolder(),
-                    ReportGMT = user.UserGMT,
-                    UserId = user.Credentials.AccountId
-                };
+				ReportBase report = GetReport(file, filePathHelper, user);
 
-                ITemplateConfiguration template = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
+				ITemplateConfiguration template = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
 
-                List<string> fileHeaders = GetFileHeaders(file, template.FieldSeparator);
+				List<string> fileHeaders = GetFileHeaders(file, template.FieldSeparator);
 
-                report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, fileHeaders));
+				report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, fileHeaders));
 
-                List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat);
+				List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat);
 
-                report.AppendItems(items);
+				report.AppendItems(items);
 
-                string reportFileName = report.Generate();
+				string reportFileName = report.Generate();
 
-                if (!string.IsNullOrEmpty(reportFileName) && File.Exists(reportFileName))
-                {
-                    string renameFile = file.Replace(".sent", ".report");
-                    File.Move(file, renameFile);
-                    UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
-                }
-            }
-        }
+				if (!string.IsNullOrEmpty(reportFileName) && File.Exists(reportFileName))
+				{
+					UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
 
-        private List<string> GetFileHeaders(string file, char separator)
-        {
-            using (var streamReader = new StreamReader(file))
-            {
-                List<string> fileHeaders = streamReader.ReadLine().Split(separator).ToList();
-                return fileHeaders;
-            }
-        }
+					reportExecution.ReportFile = Path.GetFileName(reportFileName);
+					reportExecution.Processed = true;
+					reportExecution.ProcessedDate = DateTime.UtcNow;
+				}
+			}
+		}
 
-        public override bool GenerateForcedReport(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
-        {
-            List<string> filteredFiles = FilterFilesByTemplate(files, user);
+		private List<string> GetFileHeaders(string file, char separator)
+		{
+			using (var streamReader = new StreamReader(file))
+			{
+				List<string> fileHeaders = streamReader.ReadLine().Split(separator).ToList();
+				return fileHeaders;
+			}
+		}
 
-            if (filteredFiles.Count == 0)
-            {
-                return false;
-            }
+		private Dictionary<int, List<string>> GetCustomItems(string sourceFile, int reportGMT)
+		{
+			var customItems = new Dictionary<int, List<string>>();
 
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+			if (_reportTypeConfiguration.ReportItems != null)
+			{
+				foreach (ReportItemConfiguration riConfiguration in _reportTypeConfiguration.ReportItems)
+				{
+					customItems.Add(riConfiguration.Row, riConfiguration.Values);
+				}
+			}
 
-            foreach (string file in filteredFiles)
-            {
-                _logger.Debug($"Create report file with {file} for user {user.Name}.");
+			string sendDate = new FileInfo(sourceFile).CreationTimeUtc.AddHours(reportGMT).ToString("yyyyMMdd");
+			var customValues = new List<List<string>>()
+			{
+				new List<string>() { "Información de envio" },
+				new List<string>() { "Nombre", Path.GetFileNameWithoutExtension(sourceFile) },
+				new List<string>() { "Fecha de envio", sendDate },
+				new List<string>() { "Detalle suscriptores" }
+			};
+			int index = 0;
+			foreach (List<string> value in customValues)
+			{
+				while (customItems.ContainsKey(index))
+				{
+					index++;
+				}
+				customItems.Add(index, value);
+				index++;
+			}
 
-                var report = new ExcelReport()
-                {
-                    ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file), filePathHelper.GetForcedReportsFolder()),
-                    CustomItems = GetCustomItems(file, user.UserGMT),
-                    ReportPath = filePathHelper.GetForcedReportsFolder(),
-                    ReportGMT = user.UserGMT,
-                    UserId = user.Credentials.AccountId
-                };
+			return customItems;
+		}
 
-                ITemplateConfiguration template = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
+		protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat)
+		{
+			var items = new List<ReportItem>();
 
-                List<string> fileHeaders = GetFileHeaders(file, template.FieldSeparator);
+			try
+			{
+				using (var streamReader = new StreamReader(file))
+				{
+					List<string> fileHeaders = streamReader.ReadLine().Split(separator).ToList();
 
-                report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields, fileHeaders));
+					// Contiene el header(key) y la posicion(value) en el archivo original, que seran incluidos en el reporte.
+					Dictionary<string, int> headers = GetHeadersIndexes(_reportTypeConfiguration.ReportFields, fileHeaders, out int processedIndex, out int resultIndex);
 
-                List<ReportItem> items = GetReportItems(file, template.FieldSeparator, user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat);
+					if (processedIndex == -1 || resultIndex == -1)
+					{
+						return items;
+					}
 
-                report.AppendItems(items);
+					List<int> dbIds = _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)).Select(x => x.Position).ToList();
 
-                report.Generate();
-            }
+					int count = headers.Count + dbIds.Count();
 
-            return true;
-        }
+					while (!streamReader.EndOfStream)
+					{
+						string[] lineArray = streamReader.ReadLine().Split(separator);
 
-        private Dictionary<int, List<string>> GetCustomItems(string sourceFile, int reportGMT)
-        {
-            var customItems = new Dictionary<int, List<string>>();
+						if (lineArray.Length <= resultIndex || lineArray[processedIndex] != Constants.PROCESS_RESULT_OK)
+						{
+							continue;
+						}
 
-            if (_reportTypeConfiguration.ReportItems != null)
-            {
-                foreach (ReportItemConfiguration riConfiguration in _reportTypeConfiguration.ReportItems)
-                {
-                    customItems.Add(riConfiguration.Row, riConfiguration.Values);
-                }
-            }
+						var item = new ReportItem(count);
 
-            string sendDate = new FileInfo(sourceFile).CreationTimeUtc.AddHours(reportGMT).ToString("yyyyMMdd");
-            var customValues = new List<List<string>>()
-            {
-                new List<string>() { "Información de envio" },
-                new List<string>() { "Nombre", Path.GetFileNameWithoutExtension(sourceFile) },
-                new List<string>() { "Fecha de envio", sendDate },
-                new List<string>() { "Detalle suscriptores" }
-            };
-            int index = 0;
-            foreach (List<string> value in customValues)
-            {
-                while (customItems.ContainsKey(index))
-                {
-                    index++;
-                }
-                customItems.Add(index, value);
-                index++;
-            }
+						int index = 0;
 
-            return customItems;
-        }
+						foreach (int value in headers.Values)
+						{
+							//value es el indice en el archivo original.
+							while (dbIds.Contains(value + index))
+							{
+								index++;
+							}
 
-        protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat)
-        {
-            var items = new List<ReportItem>();
+							//index es el desfasaje por la base
+							//value + index es el indice para el reporte
+							item.AddValue(lineArray[value].Trim(), value + index);
+						}
 
-            try
-            {
-                using (var streamReader = new StreamReader(file))
-                {
-                    List<string> fileHeaders = streamReader.ReadLine().Split(separator).ToList();
+						item.ResultId = lineArray[resultIndex];
 
-                    // Contiene el header(key) y la posicion(value) en el archivo original, que seran incluidos en el reporte.
-                    Dictionary<string, int> headers = GetHeadersIndexes(_reportTypeConfiguration.ReportFields, fileHeaders, out int processedIndex, out int resultIndex);
+						items.Add(item);
+					}
+				}
 
-                    if (processedIndex == -1 || resultIndex == -1)
-                    {
-                        return items;
-                    }
+				GetDataFromDB(items, dateFormat, userId, reportGMT);
 
-                    List<int> dbIds = _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)).Select(x => x.Position).ToList();
+				return items;
+			}
+			catch (Exception)
+			{
+				_logger.Error("Error trying to get report items");
+				throw;
+			}
+		}
 
-                    int count = headers.Count + dbIds.Count();
+		protected virtual ReportBase GetReport(string file, FilePathHelper filePathHelper, IUserConfiguration user)
+		{
+			var report = new ExcelReport()
+			{
+				ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file), filePathHelper.GetReportsFilesFolder()),
+				CustomItems = GetCustomItems(file, user.UserGMT),
+				ReportPath = filePathHelper.GetReportsFilesFolder(),
+				ReportGMT = user.UserGMT,
+				UserId = user.Credentials.AccountId
+			};
 
-                    while (!streamReader.EndOfStream)
-                    {
-                        string[] lineArray = streamReader.ReadLine().Split(separator);
-
-                        if (lineArray.Length <= resultIndex || lineArray[processedIndex] != Constants.PROCESS_RESULT_OK)
-                        {
-                            continue;
-                        }
-
-                        var item = new ReportItem(count);
-
-                        int index = 0;
-
-                        foreach (int value in headers.Values)
-                        {
-                            //value es el indice en el archivo original.
-                            while (dbIds.Contains(value + index))
-                            {
-                                index++;
-                            }
-
-                            //index es el desfasaje por la base
-                            //value + index es el indice para el reporte
-                            item.AddValue(lineArray[value].Trim(), value + index);
-                        }
-
-                        item.ResultId = lineArray[resultIndex];
-
-                        items.Add(item);
-                    }
-                }
-
-                GetDataFromDB(items, dateFormat, userId, reportGMT);
-
-                return items;
-            }
-            catch (Exception)
-            {
-                _logger.Error("Error trying to get report items");
-                throw;
-            }
-        }
-    }
+			return report;
+		}
+	}
 }

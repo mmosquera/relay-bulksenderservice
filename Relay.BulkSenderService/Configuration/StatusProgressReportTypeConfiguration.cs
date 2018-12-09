@@ -5,80 +5,113 @@ using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
 {
-    public class StatusProgressReportTypeConfiguration : ReportTypeConfiguration
-    {
-        public override ReportTypeConfiguration Clone()
-        {
-            var hipotecarioCabeceraReportTypeConfiguration = new RicohStatusReportTypeConfiguration();
+	public class StatusProgressReportTypeConfiguration : ReportTypeConfiguration
+	{
+		public override ReportTypeConfiguration Clone()
+		{
+			var hipotecarioCabeceraReportTypeConfiguration = new RicohStatusReportTypeConfiguration()
+			{
+				ReportId = this.ReportId,
+				OffsetHour = this.OffsetHour,
+				RunHour = this.RunHour,
+				DateFormat = this.DateFormat
+			};
 
-            hipotecarioCabeceraReportTypeConfiguration.ReportId = this.ReportId;
-            hipotecarioCabeceraReportTypeConfiguration.OffsetHour = this.OffsetHour;
-            hipotecarioCabeceraReportTypeConfiguration.RunHour = this.RunHour;
-            hipotecarioCabeceraReportTypeConfiguration.DateFormat = this.DateFormat;
+			if (this.Name != null)
+			{
+				hipotecarioCabeceraReportTypeConfiguration.Name = this.Name.Clone();
+			}
 
-            if (this.Name != null)
-            {
-                hipotecarioCabeceraReportTypeConfiguration.Name = this.Name.Clone();
-            }
+			if (this.ReportFields != null)
+			{
+				hipotecarioCabeceraReportTypeConfiguration.ReportFields = new List<ReportFieldConfiguration>();
 
-            if (this.ReportFields != null)
-            {
-                hipotecarioCabeceraReportTypeConfiguration.ReportFields = new List<ReportFieldConfiguration>();
-                foreach (ReportFieldConfiguration field in this.ReportFields)
-                {
-                    hipotecarioCabeceraReportTypeConfiguration.ReportFields.Add(field.Clone());
-                }
-            }
+				foreach (ReportFieldConfiguration field in this.ReportFields)
+				{
+					hipotecarioCabeceraReportTypeConfiguration.ReportFields.Add(field.Clone());
+				}
+			}
 
-            if (this.ReportItems != null)
-            {
-                hipotecarioCabeceraReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
-                foreach (ReportItemConfiguration reportItem in this.ReportItems)
-                {
-                    hipotecarioCabeceraReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
-                }
-            }
+			if (this.ReportItems != null)
+			{
+				hipotecarioCabeceraReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
 
-            if (this.ReportItems != null)
-            {
-                hipotecarioCabeceraReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
-                foreach (ReportItemConfiguration reportItem in this.ReportItems)
-                {
-                    hipotecarioCabeceraReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
-                }
-            }
+				foreach (ReportItemConfiguration reportItem in this.ReportItems)
+				{
+					hipotecarioCabeceraReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
+				}
+			}
 
-            return hipotecarioCabeceraReportTypeConfiguration;
-        }
+			if (this.ReportItems != null)
+			{
+				hipotecarioCabeceraReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
 
-        public override ReportExecution GetReportExecution(IUserConfiguration user, ReportExecution reportExecution)
-        {
-            if (reportExecution != null)
-            {
-                reportExecution.LastRun = reportExecution.NextRun;
-                reportExecution.NextRun = reportExecution.NextRun.AddHours(this.RunHour);
-            }
-            else
-            {
-                DateTime nextRun = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, 0, 0);
+				foreach (ReportItemConfiguration reportItem in this.ReportItems)
+				{
+					hipotecarioCabeceraReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
+				}
+			}
 
-                nextRun = nextRun.AddHours(this.RunHour);
+			return hipotecarioCabeceraReportTypeConfiguration;
+		}
 
-                reportExecution = new ReportExecution()
-                {
-                    UserName = user.Name,
-                    ReportId = this.ReportId,
-                    NextRun = nextRun,
-                    LastRun = nextRun.AddHours(-this.RunHour)
-                };
-            }
+		public override List<ReportExecution> GetReportExecution(IUserConfiguration user, ReportExecution lastExecution)
+		{
+			var reports = new List<ReportExecution>();
 
-            return reportExecution;
-        }
+			DateTime nextRun, lastRun;
 
-        public override ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger)
-        {
-            return new StatusProgressReportProcessor(logger, configuration, this);
-        }
-    }
+			if (lastExecution != null)
+			{
+				lastRun = lastExecution.NextRun;
+				nextRun = lastExecution.NextRun.AddHours(this.RunHour);
+			}
+			else
+			{
+				DateTime today = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, 0, 0);
+
+				nextRun = today.AddHours(this.RunHour);
+				lastRun = nextRun.AddHours(-this.RunHour);
+			}
+
+			DateTime nextDay = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, DateTime.UtcNow.Day, DateTime.UtcNow.Hour, 0, 0).AddDays(1);
+
+			var execution = new ReportExecution()
+			{
+				UserName = user.Name,
+				ReportId = this.ReportId,
+				NextRun = nextRun,
+				LastRun = lastRun,
+				Processed = false,
+				RunDate = nextRun,
+				CreatedAt = DateTime.UtcNow,
+			};
+
+			while (execution.NextRun < nextDay)
+			{
+				reports.Add(execution);
+
+				nextRun = execution.NextRun.AddHours(this.RunHour);
+				lastRun = execution.NextRun;
+
+				execution = new ReportExecution()
+				{
+					UserName = user.Name,
+					ReportId = this.ReportId,
+					NextRun = nextRun,
+					LastRun = lastRun,
+					Processed = false,
+					RunDate = nextRun,
+					CreatedAt = DateTime.UtcNow
+				};
+			}
+
+			return reports;
+		}
+
+		public override ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger)
+		{
+			return new StatusProgressReportProcessor(logger, configuration, this);
+		}
+	}
 }

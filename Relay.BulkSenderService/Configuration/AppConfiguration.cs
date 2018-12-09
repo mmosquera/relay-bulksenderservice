@@ -88,5 +88,10 @@ namespace Relay.BulkSenderService.Configuration
         {
             get { return int.Parse(ConfigurationManager.AppSettings["CleanAttachmentsDays"]); }
         }
-    }
+
+		public string ReportsFolder
+		{
+			get { return ConfigurationManager.AppSettings["ReportsFolder"]; }
+		}
+	}
 }

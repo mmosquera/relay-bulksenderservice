@@ -5,87 +5,86 @@ using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
 {
-    public class DailyReportTypeConfiguration : ReportTypeConfiguration
-    {
-        public override ReportTypeConfiguration Clone()
-        {
-            var dailyReportTypeConfiguration = new DailyReportTypeConfiguration();
+	public class DailyReportTypeConfiguration : ReportTypeConfiguration
+	{
+		public override ReportTypeConfiguration Clone()
+		{
+			var dailyReportTypeConfiguration = new DailyReportTypeConfiguration()
+			{
+				ReportId = this.ReportId,
+				OffsetHour = this.OffsetHour,
+				RunHour = this.RunHour,
+				DateFormat = this.DateFormat,
+			};
 
-            dailyReportTypeConfiguration.ReportId = this.ReportId;
-            dailyReportTypeConfiguration.OffsetHour = this.OffsetHour;
-            dailyReportTypeConfiguration.RunHour = this.RunHour;
-            dailyReportTypeConfiguration.DateFormat = this.DateFormat;
+			if (this.Name != null)
+			{
+				dailyReportTypeConfiguration.Name = this.Name.Clone();
+			}
 
-            if (this.Name != null)
-            {
-                dailyReportTypeConfiguration.Name = this.Name.Clone();
-            }
+			if (this.ReportFields != null)
+			{
+				dailyReportTypeConfiguration.ReportFields = new List<ReportFieldConfiguration>();
 
-            if (this.ReportFields != null)
-            {
-                dailyReportTypeConfiguration.ReportFields = new List<ReportFieldConfiguration>();
-                foreach (ReportFieldConfiguration field in this.ReportFields)
-                {
-                    dailyReportTypeConfiguration.ReportFields.Add(field.Clone());
-                }
-            }
+				foreach (ReportFieldConfiguration field in this.ReportFields)
+				{
+					dailyReportTypeConfiguration.ReportFields.Add(field.Clone());
+				}
+			}
 
-            if (this.ReportItems != null)
-            {
-                dailyReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
-                foreach (ReportItemConfiguration reportItem in this.ReportItems)
-                {
-                    dailyReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
-                }
-            }
+			if (this.ReportItems != null)
+			{
+				dailyReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
 
-            if (this.ReportItems != null)
-            {
-                dailyReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
-                foreach (ReportItemConfiguration reportItem in this.ReportItems)
-                {
-                    dailyReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
-                }
-            }
+				foreach (ReportItemConfiguration reportItem in this.ReportItems)
+				{
+					dailyReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
+				}
+			}
 
-            return dailyReportTypeConfiguration;
-        }
+			if (this.ReportItems != null)
+			{
+				dailyReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
 
-        public override ReportExecution GetReportExecution(IUserConfiguration user, ReportExecution reportExecution)
-        {
-            if (reportExecution != null)
-            {
-                reportExecution.LastRun = reportExecution.NextRun;
-                reportExecution.NextRun = reportExecution.NextRun.AddDays(1);
-            }
-            else
-            {
-                DateTime now = DateTime.UtcNow.AddHours(user.UserGMT);
+				foreach (ReportItemConfiguration reportItem in this.ReportItems)
+				{
+					dailyReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
+				}
+			}
 
-                DateTime nextRun = new DateTime(now.Year, now.Month, now.Day, this.RunHour, 0, 0);
+			return dailyReportTypeConfiguration;
+		}
 
-                if (nextRun < now)
-                {
-                    nextRun = nextRun.AddDays(1);
-                }
+		public override List<ReportExecution> GetReportExecution(IUserConfiguration user, ReportExecution lastExecution)
+		{
+			DateTime now = DateTime.UtcNow.AddHours(user.UserGMT);
 
-                nextRun = nextRun.AddHours(-user.UserGMT);                
+			DateTime nextRun = new DateTime(now.Year, now.Month, now.Day, this.RunHour, 0, 0);
 
-                reportExecution = new ReportExecution()
-                {
-                    UserName = user.Name,
-                    ReportId = this.ReportId,
-                    NextRun = nextRun,
-                    LastRun = nextRun.AddDays(-1)
-                };
-            }
+			if (nextRun < now)
+			{
+				nextRun = nextRun.AddDays(1);
+			}
 
-            return reportExecution;
-        }
+			nextRun = nextRun.AddHours(-user.UserGMT);
 
-        public override ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger)
-        {
-            return new DailyReportProcessor(logger, configuration, this);
-        }
-    }
+			var reportExecution = new ReportExecution()
+			{
+				UserName = user.Name,
+				ReportId = this.ReportId,
+				NextRun = nextRun,
+				LastRun = nextRun.AddDays(-1),
+				RunDate = nextRun,
+				Processed = false,
+				CreatedAt = DateTime.UtcNow
+			};
+
+			return new List<ReportExecution>() { reportExecution };
+		}
+
+		public override ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger)
+		{
+			return new DailyReportProcessor(logger, configuration, this);
+		}
+	}
 }
