@@ -19,7 +19,8 @@ namespace Relay.BulkSenderService.Reports
 				ReportName = _reportTypeConfiguration.Name.GetReportName(Path.GetFileName(file), filePathHelper.GetReportsFilesFolder()),
 				ReportPath = filePathHelper.GetReportsFilesFolder(),
 				ReportGMT = user.UserGMT,
-				UserId = user.Credentials.AccountId
+				UserId = user.Credentials.AccountId,
+				Separator = _reportTypeConfiguration.FieldSeparator
 			};
 
 			return report;
