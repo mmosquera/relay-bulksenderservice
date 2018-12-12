@@ -125,6 +125,7 @@ namespace Relay.BulkSenderService.Reports
 				{
 					List<string> fileHeaders = streamReader.ReadLine().Split(separator).ToList();
 
+					// TODO: ver si puedo poner la relacion entre el indice original y el indice en el reporte.
 					// Contiene el header(key) y la posicion(value) en el archivo original, que seran incluidos en el reporte.
 					Dictionary<string, int> headers = GetHeadersIndexes(_reportTypeConfiguration.ReportFields, fileHeaders, out int processedIndex, out int resultIndex);
 
@@ -132,10 +133,6 @@ namespace Relay.BulkSenderService.Reports
 					{
 						return items;
 					}
-
-					List<int> dbIds = _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)).Select(x => x.Position).ToList();
-
-					int count = headers.Count + dbIds.Count();
 
 					while (!streamReader.EndOfStream)
 					{
@@ -146,21 +143,22 @@ namespace Relay.BulkSenderService.Reports
 							continue;
 						}
 
-						var item = new ReportItem(count);
+						var item = new ReportItem(_reportTypeConfiguration.ReportFields.Count);
 
 						int index = 0;
+						int originalIndex = 0;
 
-						foreach (int value in headers.Values)
+						foreach (string key in headers.Keys)
 						{
-							//value es el indice en el archivo original.
-							while (dbIds.Contains(value + index))
-							{
-								index++;
-							}
+							originalIndex = headers[key];
 
-							//index es el desfasaje por la base
-							//value + index es el indice para el reporte
-							item.AddValue(lineArray[value].Trim(), value + index);
+							ReportFieldConfiguration field = _reportTypeConfiguration.ReportFields.FirstOrDefault(x => x.NameInFile == key);
+
+							if (field != null)
+							{
+								index = field.Position;
+								item.AddValue(lineArray[originalIndex].Trim(), index);
+							}
 						}
 
 						item.ResultId = lineArray[resultIndex];

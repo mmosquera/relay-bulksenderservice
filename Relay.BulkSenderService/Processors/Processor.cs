@@ -84,7 +84,7 @@ namespace Relay.BulkSenderService.Processors
 
 		private void AddReportForFile(string fileName, IUserConfiguration user)
 		{
-			if (string.IsNullOrEmpty(fileName))
+			if (string.IsNullOrEmpty(fileName) || user.Reports == null)
 			{
 				return;
 			}
