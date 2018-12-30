@@ -30,11 +30,11 @@ namespace Relay.BulkSenderService.Reports
 			return FilterFilesByTemplate(fileInfoList.Select(x => x.FullName).ToList(), user);
 		}
 
-		protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
+		protected override List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
 		{
 			if (files.Count == 0)
 			{
-				return;
+				return null;
 			}
 
 			_logger.Debug($"Crete Edesur report for user {user.Name}.");
@@ -60,10 +60,16 @@ namespace Relay.BulkSenderService.Reports
 
 			string reportFileName = report.Generate();
 
+			var reports = new List<string>();
+
 			if (File.Exists(reportFileName))
 			{
+				reports.Add(reportFileName);
+
 				UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
 			}
+
+			return reports;
 		}
 
 		private List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT)

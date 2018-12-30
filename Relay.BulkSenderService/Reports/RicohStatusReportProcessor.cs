@@ -17,7 +17,7 @@ namespace Relay.BulkSenderService.Reports
 			return new List<string>();
 		}
 
-		protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
+		protected override List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
 		{
 			_logger.Debug($"Process Ricoh Status report for user {user.Name}.");
 
@@ -49,6 +49,8 @@ namespace Relay.BulkSenderService.Reports
 					UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
 				}
 			}
+
+			return reports;
 		}
 
 		protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat, DateTime start, DateTime end)

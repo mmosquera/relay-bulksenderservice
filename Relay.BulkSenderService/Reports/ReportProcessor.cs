@@ -5,6 +5,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Mail;
 
 namespace Relay.BulkSenderService.Reports
 {
@@ -35,7 +37,7 @@ namespace Relay.BulkSenderService.Reports
 		/// <param name="files">Lista de archivos para generar reporte.</param>
 		/// <param name="user">Confuracion del usuario.</param>
 		/// <param name="reportExecution">Datos de la ejecucion.</param>
-		protected abstract void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution);
+		protected abstract List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution);
 
 		protected void UploadFileToFtp(string fileName, string ftpFolder, IFtpHelper ftpHelper)
 		{
@@ -53,7 +55,47 @@ namespace Relay.BulkSenderService.Reports
 		{
 			List<string> files = GetFilesToProcess(user, reportExecution);
 
-			ProcessFilesForReports(files, user, reportExecution);
+			List<string> reports = ProcessFilesForReports(files, user, reportExecution);
+
+			SendReportAlert(user, reports);
+		}
+
+		private void SendReportAlert(IUserConfiguration user, List<string> files)
+		{
+			if (((UserApiConfiguration)user).Alerts == null || files == null || files.Count == 0)
+			{
+				return;
+			}
+
+			var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
+			smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
+
+			foreach (ReportAlertTypeConfiguration alert in ((UserApiConfiguration)user).Alerts.AlertList.OfType<ReportAlertTypeConfiguration>())
+			{
+				var mailMessage = new MailMessage()
+				{
+					Body = alert.Message,
+					Subject = alert.Subject,
+					From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support")
+				};
+
+				foreach (string email in ((UserApiConfiguration)user).Alerts.Emails)
+				{
+					mailMessage.To.Add(email);
+				}
+
+				foreach (string file in files)
+				{
+					var attachment = new Attachment(file)
+					{
+						Name = Path.GetFileName(file)
+					};
+
+					mailMessage.Attachments.Add(attachment);
+				}
+
+				smtpClient.Send(mailMessage);
+			}
 		}
 
 		protected List<string> FilterFilesByTemplate(List<string> files, IUserConfiguration user)

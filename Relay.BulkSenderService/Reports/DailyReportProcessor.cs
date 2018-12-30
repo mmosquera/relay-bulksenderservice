@@ -30,11 +30,11 @@ namespace Relay.BulkSenderService.Reports
 			return FilterFilesByTemplate(fileInfoList.Select(x => x.FullName).ToList(), user);
 		}
 
-		protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
+		protected override List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
 		{
 			if (files.Count == 0)
 			{
-				return;
+				return null;
 			}
 
 			_logger.Debug($"Create daily report for user {user.Name}.");
@@ -64,11 +64,21 @@ namespace Relay.BulkSenderService.Reports
 
 			string reportFileName = report.Generate();
 
+			var reports = new List<string>();
+
 			if (File.Exists(reportFileName))
 			{
-				UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);				
+				reports.Add(reportFileName);
+
+				UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
+
+				reportExecution.ReportFile = Path.GetFileName(reportFileName);
+				reportExecution.Processed = true;
+				reportExecution.ProcessedDate = DateTime.UtcNow;
 			}
-		}		
+
+			return reports;
+		}
 
 		protected virtual List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat)
 		{

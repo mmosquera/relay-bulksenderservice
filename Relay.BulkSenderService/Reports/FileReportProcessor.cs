@@ -33,15 +33,17 @@ namespace Relay.BulkSenderService.Reports
 			return fileList;
 		}
 
-		protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
+		protected override List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
 		{
 			if (files.Count == 0)
 			{
-				return;
+				return null;
 			}
 
 			var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 			var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+			var reports = new List<string>();
 
 			foreach (string file in files)
 			{
@@ -68,8 +70,12 @@ namespace Relay.BulkSenderService.Reports
 					reportExecution.ReportFile = Path.GetFileName(reportFileName);
 					reportExecution.Processed = true;
 					reportExecution.ProcessedDate = DateTime.UtcNow;
+
+					reports.Add(reportFileName);
 				}
 			}
+
+			return reports;
 		}
 
 		private List<string> GetFileHeaders(string file, char separator)

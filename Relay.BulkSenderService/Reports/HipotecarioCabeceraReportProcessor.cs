@@ -12,11 +12,11 @@ namespace Relay.BulkSenderService.Reports
 		{
 		}
 
-		protected override void ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
+		protected override List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
 		{
 			if (files.Count == 0)
 			{
-				return;
+				return null;
 			}
 
 			_logger.Debug($"Process cabecera report for user {user.Name}.");
@@ -40,12 +40,18 @@ namespace Relay.BulkSenderService.Reports
 
 			string reportFileName = report.Generate();
 
+			var reports = new List<string>();
+
 			if (File.Exists(reportFileName))
 			{
+				reports.Add(reportFileName);
+
 				var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
 				UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
 			}
+
+			return reports;
 		}
 
 		protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat, DateTime start, DateTime end)
