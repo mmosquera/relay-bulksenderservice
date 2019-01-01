@@ -239,8 +239,6 @@ namespace Relay.BulkSenderService.Processors
 		{
 			var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-			ITemplateConfiguration templateConfiguration = user.GetTemplateConfiguration(fileName);
-
 			string resultsFileName = $@"{filePathHelper.GetResultsFilesFolder()}\{fileName.Replace(".processing", ".sent")}";
 
 			return resultsFileName;
