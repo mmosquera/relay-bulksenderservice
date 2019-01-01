@@ -1,22 +1,26 @@
 ﻿namespace Relay.BulkSenderService.Configuration
 {
-    public class ReportFieldConfiguration
-    {
-        public string HeaderName { get; set; }
-        public int Position { get; set; }
-        public string NameInFile { get; set; }
-        public string NameInDB { get; set; }
+	public class ReportFieldConfiguration
+	{
+		public string HeaderName { get; set; }
+		public int Position { get; set; }
+		public string NameInFile { get; set; }
+		public string NameInDB { get; set; }
+		public int PositionInFile { get; set; }
 
-        public ReportFieldConfiguration Clone()
-        {
-            var reportFieldConfiguration = new ReportFieldConfiguration();
+		public ReportFieldConfiguration Clone()
+		{
+			var reportFieldConfiguration = new ReportFieldConfiguration()
+			{
 
-            reportFieldConfiguration.HeaderName = this.HeaderName;
-            reportFieldConfiguration.Position = this.Position;
-            reportFieldConfiguration.NameInFile = this.NameInFile;
-            reportFieldConfiguration.NameInDB = this.NameInDB;
+				HeaderName = this.HeaderName,
+				Position = this.Position,
+				NameInFile = this.NameInFile,
+				NameInDB = this.NameInDB,
+				PositionInFile = this.PositionInFile
+			};
 
-            return reportFieldConfiguration;
-        }
-    }
+			return reportFieldConfiguration;
+		}
+	}
 }

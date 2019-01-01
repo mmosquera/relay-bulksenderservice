@@ -131,9 +131,7 @@ namespace Relay.BulkSenderService.Reports
 				{
 					List<string> fileHeaders = streamReader.ReadLine().Split(separator).ToList();
 
-					// TODO: ver si puedo poner la relacion entre el indice original y el indice en el reporte.
-					// Contiene el header(key) y la posicion(value) en el archivo original, que seran incluidos en el reporte.
-					Dictionary<string, int> headers = GetHeadersIndexes(_reportTypeConfiguration.ReportFields, fileHeaders, out int processedIndex, out int resultIndex);
+					List<ReportFieldConfiguration> reportHeaders = GetHeadersIndexes(_reportTypeConfiguration.ReportFields, fileHeaders, out int processedIndex, out int resultIndex);
 
 					if (processedIndex == -1 || resultIndex == -1)
 					{
@@ -149,22 +147,11 @@ namespace Relay.BulkSenderService.Reports
 							continue;
 						}
 
-						var item = new ReportItem(_reportTypeConfiguration.ReportFields.Count);
+						var item = new ReportItem(reportHeaders.Count);
 
-						int index = 0;
-						int originalIndex = 0;
-
-						foreach (string key in headers.Keys)
+						foreach (ReportFieldConfiguration reportFieldConfiguration in reportHeaders.Where(x => string.IsNullOrEmpty(x.NameInDB)))
 						{
-							originalIndex = headers[key];
-
-							ReportFieldConfiguration field = _reportTypeConfiguration.ReportFields.FirstOrDefault(x => x.NameInFile == key);
-
-							if (field != null)
-							{
-								index = field.Position;
-								item.AddValue(lineArray[originalIndex].Trim(), index);
-							}
+							item.AddValue(lineArray[reportFieldConfiguration.PositionInFile].Trim(), reportFieldConfiguration.Position);
 						}
 
 						item.ResultId = lineArray[resultIndex];

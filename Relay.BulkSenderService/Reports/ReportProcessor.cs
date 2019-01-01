@@ -264,33 +264,64 @@ namespace Relay.BulkSenderService.Reports
 			return headersList;
 		}
 
-		protected Dictionary<string, int> GetHeadersIndexes(List<ReportFieldConfiguration> reportHeaders, List<string> fileHeaders, out int processedIndex, out int resultIndex)
+		protected List<ReportFieldConfiguration> GetHeadersIndexes(List<ReportFieldConfiguration> configurationHeaders, List<string> fileHeaders, out int processedIndex, out int resultIndex)
 		{
-			var headers = new Dictionary<string, int>();
+			var reportHeaders = new List<ReportFieldConfiguration>();
 
-			foreach (ReportFieldConfiguration header in reportHeaders)
+			foreach (ReportFieldConfiguration header in configurationHeaders)
 			{
-				int index = fileHeaders.IndexOf(header.NameInFile);
-				if (index != -1 && !headers.ContainsKey(header.NameInFile))
+				if (!string.IsNullOrEmpty(header.NameInDB))
 				{
-					headers.Add(header.NameInFile, index);
+					reportHeaders.Add(new ReportFieldConfiguration()
+					{
+						HeaderName = header.HeaderName,
+						Position = header.Position,
+						NameInDB = header.NameInDB
+					});
+				}
+				else
+				{
+					int index = fileHeaders.IndexOf(header.NameInFile);
+					if (index != -1 && !reportHeaders.Exists(x => x.HeaderName == header.HeaderName))
+					{
+						reportHeaders.Add(new ReportFieldConfiguration()
+						{
+							HeaderName = header.HeaderName,
+							Position = header.Position,
+							NameInFile = header.NameInFile,
+							PositionInFile = index
+						});
+					}
 				}
 			}
 
-			if (reportHeaders.Exists(x => x.HeaderName.Equals("*")))
+			if (configurationHeaders.Exists(x => x.HeaderName.Equals("*")))
 			{
 				string header;
+				int index;
 				for (int i = 0; i < fileHeaders.Count; i++)
 				{
 					header = fileHeaders[i];
+					index = i;
+
 					if (header != Constants.HEADER_PROCESS_RESULT
 						&& header != Constants.HEADER_MESSAGE_ID
 						&& header != Constants.HEADER_DELIVERY_RESULT
 						&& header != Constants.HEADER_DELIVERY_LINK
-						&& !headers.ContainsKey(header)
 						&& !reportHeaders.Exists(x => x.NameInFile == header))
 					{
-						headers.Add(header, i);
+						while (reportHeaders.Exists(x => x.Position == index))
+						{
+							index++;
+						}
+
+						reportHeaders.Add(new ReportFieldConfiguration()
+						{
+							HeaderName = header,
+							NameInFile = header,
+							PositionInFile = i,
+							Position = index
+						});
 					}
 				}
 			}
@@ -298,7 +329,7 @@ namespace Relay.BulkSenderService.Reports
 			processedIndex = fileHeaders.IndexOf(Constants.HEADER_PROCESS_RESULT);
 			resultIndex = fileHeaders.IndexOf(Constants.HEADER_MESSAGE_ID);
 
-			return headers;
+			return reportHeaders;
 		}
 
 		protected void MapDBStatusDtoToReportItem(DBStatusDto dbStatusDto, ReportItem reportItem, int reportGMT = 0, string dateFormat = "")
