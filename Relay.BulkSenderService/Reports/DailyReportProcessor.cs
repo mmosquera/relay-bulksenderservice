@@ -70,11 +70,9 @@ namespace Relay.BulkSenderService.Reports
 			{
 				reports.Add(reportFileName);
 
-				UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
-
 				reportExecution.ReportFile = Path.GetFileName(reportFileName);
-				reportExecution.Processed = true;
-				reportExecution.ProcessedDate = DateTime.UtcNow;
+
+				UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
 			}
 
 			return reports;

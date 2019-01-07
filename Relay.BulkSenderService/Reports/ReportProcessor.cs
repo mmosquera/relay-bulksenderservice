@@ -57,6 +57,9 @@ namespace Relay.BulkSenderService.Reports
 
 			List<string> reports = ProcessFilesForReports(files, user, reportExecution);
 
+			reportExecution.Processed = true;
+			reportExecution.ProcessedDate = DateTime.UtcNow;
+
 			SendReportAlert(user, reports);
 		}
 

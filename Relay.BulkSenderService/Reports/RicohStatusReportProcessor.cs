@@ -44,6 +44,8 @@ namespace Relay.BulkSenderService.Reports
 			{
 				if (File.Exists(reportFileName))
 				{
+					reports.Add(reportFileName);
+
 					var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
 					UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);

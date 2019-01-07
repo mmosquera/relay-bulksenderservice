@@ -3,6 +3,7 @@ using Relay.BulkSenderService.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Relay.BulkSenderService.Reports
 {
@@ -44,6 +45,8 @@ namespace Relay.BulkSenderService.Reports
 			{
 				if (File.Exists(reportFileName))
 				{
+					reportExecution.ReportFile = string.Join("|", reports.Select(x => Path.GetFileName(x)));
+
 					var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
 					UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);

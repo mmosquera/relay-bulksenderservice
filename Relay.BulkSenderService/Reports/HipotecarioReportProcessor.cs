@@ -50,9 +50,11 @@ namespace Relay.BulkSenderService.Reports
 			{
 				reports.Add(reportFileName);
 
+				reportExecution.ReportFile = Path.GetFileName(reportFileName);
+
 				var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
-				UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
+				UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);				
 			}
 
 			return reports;
