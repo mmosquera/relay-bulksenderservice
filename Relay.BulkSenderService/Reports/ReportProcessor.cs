@@ -273,29 +273,27 @@ namespace Relay.BulkSenderService.Reports
 
 			foreach (ReportFieldConfiguration header in configurationHeaders)
 			{
+				var reportFieldConfiguration = new ReportFieldConfiguration()
+				{
+					HeaderName = header.HeaderName,
+					Position = header.Position
+				};
+
 				if (!string.IsNullOrEmpty(header.NameInDB))
 				{
-					reportHeaders.Add(new ReportFieldConfiguration()
-					{
-						HeaderName = header.HeaderName,
-						Position = header.Position,
-						NameInDB = header.NameInDB
-					});
+					reportFieldConfiguration.NameInDB = header.NameInDB;
 				}
-				else
+				else if (!string.IsNullOrEmpty(header.NameInFile))
 				{
 					int index = fileHeaders.IndexOf(header.NameInFile);
 					if (index != -1 && !reportHeaders.Exists(x => x.HeaderName == header.HeaderName))
 					{
-						reportHeaders.Add(new ReportFieldConfiguration()
-						{
-							HeaderName = header.HeaderName,
-							Position = header.Position,
-							NameInFile = header.NameInFile,
-							PositionInFile = index
-						});
+						reportFieldConfiguration.NameInFile = header.NameInFile;
+						reportFieldConfiguration.PositionInFile = index;
 					}
 				}
+
+				reportHeaders.Add(reportFieldConfiguration);
 			}
 
 			if (configurationHeaders.Exists(x => x.HeaderName.Equals("*")))

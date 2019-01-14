@@ -106,7 +106,7 @@ namespace Relay.BulkSenderService.Reports
 
 						var item = new ReportItem(reportHeaders.Count);
 
-						foreach (ReportFieldConfiguration reportFieldConfiguration in reportHeaders.Where(x => string.IsNullOrEmpty(x.NameInDB)))
+						foreach (ReportFieldConfiguration reportFieldConfiguration in reportHeaders.Where(x => !string.IsNullOrEmpty(x.NameInFile)))
 						{
 							item.AddValue(lineArray[reportFieldConfiguration.PositionInFile].Trim(), reportFieldConfiguration.Position);
 						}
