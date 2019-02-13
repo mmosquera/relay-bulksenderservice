@@ -107,6 +107,8 @@ namespace Relay.BulkSenderService.Classes
             var items = new List<DBStatusDto>();
 
             var command = new SqlCommand("BulkSender_GetDeliveriesReportByDate", Connection);
+            command.CommandTimeout = 0;
+
             command.CommandType = CommandType.StoredProcedure;
 
             command.Parameters.Add(new SqlParameter
@@ -147,13 +149,13 @@ namespace Relay.BulkSenderService.Classes
                             FromEmail = sqlDataReader["FromEmail"] != DBNull.Value ? Convert.ToString(sqlDataReader["FromEmail"]) : string.Empty,
                             FromName = sqlDataReader["FromName"] != DBNull.Value ? Convert.ToString(sqlDataReader["FromName"]) : string.Empty,
                             Subject = sqlDataReader["Subject"] != DBNull.Value ? Convert.ToString(sqlDataReader["Subject"]) : string.Empty,
-                            MessageGuid = Convert.ToString(sqlDataReader["Guid"]),                            
+                            MessageGuid = Convert.ToString(sqlDataReader["Guid"]),
                             Address = Convert.ToString(sqlDataReader["Address"]),
                             IsHard = Convert.ToBoolean(sqlDataReader["IsHard"]),
                             MailStatus = Convert.ToInt32(sqlDataReader["MailStatus"]),
                             OpenDate = Convert.ToDateTime(sqlDataReader["OpenDate"]),
                             ClickDate = sqlDataReader["ClickDate"] != DBNull.Value ? Convert.ToDateTime(sqlDataReader["ClickDate"]) : (DateTime?)null,
-                            BounceDate = Convert.ToDateTime(sqlDataReader["BounceDate"])                            
+                            BounceDate = Convert.ToDateTime(sqlDataReader["BounceDate"])
                         };
                         items.Add(item);
                     }
@@ -290,6 +292,7 @@ namespace Relay.BulkSenderService.Classes
         }
     }
 
+    [Serializable]
     public class DBStatusDto
     {
         public int DeliveryId { get; set; }

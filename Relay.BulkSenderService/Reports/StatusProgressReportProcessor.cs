@@ -4,101 +4,184 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization.Formatters.Binary;
 
 namespace Relay.BulkSenderService.Reports
 {
-	public class StatusProgressReportProcessor : ReportProcessor
-	{
-		public StatusProgressReportProcessor(ILog logger, IConfiguration configuration, ReportTypeConfiguration reportTypeConfiguration) : base(logger, configuration, reportTypeConfiguration)
-		{
-		}
+    public class StatusProgressReportProcessor : ReportProcessor
+    {
+        private const int MAX_HOUR_RANGE = 6;
+        private Dictionary<int, DBStatusDto> tempReport;
 
-		protected override List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution)
-		{
-			return new List<string>();
-		}
+        public StatusProgressReportProcessor(ILog logger, IConfiguration configuration, ReportTypeConfiguration reportTypeConfiguration) : base(logger, configuration, reportTypeConfiguration)
+        {
+            tempReport = LoadTempReport();
+        }
 
-		protected override List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
-		{
-			_logger.Debug($"Process status progress report for user {user.Name}.");
+        protected override List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution)
+        {
+            return new List<string>();
+        }
 
-			var filePathHelper = new FilePathHelper(_configuration, user.Name);
+        protected override List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution)
+        {
+            _logger.Debug($"Process status progress report for user {user.Name}.");
 
-			var report = new SplitCsvReport()
-			{
-				Separator = _reportTypeConfiguration.FieldSeparator,
-				ReportPath = filePathHelper.GetReportsFilesFolder(),
-				ReportName = _reportTypeConfiguration.Name.GetReportName(),
-				ReportGMT = user.UserGMT,
-				UserId = user.Credentials.AccountId
-			};
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-			report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields));
+            var report = new SplitCsvReport()
+            {
+                Separator = _reportTypeConfiguration.FieldSeparator,
+                ReportPath = filePathHelper.GetReportsFilesFolder(),
+                ReportName = _reportTypeConfiguration.Name.GetReportName(),
+                ReportGMT = user.UserGMT,
+                UserId = user.Credentials.AccountId
+            };
 
-			List<ReportItem> items = GetReportItems("", ' ', user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat, reportExecution.LastRun, reportExecution.NextRun);
+            report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields));
 
-			report.AppendItems(items);
+            List<ReportItem> items = GetReportItems("", ' ', user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat, reportExecution.LastRun, reportExecution.NextRun);
 
-			List<string> reports = report.SplitGenerate();
+            report.AppendItems(items);
 
-			foreach (string reportFileName in reports)
-			{
-				if (File.Exists(reportFileName))
-				{
-					reportExecution.ReportFile = string.Join("|", reports.Select(x => Path.GetFileName(x)));
+            List<string> reports = report.SplitGenerate();
 
-					var ftpHelper = user.Ftp.GetFtpHelper(_logger);
+            foreach (string reportFileName in reports)
+            {
+                if (File.Exists(reportFileName))
+                {
+                    reportExecution.ReportFile = string.Join("|", reports.Select(x => Path.GetFileName(x)));
 
-					UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
-				}
-			}
+                    var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
-			return reports;
-		}
+                    UploadFileToFtp(reportFileName, ((UserApiConfiguration)user).Reports.Folder, ftpHelper);
+                }
+            }
 
-		protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat, DateTime start, DateTime end)
-		{
-			var items = new List<ReportItem>();
+            return reports;
+        }
 
-			DateTime startTime = end.AddHours(-_reportTypeConfiguration.OffsetHour);
+        protected List<ReportItem> GetReportItems(string file, char separator, int userId, int reportGMT, string dateFormat, DateTime start, DateTime end)
+        {
+            var items = new List<ReportItem>();
 
-			try
-			{
-				GetDataFromDB(items, dateFormat, userId, reportGMT, startTime, end);
+            try
+            {
+                if (tempReport == null)
+                {
+                    start = end.AddHours(-_reportTypeConfiguration.OffsetHour);
+                    tempReport = new Dictionary<int, DBStatusDto>();
+                }
 
-				return items;
-			}
-			catch (Exception)
-			{
-				_logger.Error("Error trying to get report items");
-				throw;
-			}
-		}
+                GetDataFromDB(items, dateFormat, userId, reportGMT, start, end);
 
-		protected void GetDataFromDB(List<ReportItem> items, string dateFormat, int userId, int reportGMT, DateTime start, DateTime end)
-		{
-			var sqlHelper = new SqlHelper();
+                start = end.AddHours(-_reportTypeConfiguration.OffsetHour);
+                var keysToRemove = new List<int>();
 
-			try
-			{
-				List<DBStatusDto> dbReportItemList = sqlHelper.GetResultsByDeliveryDate(userId, start, end);
+                foreach (int key in tempReport.Keys)
+                {
+                    DBStatusDto dbReportItem = tempReport[key];
 
-				foreach (DBStatusDto dbReportItem in dbReportItemList)
-				{
-					var item = new ReportItem(_reportTypeConfiguration.ReportFields.Count);
+                    if (dbReportItem.CreatedAt >= start)
+                    {
+                        var item = new ReportItem(_reportTypeConfiguration.ReportFields.Count);
 
-					MapDBStatusDtoToReportItem(dbReportItem, item, reportGMT, dateFormat);
+                        MapDBStatusDtoToReportItem(dbReportItem, item, reportGMT, dateFormat);
 
-					items.Add(item);
-				}
+                        items.Add(item);
+                    }
+                    else
+                    {
+                        keysToRemove.Add(key);
+                    }
+                }
 
-				sqlHelper.CloseConnection();
-			}
-			catch (Exception e)
-			{
-				_logger.Error($"Error on get data from DB {e}");
-				throw;
-			}
-		}
-	}
+                ClearTempReport(keysToRemove);
+                SaveTempReport();
+
+                return items;
+            }
+            catch (Exception)
+            {
+                _logger.Error("Error trying to get report items");
+                throw;
+            }
+        }
+
+        protected void GetDataFromDB(List<ReportItem> items, string dateFormat, int userId, int reportGMT, DateTime start, DateTime end)
+        {
+            var sqlHelper = new SqlHelper();
+
+            DateTime from, to;
+            from = start;
+            to = start.AddHours(MAX_HOUR_RANGE);
+
+            try
+            {
+                while (from < to)
+                {
+                    List<DBStatusDto> dbReportItemList = sqlHelper.GetResultsByDeliveryDate(userId, from, to);
+
+                    foreach (DBStatusDto statusDto in dbReportItemList)
+                    {
+                        if (tempReport.ContainsKey(statusDto.DeliveryId))
+                        {
+                            tempReport[statusDto.DeliveryId] = statusDto;
+                        }
+                        else
+                        {
+                            tempReport.Add(statusDto.DeliveryId, statusDto);
+                        }
+                    }
+
+                    from = to;
+                    to = to.AddHours(MAX_HOUR_RANGE);
+                    if (to > end)
+                    {
+                        to = end;
+                    }
+                }
+
+                sqlHelper.CloseConnection();
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error on get data from DB {e}");
+                throw;
+            }
+        }
+
+        private Dictionary<int, DBStatusDto> LoadTempReport()
+        {
+            string fileName = $@"{_configuration.ReportsFolder}\{_reportTypeConfiguration.ReportId}.tmp";
+
+            if (File.Exists(fileName))
+            {
+                using (FileStream fileStream = File.OpenRead(fileName))
+                {
+                    return new BinaryFormatter().Deserialize(fileStream) as Dictionary<int, DBStatusDto>;
+                }
+            }
+
+            return null;
+        }
+
+        private void SaveTempReport()
+        {
+            string fileName = $@"{_configuration.ReportsFolder}\{_reportTypeConfiguration.ReportId}.tmp";
+
+            using (var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
+            {
+                new BinaryFormatter().Serialize(fileStream, tempReport);
+            }
+        }
+
+        private void ClearTempReport(List<int> keysToRemove)
+        {
+            foreach (int key in keysToRemove)
+            {
+                tempReport.Remove(key);
+            }
+        }
+    }
 }
