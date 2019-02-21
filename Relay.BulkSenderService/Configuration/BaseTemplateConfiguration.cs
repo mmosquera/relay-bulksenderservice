@@ -14,6 +14,7 @@ namespace Relay.BulkSenderService.Configuration
         public bool HasHeaders { get; set; }
         public List<string> FileNameParts { get; set; }
         public List<FieldConfiguration> Fields { get; set; }
+        public bool AllowDuplicates { get; set; }
 
         public ITemplateConfiguration Clone()
         {
@@ -24,6 +25,7 @@ namespace Relay.BulkSenderService.Configuration
             templateConfiguration.TemplateId = this.TemplateId;
             templateConfiguration.TemplateName = this.TemplateName;
             templateConfiguration.HasHeaders = this.HasHeaders;
+            templateConfiguration.AllowDuplicates = this.AllowDuplicates;
 
             if (this.FileNameParts != null)
             {

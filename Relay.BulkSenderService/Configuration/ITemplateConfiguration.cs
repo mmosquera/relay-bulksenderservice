@@ -11,6 +11,7 @@ namespace Relay.BulkSenderService.Configuration
         string TemplateId { get; set; }
         string TemplateName { get; set; }
         bool HasHeaders { get; set; }
+        bool AllowDuplicates { get; set; }
         List<string> FileNameParts { get; set; }
         List<FieldConfiguration> Fields { get; set; }
 

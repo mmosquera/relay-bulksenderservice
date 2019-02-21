@@ -77,7 +77,7 @@ namespace Relay.BulkSenderService.Processors
                     Thread.Sleep(_configuration.DeliveryInterval);
                 }
 
-                resultsFile.Append(recipient.ResultLine);                
+                resultsFile.Append(recipient.ResultLine);
             }
 
             using (StreamWriter sw = new StreamWriter(resultsFileName, true))
@@ -191,6 +191,16 @@ namespace Relay.BulkSenderService.Processors
         private void AddExtraHeaders(StringBuilder resultsFile, string headers, char separator)
         {
             resultsFile.AppendLine($"{headers}{separator}{Constants.HEADER_PROCESS_RESULT}{separator}{Constants.HEADER_DELIVERY_RESULT}");
+        }
+
+        protected override List<string> GetAttachments(string file, string userName)
+        {
+            return new List<string>();
+        }
+
+        protected override string GetBody(string file, IUserConfiguration user, ProcessResult result)
+        {
+            return null;
         }
     }
 }
