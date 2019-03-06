@@ -1,4 +1,5 @@
 ﻿using Relay.BulkSenderService.Classes;
+using Relay.BulkSenderService.Configuration.Alerts;
 using Relay.BulkSenderService.Processors;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,7 @@ namespace Relay.BulkSenderService.Configuration
         public CredentialsConfiguration Credentials { get; set; }
         public IFtpConfiguration Ftp { get; set; }
         public ReportConfiguration Reports { get; set; }
+        public AlertConfiguration Alerts { get; set; }
 
         public Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName)
         {
@@ -106,6 +108,11 @@ namespace Relay.BulkSenderService.Configuration
             if (this.Reports != null)
             {
                 configuration.Reports = this.Reports.Clone();
+            }
+
+            if (this.Alerts != null)
+            {
+                configuration.Alerts = this.Alerts.Clone();
             }
 
             return configuration;

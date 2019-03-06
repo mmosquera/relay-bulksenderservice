@@ -1,6 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Classes.Enums;
 using Relay.BulkSenderService.Configuration;
+using Relay.BulkSenderService.Configuration.Alerts;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,469 +11,480 @@ using System.Net.Mail;
 
 namespace Relay.BulkSenderService.Reports
 {
-	public abstract class ReportProcessor
-	{
-		protected readonly ILog _logger;
-		protected readonly IConfiguration _configuration;
-		protected readonly ReportTypeConfiguration _reportTypeConfiguration;
+    public abstract class ReportProcessor
+    {
+        protected readonly ILog _logger;
+        protected readonly IConfiguration _configuration;
+        protected readonly ReportTypeConfiguration _reportTypeConfiguration;
 
-		public ReportProcessor(ILog logger, IConfiguration configuration, ReportTypeConfiguration reportTypeConfiguration)
-		{
-			_logger = logger;
-			_configuration = configuration;
-			_reportTypeConfiguration = reportTypeConfiguration;
-		}
+        public ReportProcessor(ILog logger, IConfiguration configuration, ReportTypeConfiguration reportTypeConfiguration)
+        {
+            _logger = logger;
+            _configuration = configuration;
+            _reportTypeConfiguration = reportTypeConfiguration;
+        }
 
-		/// <summary>
-		/// Retorna la lista de archivos para generarle los reportes necesarios.
-		/// </summary>
-		/// <param name="user">Configuracion del usuario.</param>
-		/// <param name="reportExecution">Datos de la ejecucion.</param>
-		/// <returns></returns>
-		protected abstract List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution);
+        /// <summary>
+        /// Retorna la lista de archivos para generarle los reportes necesarios.
+        /// </summary>
+        /// <param name="user">Configuracion del usuario.</param>
+        /// <param name="reportExecution">Datos de la ejecucion.</param>
+        /// <returns></returns>
+        protected abstract List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution);
 
-		/// <summary>
-		/// Procesa los arhivos generando el reporte correspondiente.
-		/// </summary>
-		/// <param name="files">Lista de archivos para generar reporte.</param>
-		/// <param name="user">Confuracion del usuario.</param>
-		/// <param name="reportExecution">Datos de la ejecucion.</param>
-		protected abstract List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution);
+        /// <summary>
+        /// Procesa los arhivos generando el reporte correspondiente.
+        /// </summary>
+        /// <param name="files">Lista de archivos para generar reporte.</param>
+        /// <param name="user">Confuracion del usuario.</param>
+        /// <param name="reportExecution">Datos de la ejecucion.</param>
+        protected abstract List<string> ProcessFilesForReports(List<string> files, IUserConfiguration user, ReportExecution reportExecution);
 
-		protected void UploadFileToFtp(string fileName, string ftpFolder, IFtpHelper ftpHelper)
-		{
-			if (File.Exists(fileName) && !string.IsNullOrEmpty(ftpFolder))
-			{
-				string ftpFileName = $@"{ftpFolder}/{Path.GetFileName(fileName)}";
+        protected void UploadFileToFtp(string fileName, string ftpFolder, IFtpHelper ftpHelper)
+        {
+            if (File.Exists(fileName) && !string.IsNullOrEmpty(ftpFolder))
+            {
+                string ftpFileName = $@"{ftpFolder}/{Path.GetFileName(fileName)}";
 
-				_logger.Debug($"Upload file {ftpFileName} to ftp.");
+                _logger.Debug($"Upload file {ftpFileName} to ftp.");
 
-				ftpHelper.UploadFileAsync(fileName, ftpFileName);
-			}
-		}
+                ftpHelper.UploadFileAsync(fileName, ftpFileName);
+            }
+        }
 
-		public void Process(IUserConfiguration user, ReportExecution reportExecution)
-		{
-			List<string> files = GetFilesToProcess(user, reportExecution);
+        public void Process(IUserConfiguration user, ReportExecution reportExecution)
+        {
+            List<string> files = GetFilesToProcess(user, reportExecution);
 
-			List<string> reports = ProcessFilesForReports(files, user, reportExecution);
+            List<string> reports = ProcessFilesForReports(files, user, reportExecution);
 
-			reportExecution.Processed = true;
-			reportExecution.ProcessedDate = DateTime.UtcNow;
+            reportExecution.Processed = true;
+            reportExecution.ProcessedDate = DateTime.UtcNow;
 
-			SendReportAlert(user, reports);
-		}
+            SendReportAlert(user, reports);
+        }
 
-		private void SendReportAlert(IUserConfiguration user, List<string> files)
-		{
-			if (((UserApiConfiguration)user).Alerts == null || files == null || files.Count == 0)
-			{
-				return;
-			}
+        protected virtual void SendReportAlert(IUserConfiguration user, List<string> files)
+        {
+            if (user.Alerts == null || user.Alerts.GetReportAlert() == null || files == null || files.Count == 0)
+            {
+                return;
+            }
 
-			var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
-			smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
+            ReportAlertTypeConfiguration reportAlert = user.Alerts.GetReportAlert();
 
-			foreach (ReportAlertTypeConfiguration alert in ((UserApiConfiguration)user).Alerts.AlertList.OfType<ReportAlertTypeConfiguration>())
-			{
-				var mailMessage = new MailMessage()
-				{
-					Body = alert.Message,
-					Subject = alert.Subject,
-					From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support")
-				};
+            SendSmtpEmail(user.Alerts.Emails, reportAlert.Subject, reportAlert.Message, files);
+        }
 
-				foreach (string email in ((UserApiConfiguration)user).Alerts.Emails)
-				{
-					mailMessage.To.Add(email);
-				}
+        protected void SendSmtpEmail(List<string> toList, string subject, string body, List<string> attachments)
+        {
+            var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
+            smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
 
-				foreach (string file in files)
-				{
-					var attachment = new Attachment(file)
-					{
-						Name = Path.GetFileName(file)
-					};
+            var mailMessage = new MailMessage()
+            {
+                Body = body,
+                IsBodyHtml = true,
+                Subject = subject,
+                From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support")
+            };
 
-					mailMessage.Attachments.Add(attachment);
-				}
+            foreach (string to in toList)
+            {
+                mailMessage.To.Add(to);
+            }
 
-				smtpClient.Send(mailMessage);
-			}
-		}
+            foreach (string file in attachments)
+            {
+                var attachment = new Attachment(file)
+                {
+                    Name = Path.GetFileName(file)
+                };
 
-		protected List<string> FilterFilesByTemplate(List<string> files, IUserConfiguration user)
-		{
-			var filteredFiles = new List<string>();
-			foreach (string file in files)
-			{
-				ITemplateConfiguration templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
+                mailMessage.Attachments.Add(attachment);
+            }
+            try
+            {
+                smtpClient.Send(mailMessage);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error trying to send smtp email -- {e}");
+            }
+        }
 
-				if (templateConfiguration != null && _reportTypeConfiguration.Templates.Contains(templateConfiguration.TemplateName))
-				{
-					filteredFiles.Add(file);
-				}
-			}
+        protected List<string> FilterFilesByTemplate(List<string> files, IUserConfiguration user)
+        {
+            var filteredFiles = new List<string>();
+            foreach (string file in files)
+            {
+                ITemplateConfiguration templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
 
-			return filteredFiles;
-		}
+                if (templateConfiguration != null && _reportTypeConfiguration.Templates.Contains(templateConfiguration.TemplateName))
+                {
+                    filteredFiles.Add(file);
+                }
+            }
 
-		protected virtual void GetDataFromDB(List<ReportItem> items, string dateFormat, int userId, int reportGMT)
-		{
-			List<string> guids = items.Select(it => it.ResultId).Distinct().ToList();
+            return filteredFiles;
+        }
 
-			var sqlHelper = new SqlHelper();
+        protected virtual void GetDataFromDB(List<ReportItem> items, string dateFormat, int userId, int reportGMT)
+        {
+            List<string> guids = items.Select(it => it.ResultId).Distinct().ToList();
 
-			try
-			{
-				int i = 0;
-				while (i < guids.Count)
-				{
-					// TODO use skip take from linq.
-					var aux = new List<string>();
-					for (int count = 0; i < guids.Count && count < 1000; count++)
-					{
-						aux.Add(guids[i]);
-						i++;
-					}
+            var sqlHelper = new SqlHelper();
 
-					List<DBStatusDto> dbReportItemList = sqlHelper.GetResultsByDeliveryList(userId, aux);
-					foreach (DBStatusDto dbReportItem in dbReportItemList)
-					{
-						ReportItem item = items.FirstOrDefault(x => x.ResultId == dbReportItem.MessageGuid);
-						if (item != null)
-						{
-							MapDBStatusDtoToReportItem(dbReportItem, item, reportGMT, dateFormat);
-						}
-					}
+            try
+            {
+                int i = 0;
+                while (i < guids.Count)
+                {
+                    // TODO use skip take from linq.
+                    var aux = new List<string>();
+                    for (int count = 0; i < guids.Count && count < 1000; count++)
+                    {
+                        aux.Add(guids[i]);
+                        i++;
+                    }
 
-					aux.Clear();
-				}
+                    List<DBStatusDto> dbReportItemList = sqlHelper.GetResultsByDeliveryList(userId, aux);
+                    foreach (DBStatusDto dbReportItem in dbReportItemList)
+                    {
+                        ReportItem item = items.FirstOrDefault(x => x.ResultId == dbReportItem.MessageGuid);
+                        if (item != null)
+                        {
+                            MapDBStatusDtoToReportItem(dbReportItem, item, reportGMT, dateFormat);
+                        }
+                    }
 
-				sqlHelper.CloseConnection();
-			}
-			catch (Exception e)
-			{
-				_logger.Error($"Error on get data from DB {e}");
-				throw;
-			}
-		}
+                    aux.Clear();
+                }
 
-		// TODO: internationalize messages.
-		private void GetStatusAndDescription(DBStatusDto item, out string status, out string description)
-		{
-			description = string.Empty;
-			status = string.Empty;
+                sqlHelper.CloseConnection();
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error on get data from DB {e}");
+                throw;
+            }
+        }
 
-			switch (item.Status)
-			{
-				case (int)DeliveryStatus.Queued:
-					status = "Encolado";
-					description = "Encolado";
-					break;
+        // TODO: internationalize messages.
+        private void GetStatusAndDescription(DBStatusDto item, out string status, out string description)
+        {
+            description = string.Empty;
+            status = string.Empty;
 
-				case (int)DeliveryStatus.Sent:
-					status = "Enviado";
-					if (item.OpenEventsCount > 0)
-					{
-						description = "Abierto";
-					}
-					else
-					{
-						description = "No abierto";
-					}
-					break;
-				case (int)DeliveryStatus.Rejected:
-					status = "Mail rechazado";
-					break;
-				case (int)DeliveryStatus.Invalid:
-					status = "Mail inválido";
-					break;
-				case (int)DeliveryStatus.Retrying:
-					status = "Reintentando";
-					description = "Reintentando";
-					break;
-				case (int)DeliveryStatus.Dropped:
-					status = "Descartado";
-					description = "Incluido en blacklist";
-					break;
-			}
+            switch (item.Status)
+            {
+                case (int)DeliveryStatus.Queued:
+                    status = "Encolado";
+                    description = "Encolado";
+                    break;
 
-			if (item.Status == (int)DeliveryStatus.Rejected || item.Status == (int)DeliveryStatus.Invalid)
-			{
-				description = item.IsHard ? "Rebote Hard" : "Rebote soft";
+                case (int)DeliveryStatus.Sent:
+                    status = "Enviado";
+                    if (item.OpenEventsCount > 0)
+                    {
+                        description = "Abierto";
+                    }
+                    else
+                    {
+                        description = "No abierto";
+                    }
+                    break;
+                case (int)DeliveryStatus.Rejected:
+                    status = "Mail rechazado";
+                    break;
+                case (int)DeliveryStatus.Invalid:
+                    status = "Mail inválido";
+                    break;
+                case (int)DeliveryStatus.Retrying:
+                    status = "Reintentando";
+                    description = "Reintentando";
+                    break;
+                case (int)DeliveryStatus.Dropped:
+                    status = "Descartado";
+                    description = "Incluido en blacklist";
+                    break;
+            }
 
-				switch (item.MailStatus)
-				{
-					case (int)MailStatus.Invalid:
-						description += " - Inválido";
-						break;
-					case (int)MailStatus.RecipientRejected:
-						description += " - Destinatario rechazado";
-						break;
-					case (int)MailStatus.TimeOut:
-						description += " - Time out";
-						break;
-					case (int)MailStatus.TransactionError:
-						description += " - Error de transacción";
-						break;
-					case (int)MailStatus.ServerRejected:
-						description += " - Servidor rechazado";
-						break;
-					case (int)MailStatus.MailRejected:
-						description += " - Mail rechazado";
-						break;
-					case (int)MailStatus.MXNotFound:
-						description += " - MX no encontrado";
-						break;
-					case (int)MailStatus.InvalidEmail:
-						description += " - Mail inválido";
-						break;
-				}
-			}
-		}
+            if (item.Status == (int)DeliveryStatus.Rejected || item.Status == (int)DeliveryStatus.Invalid)
+            {
+                description = item.IsHard ? "Rebote Hard" : "Rebote soft";
 
-		protected List<string> GetHeadersList(List<ReportFieldConfiguration> reportHeaders, List<string> fileHeaders = null)
-		{
-			var headersList = new List<string>();
+                switch (item.MailStatus)
+                {
+                    case (int)MailStatus.Invalid:
+                        description += " - Inválido";
+                        break;
+                    case (int)MailStatus.RecipientRejected:
+                        description += " - Destinatario rechazado";
+                        break;
+                    case (int)MailStatus.TimeOut:
+                        description += " - Time out";
+                        break;
+                    case (int)MailStatus.TransactionError:
+                        description += " - Error de transacción";
+                        break;
+                    case (int)MailStatus.ServerRejected:
+                        description += " - Servidor rechazado";
+                        break;
+                    case (int)MailStatus.MailRejected:
+                        description += " - Mail rechazado";
+                        break;
+                    case (int)MailStatus.MXNotFound:
+                        description += " - MX no encontrado";
+                        break;
+                    case (int)MailStatus.InvalidEmail:
+                        description += " - Mail inválido";
+                        break;
+                }
+            }
+        }
 
-			foreach (ReportFieldConfiguration header in reportHeaders)
-			{
-				if (!headersList.Contains(header.HeaderName) && !header.HeaderName.Equals("*"))
-				{
-					headersList.Add(header.HeaderName);
-				}
-			}
+        protected List<string> GetHeadersList(List<ReportFieldConfiguration> reportHeaders, List<string> fileHeaders = null)
+        {
+            var headersList = new List<string>();
 
-			if (reportHeaders.Exists(x => x.HeaderName.Equals("*")) && fileHeaders != null)
-			{
-				string header;
-				for (int i = 0; i < fileHeaders.Count; i++)
-				{
-					header = fileHeaders[i];
-					if (header != Constants.HEADER_PROCESS_RESULT
-						&& header != Constants.HEADER_MESSAGE_ID
-						&& header != Constants.HEADER_DELIVERY_RESULT
-						&& header != Constants.HEADER_DELIVERY_LINK
-						&& !reportHeaders.Exists(x => x.NameInFile == header))
-					{
-						if (!headersList.Contains(header))
-						{
-							headersList.Add(header);
-						}
-					}
-				}
-			}
+            foreach (ReportFieldConfiguration header in reportHeaders)
+            {
+                if (!headersList.Contains(header.HeaderName) && !header.HeaderName.Equals("*"))
+                {
+                    headersList.Add(header.HeaderName);
+                }
+            }
 
-			return headersList;
-		}
+            if (reportHeaders.Exists(x => x.HeaderName.Equals("*")) && fileHeaders != null)
+            {
+                string header;
+                for (int i = 0; i < fileHeaders.Count; i++)
+                {
+                    header = fileHeaders[i];
+                    if (header != Constants.HEADER_PROCESS_RESULT
+                        && header != Constants.HEADER_MESSAGE_ID
+                        && header != Constants.HEADER_DELIVERY_RESULT
+                        && header != Constants.HEADER_DELIVERY_LINK
+                        && !reportHeaders.Exists(x => x.NameInFile == header))
+                    {
+                        if (!headersList.Contains(header))
+                        {
+                            headersList.Add(header);
+                        }
+                    }
+                }
+            }
 
-		protected List<ReportFieldConfiguration> GetHeadersIndexes(List<ReportFieldConfiguration> configurationHeaders, List<string> fileHeaders, out int processedIndex, out int resultIndex)
-		{
-			var reportHeaders = new List<ReportFieldConfiguration>();
+            return headersList;
+        }
 
-			foreach (ReportFieldConfiguration header in configurationHeaders)
-			{
-				var reportFieldConfiguration = new ReportFieldConfiguration()
-				{
-					HeaderName = header.HeaderName,
-					Position = header.Position
-				};
+        protected List<ReportFieldConfiguration> GetHeadersIndexes(List<ReportFieldConfiguration> configurationHeaders, List<string> fileHeaders, out int processedIndex, out int resultIndex)
+        {
+            var reportHeaders = new List<ReportFieldConfiguration>();
 
-				if (!string.IsNullOrEmpty(header.NameInDB))
-				{
-					reportFieldConfiguration.NameInDB = header.NameInDB;
-				}
-				else if (!string.IsNullOrEmpty(header.NameInFile))
-				{
-					int index = fileHeaders.IndexOf(header.NameInFile);
-					if (index != -1 && !reportHeaders.Exists(x => x.HeaderName == header.HeaderName))
-					{
-						reportFieldConfiguration.NameInFile = header.NameInFile;
-						reportFieldConfiguration.PositionInFile = index;
-					}
-				}
+            foreach (ReportFieldConfiguration header in configurationHeaders)
+            {
+                var reportFieldConfiguration = new ReportFieldConfiguration()
+                {
+                    HeaderName = header.HeaderName,
+                    Position = header.Position
+                };
 
-				reportHeaders.Add(reportFieldConfiguration);
-			}
+                if (!string.IsNullOrEmpty(header.NameInDB))
+                {
+                    reportFieldConfiguration.NameInDB = header.NameInDB;
+                }
+                else if (!string.IsNullOrEmpty(header.NameInFile))
+                {
+                    int index = fileHeaders.IndexOf(header.NameInFile);
+                    if (index != -1 && !reportHeaders.Exists(x => x.HeaderName == header.HeaderName))
+                    {
+                        reportFieldConfiguration.NameInFile = header.NameInFile;
+                        reportFieldConfiguration.PositionInFile = index;
+                    }
+                }
 
-			if (configurationHeaders.Exists(x => x.HeaderName.Equals("*")))
-			{
-				string header;
-				int index;
-				for (int i = 0; i < fileHeaders.Count; i++)
-				{
-					header = fileHeaders[i];
-					index = i;
+                reportHeaders.Add(reportFieldConfiguration);
+            }
 
-					if (header != Constants.HEADER_PROCESS_RESULT
-						&& header != Constants.HEADER_MESSAGE_ID
-						&& header != Constants.HEADER_DELIVERY_RESULT
-						&& header != Constants.HEADER_DELIVERY_LINK
-						&& !reportHeaders.Exists(x => x.NameInFile == header))
-					{
-						while (reportHeaders.Exists(x => x.Position == index))
-						{
-							index++;
-						}
+            if (configurationHeaders.Exists(x => x.HeaderName.Equals("*")))
+            {
+                string header;
+                int index;
+                for (int i = 0; i < fileHeaders.Count; i++)
+                {
+                    header = fileHeaders[i];
+                    index = i;
 
-						reportHeaders.Add(new ReportFieldConfiguration()
-						{
-							HeaderName = header,
-							NameInFile = header,
-							PositionInFile = i,
-							Position = index
-						});
-					}
-				}
-			}
+                    if (header != Constants.HEADER_PROCESS_RESULT
+                        && header != Constants.HEADER_MESSAGE_ID
+                        && header != Constants.HEADER_DELIVERY_RESULT
+                        && header != Constants.HEADER_DELIVERY_LINK
+                        && !reportHeaders.Exists(x => x.NameInFile == header))
+                    {
+                        while (reportHeaders.Exists(x => x.Position == index))
+                        {
+                            index++;
+                        }
 
-			processedIndex = fileHeaders.IndexOf(Constants.HEADER_PROCESS_RESULT);
-			resultIndex = fileHeaders.IndexOf(Constants.HEADER_MESSAGE_ID);
+                        reportHeaders.Add(new ReportFieldConfiguration()
+                        {
+                            HeaderName = header,
+                            NameInFile = header,
+                            PositionInFile = i,
+                            Position = index
+                        });
+                    }
+                }
+            }
 
-			return reportHeaders;
-		}
+            processedIndex = fileHeaders.IndexOf(Constants.HEADER_PROCESS_RESULT);
+            resultIndex = fileHeaders.IndexOf(Constants.HEADER_MESSAGE_ID);
 
-		protected void MapDBStatusDtoToReportItem(DBStatusDto dbStatusDto, ReportItem reportItem, int reportGMT = 0, string dateFormat = "")
-		{
-			string status;
-			string description;
-			GetStatusAndDescription(dbStatusDto, out status, out description);
+            return reportHeaders;
+        }
 
-			foreach (ReportFieldConfiguration reportField in _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)))
-			{
-				switch (reportField.NameInDB)
-				{
-					case "CreatedAt":
-						reportItem.AddValue(dbStatusDto.CreatedAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-						break;
-					case "Status":
-						reportItem.AddValue(status, reportField.Position);
-						break;
-					case "Description":
-						reportItem.AddValue(description, reportField.Position);
-						break;
-					case "ClickEventsCount":
-						reportItem.AddValue(dbStatusDto.ClickEventsCount.ToString(), reportField.Position);
-						break;
-					case "OpenEventsCount":
-						reportItem.AddValue(dbStatusDto.OpenEventsCount.ToString(), reportField.Position);
-						break;
-					case "SentAt":
-						reportItem.AddValue(dbStatusDto.SentAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-						break;
-					case "Subject":
-						reportItem.AddValue(dbStatusDto.Subject, reportField.Position);
-						break;
-					case "FromEmail":
-						reportItem.AddValue(dbStatusDto.FromEmail, reportField.Position);
-						break;
-					case "FromName":
-						reportItem.AddValue(dbStatusDto.FromName, reportField.Position);
-						break;
-					case "Address":
-						reportItem.AddValue(dbStatusDto.Address, reportField.Position);
-						break;
-					case "OpenDate":
-						reportItem.AddValue(dbStatusDto.OpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-						break;
-					case "ClickDate":
-						if (dbStatusDto.ClickDate.HasValue)
-						{
-							reportItem.AddValue(dbStatusDto.ClickDate.Value.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-						}
-						else
-						{
-							reportItem.AddValue(string.Empty, reportField.Position);
-						}
-						break;
-					case "BounceDate":
-						reportItem.AddValue(dbStatusDto.BounceDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-						break;
-					case "LinkUrl":
-						reportItem.AddValue(dbStatusDto.LinkUrl, reportField.Position);
-						break;
-					case "Unsubscribed":
-						reportItem.AddValue(dbStatusDto.Unsubscribed.ToString(), reportField.Position);
-						break;
-					case "TemplateId":
-						reportItem.AddValue(dbStatusDto.TemplateId.ToString(), reportField.Position);
-						break;
-					case "TemplateName":
-						reportItem.AddValue(dbStatusDto.TemplateName, reportField.Position);
-						break;
-					case "MessageGuid":
-						reportItem.AddValue(dbStatusDto.MessageGuid, reportField.Position);
-						break;
-				}
-			}
-		}
+        protected void MapDBStatusDtoToReportItem(DBStatusDto dbStatusDto, ReportItem reportItem, int reportGMT = 0, string dateFormat = "")
+        {
+            string status;
+            string description;
+            GetStatusAndDescription(dbStatusDto, out status, out description);
 
-		protected void MapDBSummarizedDtoToReportItem(DBSummarizedDto dbSummarizedDto, ReportItem reportItem, int reportGMT = 0, string dateFormat = "")
-		{
-			foreach (ReportFieldConfiguration reportField in _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)))
-			{
-				switch (reportField.NameInDB)
-				{
-					case "TemplateId":
-						reportItem.AddValue(dbSummarizedDto.TemplateId.ToString(), reportField.Position);
-						break;
-					case "TemplateName":
-						reportItem.AddValue(dbSummarizedDto.TemplateName, reportField.Position);
-						break;
-					case "TemplateGuid":
-						reportItem.AddValue(dbSummarizedDto.TemplateGuid, reportField.Position);
-						break;
-					case "TemplateFromEmail":
-						reportItem.AddValue(dbSummarizedDto.TemplateFromEmail, reportField.Position);
-						break;
-					case "TemplateFromName":
-						reportItem.AddValue(dbSummarizedDto.TemplateFromName, reportField.Position);
-						break;
-					case "TemplateSubject":
-						reportItem.AddValue(dbSummarizedDto.TemplateSubject, reportField.Position);
-						break;
-					case "TotalDeliveries":
-						reportItem.AddValue(dbSummarizedDto.TotalDeliveries.ToString(), reportField.Position);
-						break;
-					case "TotalRetries":
-						reportItem.AddValue(dbSummarizedDto.TotalRetries.ToString(), reportField.Position);
-						break;
-					case "TotalOpens":
-						reportItem.AddValue(dbSummarizedDto.TotalOpens.ToString(), reportField.Position);
-						break;
-					case "TotalUniqueOpens":
-						reportItem.AddValue(dbSummarizedDto.TotalUniqueOpens.ToString(), reportField.Position);
-						break;
-					case "LastOpenDate":
-						if (dbSummarizedDto.LastOpenDate != DateTime.MinValue)
-						{
-							reportItem.AddValue(dbSummarizedDto.LastOpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-						}
-						break;
-					case "TotalClicks":
-						reportItem.AddValue(dbSummarizedDto.TotalClicks.ToString(), reportField.Position);
-						break;
-					case "TotalUniqueClicks":
-						reportItem.AddValue(dbSummarizedDto.TotalUniqueClicks.ToString(), reportField.Position);
-						break;
-					case "LastClickDate":
-						if (dbSummarizedDto.LastClickDate != DateTime.MinValue)
-						{
-							reportItem.AddValue(dbSummarizedDto.LastClickDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
-						}
-						break;
-					case "TotalUnsubscriptions":
-						reportItem.AddValue(dbSummarizedDto.TotalUnsubscriptions.ToString(), reportField.Position);
-						break;
-					case "TotalHardBounces":
-						reportItem.AddValue(dbSummarizedDto.TotalHardBounces.ToString(), reportField.Position);
-						break;
-					case "TotalSoftBounces":
-						reportItem.AddValue(dbSummarizedDto.TotalSoftBounces.ToString(), reportField.Position);
-						break;
-				}
-			}
-		}
-	}
+            foreach (ReportFieldConfiguration reportField in _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)))
+            {
+                switch (reportField.NameInDB)
+                {
+                    case "CreatedAt":
+                        reportItem.AddValue(dbStatusDto.CreatedAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "Status":
+                        reportItem.AddValue(status, reportField.Position);
+                        break;
+                    case "Description":
+                        reportItem.AddValue(description, reportField.Position);
+                        break;
+                    case "ClickEventsCount":
+                        reportItem.AddValue(dbStatusDto.ClickEventsCount.ToString(), reportField.Position);
+                        break;
+                    case "OpenEventsCount":
+                        reportItem.AddValue(dbStatusDto.OpenEventsCount.ToString(), reportField.Position);
+                        break;
+                    case "SentAt":
+                        reportItem.AddValue(dbStatusDto.SentAt.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "Subject":
+                        reportItem.AddValue(dbStatusDto.Subject, reportField.Position);
+                        break;
+                    case "FromEmail":
+                        reportItem.AddValue(dbStatusDto.FromEmail, reportField.Position);
+                        break;
+                    case "FromName":
+                        reportItem.AddValue(dbStatusDto.FromName, reportField.Position);
+                        break;
+                    case "Address":
+                        reportItem.AddValue(dbStatusDto.Address, reportField.Position);
+                        break;
+                    case "OpenDate":
+                        reportItem.AddValue(dbStatusDto.OpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "ClickDate":
+                        if (dbStatusDto.ClickDate.HasValue)
+                        {
+                            reportItem.AddValue(dbStatusDto.ClickDate.Value.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        }
+                        else
+                        {
+                            reportItem.AddValue(string.Empty, reportField.Position);
+                        }
+                        break;
+                    case "BounceDate":
+                        reportItem.AddValue(dbStatusDto.BounceDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        break;
+                    case "LinkUrl":
+                        reportItem.AddValue(dbStatusDto.LinkUrl, reportField.Position);
+                        break;
+                    case "Unsubscribed":
+                        reportItem.AddValue(dbStatusDto.Unsubscribed.ToString(), reportField.Position);
+                        break;
+                    case "TemplateId":
+                        reportItem.AddValue(dbStatusDto.TemplateId.ToString(), reportField.Position);
+                        break;
+                    case "TemplateName":
+                        reportItem.AddValue(dbStatusDto.TemplateName, reportField.Position);
+                        break;
+                    case "MessageGuid":
+                        reportItem.AddValue(dbStatusDto.MessageGuid, reportField.Position);
+                        break;
+                }
+            }
+        }
+
+        protected void MapDBSummarizedDtoToReportItem(DBSummarizedDto dbSummarizedDto, ReportItem reportItem, int reportGMT = 0, string dateFormat = "")
+        {
+            foreach (ReportFieldConfiguration reportField in _reportTypeConfiguration.ReportFields.Where(x => !string.IsNullOrEmpty(x.NameInDB)))
+            {
+                switch (reportField.NameInDB)
+                {
+                    case "TemplateId":
+                        reportItem.AddValue(dbSummarizedDto.TemplateId.ToString(), reportField.Position);
+                        break;
+                    case "TemplateName":
+                        reportItem.AddValue(dbSummarizedDto.TemplateName, reportField.Position);
+                        break;
+                    case "TemplateGuid":
+                        reportItem.AddValue(dbSummarizedDto.TemplateGuid, reportField.Position);
+                        break;
+                    case "TemplateFromEmail":
+                        reportItem.AddValue(dbSummarizedDto.TemplateFromEmail, reportField.Position);
+                        break;
+                    case "TemplateFromName":
+                        reportItem.AddValue(dbSummarizedDto.TemplateFromName, reportField.Position);
+                        break;
+                    case "TemplateSubject":
+                        reportItem.AddValue(dbSummarizedDto.TemplateSubject, reportField.Position);
+                        break;
+                    case "TotalDeliveries":
+                        reportItem.AddValue(dbSummarizedDto.TotalDeliveries.ToString(), reportField.Position);
+                        break;
+                    case "TotalRetries":
+                        reportItem.AddValue(dbSummarizedDto.TotalRetries.ToString(), reportField.Position);
+                        break;
+                    case "TotalOpens":
+                        reportItem.AddValue(dbSummarizedDto.TotalOpens.ToString(), reportField.Position);
+                        break;
+                    case "TotalUniqueOpens":
+                        reportItem.AddValue(dbSummarizedDto.TotalUniqueOpens.ToString(), reportField.Position);
+                        break;
+                    case "LastOpenDate":
+                        if (dbSummarizedDto.LastOpenDate != DateTime.MinValue)
+                        {
+                            reportItem.AddValue(dbSummarizedDto.LastOpenDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        }
+                        break;
+                    case "TotalClicks":
+                        reportItem.AddValue(dbSummarizedDto.TotalClicks.ToString(), reportField.Position);
+                        break;
+                    case "TotalUniqueClicks":
+                        reportItem.AddValue(dbSummarizedDto.TotalUniqueClicks.ToString(), reportField.Position);
+                        break;
+                    case "LastClickDate":
+                        if (dbSummarizedDto.LastClickDate != DateTime.MinValue)
+                        {
+                            reportItem.AddValue(dbSummarizedDto.LastClickDate.AddHours(reportGMT).ToString(dateFormat), reportField.Position);
+                        }
+                        break;
+                    case "TotalUnsubscriptions":
+                        reportItem.AddValue(dbSummarizedDto.TotalUnsubscriptions.ToString(), reportField.Position);
+                        break;
+                    case "TotalHardBounces":
+                        reportItem.AddValue(dbSummarizedDto.TotalHardBounces.ToString(), reportField.Position);
+                        break;
+                    case "TotalSoftBounces":
+                        reportItem.AddValue(dbSummarizedDto.TotalSoftBounces.ToString(), reportField.Position);
+                        break;
+                }
+            }
+        }
+    }
 }

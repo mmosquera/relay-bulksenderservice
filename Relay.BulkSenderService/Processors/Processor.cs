@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using Relay.BulkSenderService.Configuration.Alerts;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -62,7 +63,7 @@ namespace Relay.BulkSenderService.Processors
                     SendEndProcessEmail(fileName, user, result);
                 }
 
-                SendErrorEmail(fileName, user.AdminEmail, result);
+                SendErrorEmail(fileName, user.Alerts, result);
 
                 AddReportForFile(resultFileName, user);
 
@@ -221,7 +222,7 @@ namespace Relay.BulkSenderService.Processors
 
         private void SendStartProcessEmail(string file, IUserConfiguration user)
         {
-            if (user.AdminEmail != null && user.AdminEmail.HasStartEmail && user.AdminEmail.Emails.Count > 0)
+            if (user.Alerts != null && user.Alerts.GetStartAlert() != null && user.Alerts.Emails.Count > 0)
             {
                 _logger.Debug($"Send start to send email for file {file}");
 
@@ -229,9 +230,10 @@ namespace Relay.BulkSenderService.Processors
                 smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
 
                 var mailMessage = new MailMessage();
-                mailMessage.Subject = "Doppler Relay - Start process";
+                mailMessage.Subject = user.Alerts.GetStartAlert().Subject;
                 mailMessage.From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support");
-                foreach (string email in user.AdminEmail.Emails)
+
+                foreach (string email in user.Alerts.Emails)
                 {
                     mailMessage.To.Add(email);
                 }
@@ -253,7 +255,7 @@ namespace Relay.BulkSenderService.Processors
 
         private void SendEndProcessEmail(string file, IUserConfiguration user, ProcessResult result)
         {
-            if (user.AdminEmail != null && user.AdminEmail.HasEndEmail && user.AdminEmail.Emails.Count > 0)
+            if (user.Alerts != null && user.Alerts.GetEndAlert() != null && user.Alerts.Emails.Count > 0)
             {
                 _logger.Debug($"Send end process email for file {file}");
 
@@ -261,9 +263,10 @@ namespace Relay.BulkSenderService.Processors
                 smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
 
                 var mailMessage = new MailMessage();
-                mailMessage.Subject = "Doppler Relay - Complete process";
+                mailMessage.Subject = user.Alerts.GetEndAlert().Subject;
                 mailMessage.From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support");
-                foreach (string email in user.AdminEmail.Emails)
+
+                foreach (string email in user.Alerts.Emails)
                 {
                     mailMessage.To.Add(email);
                 }
@@ -296,9 +299,12 @@ namespace Relay.BulkSenderService.Processors
 
         protected abstract string GetBody(string file, IUserConfiguration user, ProcessResult result);
 
-        private void SendErrorEmail(string file, AdminEmailConfiguration adminEmail, ProcessResult result)
+        private void SendErrorEmail(string file, AlertConfiguration alerts, ProcessResult result)
         {
-            if (result.Type != ResulType.PROCESS && adminEmail != null && adminEmail.HasErrorEmail && adminEmail.Emails.Count > 0)
+            if (result.Type != ResulType.PROCESS
+                && alerts != null
+                && alerts.GetErrorAlert() != null
+                && alerts.Emails.Count > 0)
             {
                 _logger.Debug($"Send end process email for file {file}");
 
@@ -307,10 +313,10 @@ namespace Relay.BulkSenderService.Processors
 
                 var mailMessage = new MailMessage()
                 {
-                    Subject = "DOPPLER RELAY PROCESS ERROR",
+                    Subject = alerts.GetErrorAlert().Subject,
                     From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support")
                 };
-                foreach (string email in adminEmail.Emails)
+                foreach (string email in alerts.Emails)
                 {
                     mailMessage.To.Add(email);
                 }

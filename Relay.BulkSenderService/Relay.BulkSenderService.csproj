@@ -218,9 +218,11 @@
     <Compile Include="Classes\ZipHelper.cs" />
     <Compile Include="Configuration\AckConfiguration.cs" />
     <Compile Include="Configuration\AdminEmailConfiguration.cs" />
-    <Compile Include="Configuration\AlertConfiguration.cs" />
+    <Compile Include="Configuration\Alerts\AlertConfiguration.cs" />
+    <Compile Include="Configuration\Alerts\EndAlertTypeConfiguration.cs" />
+    <Compile Include="Configuration\Alerts\StartAlertTypeConfiguration.cs" />
     <Compile Include="Configuration\BanorteResumeReportTypeConfiguration.cs" />
-    <Compile Include="Configuration\IAlertTypeConfiguration.cs" />
+    <Compile Include="Configuration\Alerts\IAlertTypeConfiguration.cs" />
     <Compile Include="Configuration\AppConfiguration.cs" />
     <Compile Include="Configuration\AttachmentConfiguration.cs" />
     <Compile Include="Configuration\BaseTemplateConfiguration.cs" />
@@ -228,7 +230,8 @@
     <Compile Include="Classes\FilePathHelper.cs" />
     <Compile Include="Configuration\CredentialsConfiguration.cs" />
     <Compile Include="Configuration\CsvFileReportTypeConfiguration.cs" />
-    <Compile Include="Configuration\ReportAlertTypeConfiguration.cs" />
+    <Compile Include="Configuration\Alerts\ErrorAlertTypeConfiguration.cs" />
+    <Compile Include="Configuration\Alerts\ReportAlertTypeConfiguration.cs" />
     <Compile Include="Configuration\StatusProgressReportTypeConfiguration.cs" />
     <Compile Include="Configuration\RicohStatusReportTypeConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioCabeceraReportTypeConfiguration.cs" />

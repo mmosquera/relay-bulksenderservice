@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Mail;
 
 namespace Relay.BulkSenderService.Reports
 {
@@ -26,7 +24,6 @@ namespace Relay.BulkSenderService.Reports
 
             _logger.Debug($"Create resume report for user {user.Name}.");
 
-            //var ftpHelper = user.Ftp.GetFtpHelper(_logger);
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
             var report = new TemplateReport()
@@ -53,39 +50,16 @@ namespace Relay.BulkSenderService.Reports
                 reports.Add(reportFileName);
 
                 reportExecution.ReportFile = Path.GetFileName(reportFileName);
-
-                SendEmail(user, reportFileName);
             }
 
             return reports;
         }
 
-        private void SendEmail(IUserConfiguration user, string reportFileName)
+        protected override void SendReportAlert(IUserConfiguration user, List<string> files)
         {
-            if (user.AdminEmail != null && user.AdminEmail.Emails.Count > 0)
+            if (user.Alerts != null && user.Alerts.GetReportAlert() != null && user.Alerts.Emails.Count > 0)
             {
-                var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
-                smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
-
-                var mailMessage = new MailMessage();
-                mailMessage.Subject = "Doppler Relay - Resumen Importacion";
-                mailMessage.From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support");
-                foreach (string email in user.AdminEmail.Emails)
-                {
-                    mailMessage.To.Add(email);
-                }
-
-                mailMessage.Body = File.ReadAllText(reportFileName);
-                mailMessage.IsBodyHtml = true;
-
-                try
-                {
-                    smtpClient.Send(mailMessage);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"Error trying to send starting email -- {e}");
-                }
+                SendSmtpEmail(user.Alerts.Emails, user.Alerts.GetReportAlert().Subject, File.ReadAllText(files[0]), new List<string>());
             }
         }
 
