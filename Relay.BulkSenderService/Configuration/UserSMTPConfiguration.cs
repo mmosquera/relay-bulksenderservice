@@ -1,14 +1,16 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration.Alerts;
 using Relay.BulkSenderService.Processors;
+using Relay.BulkSenderService.Processors.PreProcess;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 
 namespace Relay.BulkSenderService.Configuration
 {
     public class UserSMTPConfiguration : IUserConfiguration
     {
-        public char FieldSeparator { get; set; }
         public int FtpInterval { get; set; }
         public bool HasDeleteFtp { get; set; }
         public string Name { get; set; }
@@ -16,7 +18,7 @@ namespace Relay.BulkSenderService.Configuration
         public string SmtpPass { get; set; }
         public string TemplateFilePath { get; set; }
         public int UserGMT { get; set; }
-        public string AttachFilePath { get; set; }
+        public bool HasHeaders { get; set; }
         public string AttachmentsFolder { get; set; }
         public ErrorConfiguration Errors { get; set; }
         public IResultConfiguration Results { get; set; }
@@ -28,10 +30,12 @@ namespace Relay.BulkSenderService.Configuration
         public IFtpConfiguration Ftp { get; set; }
         public ReportConfiguration Reports { get; set; }
         public AlertConfiguration Alerts { get; set; }
+        public List<ITemplateConfiguration> Templates { get; set; }
+        public IPreProcessorConfiguration PreProcessor { get; set; }
 
         public Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName)
         {
-            return new SMTPProcessor(logger, configuration);
+            return GetTemplateConfiguration(fileName)?.GetProcessor(logger, configuration);
         }
 
         public DateTimeOffset GetUserDateTime()
@@ -41,12 +45,26 @@ namespace Relay.BulkSenderService.Configuration
             return new DateTimeOffset(DateTimeOffset.UtcNow.Add(timeSpan).DateTime, timeSpan);
         }
 
+        public ITemplateConfiguration GetTemplateConfiguration(string fileName)
+        {
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            foreach (ITemplateConfiguration templateConfiguration in this.Templates)
+            {
+                string[] namePartsArray = name.ToUpper().Split(templateConfiguration.FileNamePartSeparator);
+
+                if (templateConfiguration.FileNameParts.All(x => namePartsArray.Contains(x.ToUpper())))
+                {
+                    return templateConfiguration;
+                }
+            }
+
+            return Templates.Where(x => x.FileNameParts.Contains("*")).FirstOrDefault();
+        }
+
         public IUserConfiguration Clone()
         {
             var configuration = new UserSMTPConfiguration();
 
-            configuration.AttachFilePath = this.AttachFilePath;
-            configuration.FieldSeparator = this.FieldSeparator;
             configuration.FtpInterval = this.FtpInterval;
             configuration.HasDeleteFtp = this.HasDeleteFtp;
             configuration.Name = this.Name;
@@ -115,7 +133,22 @@ namespace Relay.BulkSenderService.Configuration
                 configuration.Alerts = this.Alerts.Clone();
             }
 
+            if (this.Templates != null)
+            {
+                configuration.Templates = new List<ITemplateConfiguration>();
+
+                foreach (ITemplateConfiguration template in this.Templates)
+                {
+                    configuration.Templates.Add(template.Clone());
+                }
+            }
+
             return configuration;
+        }
+
+        public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration)
+        {
+            return PreProcessor.GetPreProcessor(logger, configuration);
         }
     }
 }

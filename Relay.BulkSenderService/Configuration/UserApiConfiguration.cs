@@ -1,6 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration.Alerts;
 using Relay.BulkSenderService.Processors;
+using Relay.BulkSenderService.Processors.PreProcess;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -25,6 +26,7 @@ namespace Relay.BulkSenderService.Configuration
         public IFtpConfiguration Ftp { get; set; }
         public ReportConfiguration Reports { get; set; }
         public AlertConfiguration Alerts { get; set; }
+        public IPreProcessorConfiguration PreProcessor { get; set; }
 
         public DateTimeOffset GetUserDateTime()
         {
@@ -131,6 +133,11 @@ namespace Relay.BulkSenderService.Configuration
             }
 
             return configuration;
+        }
+
+        public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration)
+        {
+            return PreProcessor.GetPreProcessor(logger, configuration);
         }
     }
 }
