@@ -211,6 +211,7 @@
     <Compile Include="Classes\LogManager.cs" />
     <Compile Include="Classes\Recipient.cs" />
     <Compile Include="Classes\ProcessResult.cs" />
+    <Compile Include="Classes\RecipientAttachment.cs" />
     <Compile Include="Classes\SftpHelper.cs" />
     <Compile Include="Classes\SMTPRecipient.cs" />
     <Compile Include="Classes\SqlHelper.cs" />
@@ -228,10 +229,14 @@
     <Compile Include="Configuration\BaseTemplateConfiguration.cs" />
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\FilePathHelper.cs" />
+    <Compile Include="Configuration\ProvinciaPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\CredentialsConfiguration.cs" />
     <Compile Include="Configuration\CsvFileReportTypeConfiguration.cs" />
     <Compile Include="Configuration\Alerts\ErrorAlertTypeConfiguration.cs" />
     <Compile Include="Configuration\Alerts\ReportAlertTypeConfiguration.cs" />
+    <Compile Include="Configuration\BasicPreProcessorConfiguration.cs" />
+    <Compile Include="Configuration\IPreProcessorConfiguration.cs" />
+    <Compile Include="Configuration\ProvinciaTemplateConfiguration.cs" />
     <Compile Include="Configuration\StatusProgressReportTypeConfiguration.cs" />
     <Compile Include="Configuration\RicohStatusReportTypeConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioCabeceraReportTypeConfiguration.cs" />
@@ -255,6 +260,7 @@
     <Compile Include="Configuration\ReportName.cs" />
     <Compile Include="Configuration\ResultConfiguration.cs" />
     <Compile Include="Configuration\ResultMessageConfiguration.cs" />
+    <Compile Include="Configuration\TemplateSmtpConfiguration.cs" />
     <Compile Include="Configuration\TemplateDuplicatesConfiguration.cs" />
     <Compile Include="Configuration\TemplateBanorteConfiguration.cs" />
     <Compile Include="Configuration\TemplateGireConfiguration.cs" />
@@ -265,6 +271,11 @@
     <Compile Include="Configuration\UserApiConfiguration.cs" />
     <Compile Include="Configuration\UserSMTPConfiguration.cs" />
     <Compile Include="Classes\FTPHelper.cs" />
+    <Compile Include="Processors\PreProcess\BasicPreProcessor.cs" />
+    <Compile Include="Processors\PreProcess\PreProcessor.cs" />
+    <Compile Include="Processors\PreProcess\ProvinciaPreProcessor.cs" />
+    <Compile Include="Processors\PreProcess\PreProcessWorker.cs" />
+    <Compile Include="Processors\SMTPProcessorProvincia.cs" />
     <Compile Include="Processors\APIProcessorDuplicates.cs" />
     <Compile Include="Processors\APIProcessorBanorte.cs" />
     <Compile Include="Processors\APIProcessorCustomHeaderBancor.cs" />
@@ -326,6 +337,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="Configs\bancorRemote.config.json" />
+    <None Include="Configs\BasicSmpt.config.json" />
     <None Include="Configs\bpn.config.json" />
     <None Include="Configs\compumundo.config.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

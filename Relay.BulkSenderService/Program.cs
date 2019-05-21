@@ -1,6 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
 using Relay.BulkSenderService.Processors;
+using Relay.BulkSenderService.Processors.PreProcess;
 using System.ServiceProcess;
 using Unity;
 
@@ -25,14 +26,17 @@ namespace Relay.BulkSenderService
             ServiceBase.Run(ServicesToRun);
 
             #region To run it as a console app:
-            //FtpMonitor ftp = _container.Resolve<FtpMonitor>();
-            //LocalMonitor local = _container.Resolve<LocalMonitor>();
+            //FtpMonitor fm = _container.Resolve<FtpMonitor>();
+            //LocalMonitor lm = _container.Resolve<LocalMonitor>();
             //ReportGenerator rg = _container.Resolve<ReportGenerator>();
+            //PreProcessWorker pp = _container.Resolve<PreProcessWorker>();
+            //CleanProcessor cp = _container.Resolve<CleanProcessor>();
 
-            //ftp.ReadFtpFiles();            
-            //local.ReadLocalFiles();
+            //fm.ReadFtpFiles();            
+            //lm.ReadLocalFiles();
             //rg.Process();            
             //cp.Process();
+            //pp.Process();
             #endregion
         }
         static void Configure()
@@ -47,6 +51,7 @@ namespace Relay.BulkSenderService
             _container.RegisterType<BaseWorker, FtpMonitor>();
             _container.RegisterType<BaseWorker, ReportGenerator>();
             _container.RegisterType<BaseWorker, CleanProcessor>();
+            _container.RegisterType<BaseWorker, PreProcessWorker>();
             _container.RegisterType<IWatcher, FileCommandsWatcher>();
 
             var logManager = _container.Resolve<ILogManager>();
