@@ -20,5 +20,6 @@
 		int CleanAttachmentsDays { get; }
 		int LocalFilesInterval { get; }
 		string ReportsFolder { get; }
+        string UserFiles { get; }
 	}
 }
