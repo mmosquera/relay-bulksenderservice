@@ -24,6 +24,8 @@ namespace Relay.BulkSenderService.Classes
 
         public abstract bool DownloadFile(string ftpFileName, string localFileName);
 
+        public abstract bool DownloadFileWithResume(string ftpFileName, string localFileName);
+
         public abstract List<string> GetFileList(string folder, IEnumerable<string> filters);
 
         public abstract bool UploadFile(string localFileName, string ftpFileName);

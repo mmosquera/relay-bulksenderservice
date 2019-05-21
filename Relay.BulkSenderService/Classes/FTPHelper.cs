@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Threading;
 
 namespace Relay.BulkSenderService.Classes
 {
@@ -43,7 +42,7 @@ namespace Relay.BulkSenderService.Classes
                         while ((line = streamReader.ReadLine()) != null)
                         {
                             string extension = Path.GetExtension(line);
-                            
+
                             if (filters.Any(f => extension.Equals(f, StringComparison.InvariantCultureIgnoreCase)))
                             {
                                 files.Add(Path.GetFileName(line));
@@ -105,6 +104,62 @@ namespace Relay.BulkSenderService.Classes
             catch (Exception e)
             {
                 _logger.Error($"Error download file -- {e}");
+
+                return false;
+            }
+        }
+
+        public override bool DownloadFileWithResume(string ftpFileName, string localFileName)
+        {
+            Uri requestUri = GetFtpUri(ftpFileName);
+
+            if (requestUri == null)
+            {
+                return false;
+            }
+
+            var downloadRequest = (FtpWebRequest)WebRequest.Create(requestUri);
+            downloadRequest.Credentials = new NetworkCredential(_ftpUser, _ftpPassword);
+            downloadRequest.Method = WebRequestMethods.Ftp.DownloadFile;
+            downloadRequest.UseBinary = true;
+            downloadRequest.KeepAlive = true;
+            downloadRequest.EnableSsl = _isFTPS;
+            downloadRequest.UsePassive = true;
+
+            FileMode mode = FileMode.Create;
+            var file = new FileInfo(localFileName);
+
+            if (file.Exists)
+            {
+                downloadRequest.ContentOffset = file.Length;
+                mode = FileMode.Append;
+            }
+
+            try
+            {
+                using (var downloadResponse = (FtpWebResponse)downloadRequest.GetResponse())
+                {
+                    using (var responseStream = downloadResponse.GetResponseStream())
+                    {
+                        using (var writeStream = new FileStream(localFileName, mode, FileAccess.Write))
+                        {
+                            int Length = 4096;
+                            byte[] buffer = new byte[Length];
+                            int bytesRead;
+
+                            while ((bytesRead = responseStream.Read(buffer, 0, Length)) > 0)
+                            {
+                                writeStream.Write(buffer, 0, bytesRead);
+                            }
+                        }
+                    }
+                }
+
+                return true;
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error download file with resume -- {e}");
 
                 return false;
             }

@@ -60,6 +60,11 @@ namespace Relay.BulkSenderService.Classes
             }
         }
 
+        public override bool DownloadFileWithResume(string ftpFileName, string localFileName)
+        {
+            throw new NotImplementedException();
+        }
+
         public override List<string> GetFileList(string folder, IEnumerable<string> filters)
         {
             var files = new List<string>();

@@ -8,6 +8,8 @@ namespace Relay.BulkSenderService.Classes
 
         bool DownloadFile(string ftpFileName, string localFileName);
 
+        bool DownloadFileWithResume(string ftpFileName, string localFileName);
+
         bool UploadFile(string localFileName, string ftpFileName);
 
         bool DeleteFile(string ftpFileName);
