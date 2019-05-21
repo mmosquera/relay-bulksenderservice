@@ -1,7 +1,4 @@
-﻿using Newtonsoft.Json;
-using System.Collections.Generic;
-
-namespace Relay.BulkSenderService.Classes
+﻿namespace Relay.BulkSenderService.Classes
 {
     public class Recipient
     {
@@ -14,7 +11,6 @@ namespace Relay.BulkSenderService.Classes
         public string Subject { get; set; }
         public bool HasError { get; set; }
         public string ResultLine { get; set; }
-        public List<RecipientAttachment> Attachments { get; set; }
 
         public void AddProcessedResult(string line, char separator, string message)
         {
@@ -25,17 +21,5 @@ namespace Relay.BulkSenderService.Classes
         {
             ResultLine += $"{separator}{message}";
         }
-    }
-
-    public class RecipientAttachment
-    {
-        [JsonProperty(PropertyName = "base64_content")]
-        public string Base64String { get; set; }
-
-        [JsonProperty(PropertyName = "name")]
-        public string FileName { get; set; }
-
-        [JsonProperty(PropertyName = "type")]
-        public string FileType { get; set; }
     }
 }
