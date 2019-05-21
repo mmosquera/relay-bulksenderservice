@@ -3,8 +3,8 @@ using Relay.BulkSenderService.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading;
 using System.Linq;
+using System.Threading;
 
 namespace Relay.BulkSenderService.Processors
 {
@@ -126,6 +126,7 @@ namespace Relay.BulkSenderService.Processors
                         break;
                     }
 
+                    // TODO: remove from here!
                     if (user.Ack != null && IsAckFile(file, user.Ack))
                     {
                         ProcessAckFile(folder, file, user, ftpHelper);
@@ -224,11 +225,11 @@ namespace Relay.BulkSenderService.Processors
         {
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            string localFileName;
-
-            ITemplateConfiguration templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
+            ITemplateConfiguration templateConfiguration = user.GetTemplateConfiguration(file);
 
             bool allowDuplicates = templateConfiguration != null && templateConfiguration.AllowDuplicates ? true : false;
+
+            string localFileName;
 
             if (!ValidateFile(file, filePathHelper, result, allowDuplicates, out localFileName))
             {
@@ -237,57 +238,12 @@ namespace Relay.BulkSenderService.Processors
 
             _logger.Debug($"Start to download {file} for user {user.Name}");
 
-            bool downloadResult = ftpHelper.DownloadFile(file, localFileName);
+            bool downloadResult = ftpHelper.DownloadFileWithResume(file, localFileName);
 
             if (downloadResult && File.Exists(localFileName))
             {
-                if (Path.GetExtension(file).Equals(".zip", StringComparison.InvariantCultureIgnoreCase))
-                {
-                    List<string> zipEntries = UnzipFile(localFileName, filePathHelper.GetDownloadsFolder());
-
-                    if (zipEntries.Count == 0)
-                    {
-                        string message = $"{DateTime.UtcNow}:Problems to unzip the file {file}.";
-                        result.Type = ResulType.UNZIP;
-                        result.WriteError(message);
-                        return false;
-                    }
-
-                    try
-                    {
-                        File.Delete(localFileName); // Delete zip file                        
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.Error($"Error trying to delete zip file -- {e}");
-                    }
-
-                    string newLocalFile;
-                    foreach (string zipEntry in zipEntries)
-                    {
-                        templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(file);
-
-                        allowDuplicates = templateConfiguration != null && templateConfiguration.AllowDuplicates ? true : false;
-
-                        if (ValidateFile(zipEntry, filePathHelper, result, allowDuplicates, out newLocalFile))
-                        {
-                            string newFileName = newLocalFile.Replace(".downloading", ".processing");
-
-                            File.Move(zipEntry, newFileName);
-                        }
-                        else
-                        {
-                            File.Delete(zipEntry);
-                            //delete file
-                        }
-                    }
-                }
-                else
-                {
-                    string newFileName = localFileName.Replace(".downloading", ".processing");
-
-                    File.Move(localFileName, newFileName);
-                }
+                string newFileName = localFileName.Replace(".downloading", Path.GetExtension(file));
+                File.Move(localFileName, newFileName);
             }
             else
             {

@@ -5,7 +5,6 @@ using Relay.BulkSenderService.Configuration.Alerts;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
@@ -42,15 +41,13 @@ namespace Relay.BulkSenderService.Processors
             {
                 _logger.Debug($"Start to process {fileName} for User:{user.Name} in Thread:{Thread.CurrentThread.ManagedThreadId}");
 
-                var ftpHelper = user.Ftp.GetFtpHelper(_logger);
-
                 result.ErrorFileName = GetErrorsFileName(fileName, user);
 
                 SendStartProcessEmail(fileName, user);
 
-                UploadStartFileToFTP(fileName, user, ftpHelper);
-
                 string resultFileName = Process(user, fileName, result);
+
+                var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
                 UploadErrosToFTP(result.ErrorFileName, user, ftpHelper);
 
@@ -134,11 +131,6 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        private void UploadStartFileToFTP(string fileName, IUserConfiguration user, IFtpHelper ftpHelper)
-        {
-
-        }
-
         protected abstract string Process(IUserConfiguration user, string file, ProcessResult result);
 
         protected virtual void OnProcessFinished(ThreadEventArgs args)
@@ -146,16 +138,26 @@ namespace Relay.BulkSenderService.Processors
             ProcessFinished?.Invoke(this, args);
         }
 
-        protected string GetAttachmentFile(string attachmentFile, string originalFile, UserApiConfiguration user)
+        protected string GetAttachmentFile(string attachmentFile, string originalFile, IUserConfiguration user)
         {
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
+            //local file 
             string localAttachmentFolder = filePathHelper.GetAttachmentsFilesFolder();
             string localAttachmentFile = $@"{localAttachmentFolder}\{attachmentFile}";
 
             if (File.Exists(localAttachmentFile))
             {
                 return localAttachmentFile;
+            }
+
+            //local file in subfolder
+            string subFolder = Path.GetFileNameWithoutExtension(originalFile);
+            string localAttachmentSubFile = $@"{localAttachmentFolder}\{subFolder}\{attachmentFile}";
+
+            if (File.Exists(localAttachmentSubFile))
+            {
+                return localAttachmentSubFile;
             }
 
             string ftpAttachmentFile = $@"{user.AttachmentsFolder}/{attachmentFile}";
@@ -177,14 +179,12 @@ namespace Relay.BulkSenderService.Processors
 
             if (File.Exists(localZipAttachments))
             {
-                using (ZipArchive zipArchive = ZipFile.OpenRead(localZipAttachments))
-                {
-                    foreach (ZipArchiveEntry entry in zipArchive.Entries)
-                    {
-                        string entryFileName = $@"{localAttachmentFolder}\{entry.Name}";
-                        entry.ExtractToFile(entryFileName, true);
-                    }
-                }
+                string newZipDirectory = $@"{localAttachmentFolder}\{subFolder}";
+                Directory.CreateDirectory(newZipDirectory);
+
+                var zipHelper = new ZipHelper();
+                zipHelper.UnzipFile(localZipAttachments, newZipDirectory);
+
                 ftpHelper.DeleteFile(zipAttachments);
                 File.Delete(localZipAttachments); //TODO add retries.
             }
@@ -240,7 +240,7 @@ namespace Relay.BulkSenderService.Processors
 
                 string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\StartProcess.es.html");
 
-                mailMessage.Body = string.Format(body, Path.GetFileName(file), user.GetUserDateTime().DateTime);
+                mailMessage.Body = string.Format(body, Path.GetFileNameWithoutExtension(file), user.GetUserDateTime().DateTime);
 
                 try
                 {
@@ -293,6 +293,25 @@ namespace Relay.BulkSenderService.Processors
                     _logger.Error($"Error trying to send end process email -- {e}");
                 }
             }
+        }
+
+        protected virtual string GetHeaderLine(string line, ITemplateConfiguration templateConfiguration)
+        {
+            if (templateConfiguration != null && !templateConfiguration.HasHeaders)
+            {
+                return string.Join(templateConfiguration.FieldSeparator.ToString(), templateConfiguration.Fields.Select(x => x.Name));
+            }
+
+            return line;
+        }
+
+        protected string GetResultsFileName(string fileName, IUserConfiguration user)
+        {
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+            string resultsFileName = $@"{filePathHelper.GetResultsFilesFolder()}\{fileName.Replace(".processing", ".sent")}";
+
+            return resultsFileName;
         }
 
         protected abstract List<string> GetAttachments(string file, string userName);

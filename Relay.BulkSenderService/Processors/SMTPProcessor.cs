@@ -3,9 +3,9 @@ using Relay.BulkSenderService.Configuration;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Mail;
-using System.Text;
 using System.Threading;
 
 namespace Relay.BulkSenderService.Processors
@@ -22,40 +22,46 @@ namespace Relay.BulkSenderService.Processors
             }
 
             var recipients = new List<SMTPRecipient>();
-            var resultsFile = new StringBuilder();
 
             string fileName = Path.GetFileName(localFileName);
 
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
-            string resultsFileName = $@"{filePathHelper.GetResultsFilesFolder()}\{fileName.Replace(".processing", ".sent")}";
+            string resultsFileName = GetResultsFileName(fileName, user);
 
             try
             {
-                _logger.Debug($"Read file {localFileName}");
+                ITemplateConfiguration templateConfiguration = ((UserSMTPConfiguration)user).GetTemplateConfiguration(fileName);
+
+                _logger.Debug($"Start to read file {localFileName}");
 
                 using (StreamReader reader = new StreamReader(localFileName))
                 {
-                    string headers = reader.ReadLine();
+                    string line = templateConfiguration.HasHeaders ? reader.ReadLine() : null;
 
-                    AddExtraHeaders(resultsFile, headers, ((UserSMTPConfiguration)user).FieldSeparator);
+                    string headers = GetHeaderLine(line, templateConfiguration);
+
+                    AddExtraHeaders(resultsFileName, headers, templateConfiguration.FieldSeparator);
 
                     while (!reader.EndOfStream)
                     {
-                        string line = reader.ReadLine();
+                        line = reader.ReadLine();
 
-                        var recipient = CreateRecipientFromString(line, ((UserSMTPConfiguration)user).TemplateFilePath, ((UserSMTPConfiguration)user).AttachFilePath, ((UserSMTPConfiguration)user).FieldSeparator);
+                        string[] recipientArray = line.Split(templateConfiguration.FieldSeparator);
+
+                        result.ProcessedCount++;
+
+                        SMTPRecipient recipient = CreateRecipientFromString(recipientArray, line, ((UserSMTPConfiguration)user).TemplateFilePath, ((UserSMTPConfiguration)user).AttachmentsFolder, templateConfiguration.FieldSeparator);
+                        FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, user, result);
 
                         recipients.Add(recipient);
 
                         if (recipients.Count == _configuration.BulkEmailCount)
                         {
-                            SendRecipientList(recipients, ((UserSMTPConfiguration)user).SmtpUser, ((UserSMTPConfiguration)user).SmtpPass, resultsFileName, resultsFile, ((UserSMTPConfiguration)user).FieldSeparator);
-
-                            resultsFile.Clear();
+                            SendRecipientList(recipients, ((UserSMTPConfiguration)user).SmtpUser, ((UserSMTPConfiguration)user).SmtpPass, resultsFileName, templateConfiguration.FieldSeparator);
                         }
                     }
 
-                    SendRecipientList(recipients, ((UserSMTPConfiguration)user).SmtpUser, ((UserSMTPConfiguration)user).SmtpPass, resultsFileName, resultsFile, ((UserSMTPConfiguration)user).FieldSeparator);
+                    SendRecipientList(recipients, ((UserSMTPConfiguration)user).SmtpUser, ((UserSMTPConfiguration)user).SmtpPass, resultsFileName, templateConfiguration.FieldSeparator);
                 }
             }
             catch (Exception e)
@@ -66,40 +72,43 @@ namespace Relay.BulkSenderService.Processors
             return resultsFileName;
         }
 
-        private void SendRecipientList(List<SMTPRecipient> recipients, string smtpUser, string smtpPass, string resultsFileName, StringBuilder resultsFile, char separator)
+        protected void SendRecipientList(List<SMTPRecipient> recipients, string smtpUser, string smtpPass, string resultsFileName, char separator)
         {
-            foreach (SMTPRecipient recipient in recipients)
-            {
-                if (!recipient.HasError)
-                {
-                    SendMessage(recipient, smtpUser, smtpPass, separator);
-
-                    Thread.Sleep(_configuration.DeliveryInterval);
-                }
-
-                resultsFile.Append(recipient.ResultLine);
-            }
-
             using (StreamWriter sw = new StreamWriter(resultsFileName, true))
             {
-                sw.Write(resultsFile.ToString());
+                foreach (SMTPRecipient recipient in recipients)
+                {
+                    if (!recipient.HasError)
+                    {
+                        SendMessage(recipient, smtpUser, smtpPass, separator);
+
+                        Thread.Sleep(_configuration.DeliveryInterval);
+                    }
+                    sw.WriteLine(recipient.ResultLine);
+                    sw.Flush();
+                }
             }
         }
 
-        private void SendMessage(SMTPRecipient recipient, string smtpUser, string smtpPass, char separator)
+        protected void SendMessage(SMTPRecipient recipient, string smtpUser, string smtpPass, char separator)
         {
-            var message = new MailMessage();
-
-            message.From = new MailAddress(recipient.FromEmail, recipient.FromName);
-            message.To.Add(new MailAddress(recipient.ToEmail, recipient.ToName));
-            message.Subject = recipient.Subject;
-            message.IsBodyHtml = true;
-            message.Body = recipient.Body;
-
-            if (!string.IsNullOrEmpty(recipient.AttachFileName))
+            var message = new MailMessage()
             {
-                var attachment = new Attachment(recipient.AttachFileName);
-                attachment.Name = Path.GetFileName(recipient.AttachFileName);
+                From = new MailAddress(recipient.FromEmail, recipient.FromName),
+                Subject = recipient.Subject,
+                IsBodyHtml = true,
+                Body = recipient.Body
+            };
+
+            message.To.Add(new MailAddress(recipient.ToEmail, recipient.ToName));
+
+            foreach (string fileName in recipient.Attachments)
+            {
+                var attachment = new Attachment(fileName)
+                {
+                    Name = Path.GetFileName(fileName)
+                };
+
                 message.Attachments.Add(attachment);
             }
 
@@ -107,7 +116,6 @@ namespace Relay.BulkSenderService.Processors
             client.Credentials = new NetworkCredential(smtpUser, smtpPass);
             try
             {
-                _logger.Debug($"Send message {message.Subject} from {message.From.Address} to {message.To[0].Address}");
                 client.Send(message);
                 recipient.AddSentResult(separator, "Send OK");
             }
@@ -118,13 +126,9 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        private SMTPRecipient CreateRecipientFromString(string line, string templateFilePath, string attachFilePath, char separator)
+        protected SMTPRecipient CreateRecipientFromString(string[] mailArray, string line, string templateFilePath, string attachFilePath, char separator)
         {
             var recipient = new SMTPRecipient();
-
-            _logger.Debug("Create message to send");
-
-            string[] mailArray = line.Split(separator);
 
             if (mailArray.Length != 8)
             {
@@ -135,7 +139,7 @@ namespace Relay.BulkSenderService.Processors
 
                 _logger.Error(error);
 
-                return null;
+                return recipient;
             }
 
             try
@@ -163,19 +167,6 @@ namespace Relay.BulkSenderService.Processors
                     }
                 }
 
-                if (!string.IsNullOrEmpty(mailArray[7]))
-                {
-                    var attachFileName = $"{attachFilePath}/{mailArray[7]}";
-                    if (File.Exists(attachFileName))
-                    {
-                        recipient.AttachFileName = attachFileName;
-                    }
-                    else
-                    {
-                        _logger.Error($"Attach file doesn't exists {attachFileName}");
-                    }
-                }
-
                 recipient.AddProcessedResult(line, separator, Constants.PROCESS_RESULT_OK);
             }
             catch (Exception e)
@@ -188,9 +179,46 @@ namespace Relay.BulkSenderService.Processors
             return recipient;
         }
 
-        private void AddExtraHeaders(StringBuilder resultsFile, string headers, char separator)
+        protected virtual void FillRecipientAttachments(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, IUserConfiguration user, ProcessResult result)
         {
-            resultsFile.AppendLine($"{headers}{separator}{Constants.HEADER_PROCESS_RESULT}{separator}{Constants.HEADER_DELIVERY_RESULT}");
+            recipient.Attachments = new List<string>();
+
+            foreach (FieldConfiguration field in templateConfiguration.Fields.Where(x => x.IsAttachment))
+            {
+                string attachName = recipientArray[field.Position];
+
+                if (!string.IsNullOrEmpty(attachName))
+                {
+                    string localAttachement = GetAttachmentFile(attachName, fileName, user);
+
+                    if (!string.IsNullOrEmpty(localAttachement))
+                    {
+                        recipient.Attachments.Add(localAttachement);
+                    }
+                    else
+                    {
+                        string message = $"The attachment file {attachName} doesn't exists.";
+                        recipient.HasError = true;
+                        recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
+                        _logger.Error(message);
+                        string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
+                        result.WriteError(errorMessage);
+                        result.ErrorsCount++;
+                    }
+                }
+            }
+        }
+
+        protected void AddExtraHeaders(string resultsFileName, string headers, char separator)
+        {
+            if (!File.Exists(resultsFileName))
+            {
+                string resultHeaders = $"{headers}{separator}{Constants.HEADER_PROCESS_RESULT}{separator}{Constants.HEADER_DELIVERY_RESULT}";
+                using (StreamWriter sw = new StreamWriter(resultsFileName))
+                {
+                    sw.WriteLine(resultHeaders);
+                }
+            }
         }
 
         protected override List<string> GetAttachments(string file, string userName)
@@ -200,7 +228,9 @@ namespace Relay.BulkSenderService.Processors
 
         protected override string GetBody(string file, IUserConfiguration user, ProcessResult result)
         {
-            return null;
+            string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\FinishProcess.es.html");
+
+            return string.Format(body, Path.GetFileNameWithoutExtension(file), user.GetUserDateTime().DateTime, result.ProcessedCount, result.ErrorsCount);
         }
     }
 }

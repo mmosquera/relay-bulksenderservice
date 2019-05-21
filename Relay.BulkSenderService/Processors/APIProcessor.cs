@@ -239,25 +239,6 @@ namespace Relay.BulkSenderService.Processors
             return line.Split(templateConfiguration.FieldSeparator);
         }
 
-        protected virtual string GetHeaderLine(string line, ITemplateConfiguration templateConfiguration)
-        {
-            if (templateConfiguration != null && !templateConfiguration.HasHeaders)
-            {
-                return string.Join(templateConfiguration.FieldSeparator.ToString(), templateConfiguration.Fields.Select(x => x.Name));
-            }
-
-            return line;
-        }
-
-        protected string GetResultsFileName(string fileName, UserApiConfiguration user)
-        {
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
-            string resultsFileName = $@"{filePathHelper.GetResultsFilesFolder()}\{fileName.Replace(".processing", ".sent")}";
-
-            return resultsFileName;
-        }
-
         private void AddExtraHeaders(string resultsFileName, string headers, char separator)
         {
             if (!File.Exists(resultsFileName))
