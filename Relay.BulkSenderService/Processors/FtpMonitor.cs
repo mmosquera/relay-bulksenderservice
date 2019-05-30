@@ -10,6 +10,7 @@ namespace Relay.BulkSenderService.Processors
 {
     public class FtpMonitor : BaseWorker
     {
+        private const int MINUTES_TO_WRITE = 5;
         private Dictionary<string, DateTime> _nextRun;
         private List<string> _pausedUsers;
         private object _lockObject;
@@ -252,16 +253,6 @@ namespace Relay.BulkSenderService.Processors
                 result.WriteError(message);
                 _logger.Error($"Download problems with file {file}.");
 
-                try
-                {
-                    // Delete wrong file to retry.
-                    File.Delete(localFileName);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"Error trying to delete file -- {e}");
-                }
-
                 return false;
             }
 
@@ -296,7 +287,9 @@ namespace Relay.BulkSenderService.Processors
                 localFileName = $@"{downloadPath}\{name}.downloading";
             }
 
-            if (File.Exists(localFileName))
+            var fileInfo = new FileInfo(localFileName);
+
+            if (fileInfo.Exists && DateTime.UtcNow.Subtract(fileInfo.LastWriteTimeUtc).TotalMinutes < MINUTES_TO_WRITE)
             {
                 _logger.Info($"The file {fileName} is downloading.");
                 return false;
