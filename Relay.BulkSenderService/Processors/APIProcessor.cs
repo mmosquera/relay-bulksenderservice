@@ -1,14 +1,13 @@
 ﻿using Newtonsoft.Json;
 using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Headers;
-using System.Text;
+using System.Net;
 using System.Threading;
 
 namespace Relay.BulkSenderService.Processors
@@ -194,38 +193,35 @@ namespace Relay.BulkSenderService.Processors
 
         }
 
-        private bool ValidateCredentials(CredentialsConfiguration credentials)
+        public bool ValidateCredentials(CredentialsConfiguration credentials)
         {
-            using (var client = new HttpClient())
+            var restClient = new RestClient(_configuration.BaseUrl);
+
+            string resource = _configuration.AccountUrl.Replace("{AccountId}", credentials.AccountId.ToString());
+            var request = new RestRequest(resource, Method.GET);
+
+            string value = $"token {credentials.ApiKey}";
+            request.AddHeader("Authorization", value);
+
+            try
             {
-                client.BaseAddress = new Uri(_configuration.BaseUrl);
-                client.DefaultRequestHeaders.Clear();
-                client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                client.DefaultRequestHeaders.Add("Authorization", $"token {credentials.ApiKey}");
+                IRestResponse response = restClient.Execute(request);
 
-                string accountUrl = _configuration.AccountUrl.Replace("{AccountId}", credentials.AccountId.ToString());
-
-                try
+                if (response.StatusCode == HttpStatusCode.OK)
                 {
-                    HttpResponseMessage response = client.GetAsync(accountUrl).Result;
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        return true;
-                    }
-                    else
-                    {
-                        string result = response.Content.ReadAsStringAsync().Result;
-                        _logger.Info($"Validate credentials fail:{result}");
-                        return false;
-                    }
+                    return true;
                 }
-                catch (Exception e)
+                else
                 {
-                    _logger.Error($"Validate credentials error -- {e}");
-
+                    string result = response.Content;
+                    _logger.Info($"Validate credentials fail:{result}");
                     return false;
                 }
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Validate credentials error -- {e}");
+                return false;
             }
         }
 
@@ -253,83 +249,70 @@ namespace Relay.BulkSenderService.Processors
 
         protected void SendEmail(string apiKey, int accountId, ApiRecipient recipient, char separator, ProcessResult result)
         {
-            using (var httpClient = new HttpClient())
+            var restClient = new RestClient(_configuration.BaseUrl);
+
+            string resource = _configuration.TemplateUrl.Replace("{AccountId}", accountId.ToString()).Replace("{TemplateId}", recipient.TemplateId);
+            var request = new RestRequest(resource, Method.POST);
+
+            string value = $"token {apiKey}";
+            request.AddHeader("Authorization", value);
+
+            dynamic dinObject = DictionaryToObject(recipient.Fields);
+
+            request.RequestFormat = DataFormat.Json;
+            request.AddJsonBody(new
             {
-                httpClient.BaseAddress = new Uri(_configuration.BaseUrl);
-                httpClient.DefaultRequestHeaders.Clear();
-                httpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                httpClient.DefaultRequestHeaders.Add("Authorization", $"token {apiKey}");
-
-                dynamic dinObject = DictionaryToObject(recipient.Fields);
-
-                // To test with json file.
-                //string jsonString;
-                //using (StreamReader reader = new StreamReader("jsonToTest.json"))
-                //{
-                //    jsonString = reader.ReadToEnd();
-                //}
-                //dynamic dinObject = JsonConvert.DeserializeObject(jsonString);
-
-                try
-                {
-                    string uriTemplate = _configuration.TemplateUrl.Replace("{AccountId}", accountId.ToString()).Replace("{TemplateId}", recipient.TemplateId);
-
-                    string postData = JsonConvert.SerializeObject(new
-                    {
-                        from_name = recipient.FromName,
-                        from_email = recipient.FromEmail,
-                        recipients = new[] { new {
+                from_name = recipient.FromName,
+                from_email = recipient.FromEmail,
+                recipients = new[] { new {
                                 email = recipient.ToEmail,
                                 name = recipient.ToName,
                                 type = "to" }
                             },
-                        reply_to = !string.IsNullOrEmpty(recipient.ReplyToEmail) ? new
-                        {
-                            email = recipient.ReplyToEmail,
-                            name = recipient.ReplyToName
-                        } : null,
-                        model = dinObject,
-                        attachments = recipient.Attachments
-                    });
-
-                    HttpResponseMessage response = httpClient.PostAsync(uriTemplate, new StringContent(postData, Encoding.UTF8, "application/json")).Result;
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        //_logger.Debug($"{response.StatusCode} -- Send OK to {recipient.ToEmail}");
-                        string responseResult = response.Content.ReadAsStringAsync().Result;
-                        var apiResult = JsonConvert.DeserializeObject<ApiResponse>(responseResult);
-
-                        // TODO: Improvements to add results.
-                        string linkResult = apiResult._links.Count >= 2 ? apiResult._links[1].href : string.Empty;
-                        string sentResult = $"Send OK{separator}{apiResult.createdResourceId}{separator}{linkResult}";
-                        recipient.AddSentResult(separator, sentResult);
-                    }
-                    else
-                    {
-                        // TODO: send login error.
-                        //if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized) 
-                        dynamic jsonResult = JsonConvert.DeserializeObject(response.Content.ReadAsStringAsync().Result);
-
-                        _logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
-
-                        string message = $"{DateTime.UtcNow}:{response.StatusCode} -- Send fail to {recipient.ToEmail}";
-                        result.WriteError(message);
-
-                        result.ErrorsCount++;
-
-                        recipient.AddSentResult(separator, $"Send Fail ({jsonResult.title})");
-                    }
-                }
-                catch (Exception se)
+                reply_to = !string.IsNullOrEmpty(recipient.ReplyToEmail) ? new
                 {
-                    string message = $"{DateTime.UtcNow}:Send error to {recipient.ToEmail}";
+                    email = recipient.ReplyToEmail,
+                    name = recipient.ReplyToName
+                } : null,
+                model = dinObject,
+                attachments = recipient.Attachments
+            });
+
+            try
+            {
+                IRestResponse response = restClient.Execute(request);
+
+                if (response.IsSuccessful)
+                {
+                    var apiResult = JsonConvert.DeserializeObject<ApiResponse>(response.Content);
+
+                    // TODO: Improvements to add results.
+                    string linkResult = apiResult._links.Count >= 2 ? apiResult._links[1].href : string.Empty;
+                    string sentResult = $"Send OK{separator}{apiResult.createdResourceId}{separator}{linkResult}";
+                    recipient.AddSentResult(separator, sentResult);
+                }
+                else
+                {
+                    dynamic jsonResult = JsonConvert.DeserializeObject(response.Content);
+
+                    _logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
+
+                    string message = $"{DateTime.UtcNow}:{response.StatusCode} -- Send fail to {recipient.ToEmail}";
                     result.WriteError(message);
 
                     result.ErrorsCount++;
 
-                    _logger.Error($"SENDING ERROR to \"{recipient.ToEmail}\". -- {se}");
+                    recipient.AddSentResult(separator, $"Send Fail ({jsonResult.title})");
                 }
+            }
+            catch (Exception se)
+            {
+                string message = $"{DateTime.UtcNow}:Send error to {recipient.ToEmail}";
+                result.WriteError(message);
+
+                result.ErrorsCount++;
+
+                _logger.Error($"SENDING ERROR to: {recipient.ToEmail}. -- {se}");
             }
         }
 
