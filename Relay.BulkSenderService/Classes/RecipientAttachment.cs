@@ -1,16 +1,11 @@
-﻿using Newtonsoft.Json;
-
-namespace Relay.BulkSenderService.Classes
+﻿namespace Relay.BulkSenderService.Classes
 {
     public class RecipientAttachment
     {
-        [JsonProperty(PropertyName = "base64_content")]
-        public string Base64String { get; set; }
+        public string base64_content { get; set; }
 
-        [JsonProperty(PropertyName = "name")]
-        public string FileName { get; set; }
+        public string filename { get; set; }
 
-        [JsonProperty(PropertyName = "type")]
-        public string FileType { get; set; }
+        public string type { get; set; }
     }
 }

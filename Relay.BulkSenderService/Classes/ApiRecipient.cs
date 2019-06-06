@@ -35,9 +35,9 @@ namespace Relay.BulkSenderService.Classes
                 byte[] bytesArray = File.ReadAllBytes(fileName);
                 Attachments.Add(new RecipientAttachment()
                 {
-                    Base64String = Convert.ToBase64String(bytesArray),
-                    FileName = Path.GetFileName(fileName),
-                    FileType = GetContentTypeByExtension(fileName),
+                    base64_content = Convert.ToBase64String(bytesArray),
+                    filename = Path.GetFileName(fileName),
+                    type = GetContentTypeByExtension(fileName),
                 });
             }
         }
