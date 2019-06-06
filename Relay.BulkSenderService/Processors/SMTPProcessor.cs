@@ -114,6 +114,7 @@ namespace Relay.BulkSenderService.Processors
 
             var client = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
             client.Credentials = new NetworkCredential(smtpUser, smtpPass);
+
             try
             {
                 client.Send(message);
@@ -144,6 +145,7 @@ namespace Relay.BulkSenderService.Processors
 
             try
             {
+                // TODO: fix recipient without email
                 recipient.FromEmail = mailArray[0];
                 recipient.FromName = mailArray[1];
                 recipient.ToEmail = mailArray[2];

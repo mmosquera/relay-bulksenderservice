@@ -138,6 +138,11 @@ namespace Relay.BulkSenderService.Processors
 
                 foreach (string attachName in attachments)
                 {
+                    if (string.IsNullOrEmpty(attachName))
+                    {
+                        continue;
+                    }
+
                     string localAttachement = GetAttachmentFile(attachName, fileName, user);
 
                     if (!string.IsNullOrEmpty(localAttachement))
