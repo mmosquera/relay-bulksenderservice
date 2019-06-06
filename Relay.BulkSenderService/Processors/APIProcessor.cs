@@ -111,6 +111,7 @@ namespace Relay.BulkSenderService.Processors
                                 FillRecipientBasics(recipient, recipientArray, templateConfiguration.Fields, templateId);
                                 FillRecipientCustoms(recipient, recipientArray, customHeaders, templateConfiguration.Fields);
                                 FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, (UserApiConfiguration)user, result);
+                                HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user, result);
 
                                 if (!recipient.HasError && !string.IsNullOrEmpty(recipient.TemplateId) && !string.IsNullOrEmpty(recipient.ToEmail))
                                 {
@@ -181,6 +182,11 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return resultsFileName;
+        }
+
+        protected virtual void HostFile(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string line, string originalFileName, IUserConfiguration user, ProcessResult result)
+        {
+
         }
 
         protected virtual void CustomRecipientValidations(ApiRecipient recipient, string[] recipientArray, string line, char fielSeparator, ProcessResult result)

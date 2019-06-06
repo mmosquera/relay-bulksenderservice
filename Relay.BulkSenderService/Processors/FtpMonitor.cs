@@ -313,20 +313,6 @@ namespace Relay.BulkSenderService.Processors
             return true;
         }
 
-        private List<string> UnzipFile(string fileName, string path)
-        {
-            try
-            {
-                return new ZipHelper().UnzipFile(fileName, path);
-            }
-            catch (Exception e)
-            {
-                _logger.Error($"Error trying to unzip file -- {e}");
-            }
-
-            return new List<string>();
-        }
-
         private void RemoveFileFromFtp(string file, IUserConfiguration user, IFtpHelper ftpHelper)
         {
             if (user.HasDeleteFtp)
