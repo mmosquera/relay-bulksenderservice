@@ -51,7 +51,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                     _logger.Error($"GENERAL PREPROCESS ERROR: {ex}");
                 }
 
-                Thread.Sleep(60000);
+                Thread.Sleep(_configuration.PreProcessorInterval);
             }
         }
     }
