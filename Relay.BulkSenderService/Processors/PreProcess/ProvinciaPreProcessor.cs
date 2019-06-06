@@ -26,8 +26,6 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
             string unzipFolder = $@"{filePathHelper.GetAttachmentsFilesFolder()}\{name}";
 
-            //string downloadPath = $@"{downloadFolder}\{name}";
-
             Directory.CreateDirectory(unzipFolder);
 
             var zipHelper = new ZipHelper();
