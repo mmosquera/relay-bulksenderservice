@@ -90,7 +90,7 @@ namespace Relay.BulkSenderService.Processors
 
                     _hostedFiles.Add(hostedFile, publicPath);
 
-                    recipient.Fields.Add("hostedImage", publicPath);
+
                 }
                 else
                 {
@@ -103,6 +103,8 @@ namespace Relay.BulkSenderService.Processors
                     result.ErrorsCount++;
                 }
             }
+
+            recipient.Fields.Add("hostedImage", publicPath);
         }
     }
 }
