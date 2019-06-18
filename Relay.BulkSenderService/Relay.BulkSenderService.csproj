@@ -232,6 +232,7 @@
     <Compile Include="Configuration\BaseTemplateConfiguration.cs" />
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\FilePathHelper.cs" />
+    <Compile Include="Configuration\HipotecarioPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\ProvinciaPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\CredentialsConfiguration.cs" />
     <Compile Include="Configuration\CsvFileReportTypeConfiguration.cs" />
@@ -277,6 +278,7 @@
     <Compile Include="Classes\FTPHelper.cs" />
     <Compile Include="Processors\ApiProcessorProvincia.cs" />
     <Compile Include="Processors\PreProcess\BasicPreProcessor.cs" />
+    <Compile Include="Processors\PreProcess\HipotecarioPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessor.cs" />
     <Compile Include="Processors\PreProcess\ProvinciaPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessWorker.cs" />
