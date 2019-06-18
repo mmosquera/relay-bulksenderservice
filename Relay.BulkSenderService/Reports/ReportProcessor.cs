@@ -297,7 +297,7 @@ namespace Relay.BulkSenderService.Reports
                 }
                 else if (!string.IsNullOrEmpty(header.NameInFile))
                 {
-                    int index = fileHeaders.IndexOf(header.NameInFile);
+                    int index = fileHeaders.FindIndex(x => x.Equals(header.NameInFile, StringComparison.OrdinalIgnoreCase));
                     if (index != -1 && !reportHeaders.Exists(x => x.HeaderName == header.HeaderName))
                     {
                         reportFieldConfiguration.NameInFile = header.NameInFile;
