@@ -9,7 +9,7 @@ namespace Relay.BulkSenderService.Processors
 {
     public class CleanProcessor : BaseWorker
     {
-        public CleanProcessor(ILog logger, IConfiguration configuration, IWatcher watcher) : base(logger, configuration, watcher)
+        public CleanProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
 
         }

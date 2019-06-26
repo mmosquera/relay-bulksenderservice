@@ -15,14 +15,14 @@ namespace Relay.BulkSenderService.Processors
         private List<string> _pausedUsers;
         private object _lockObject;
 
-        public FtpMonitor(ILog logger, IConfiguration configuration, IWatcher watcher) : base(logger, configuration, watcher)
+        public FtpMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _nextRun = new Dictionary<string, DateTime>();
             _pausedUsers = new List<string>();
             _lockObject = new object();
-            CreateUserFolders();
-            ((FileCommandsWatcher)_watcher).StartProcessEvent += FtpMonitor_StartProcessEvent;
-            ((FileCommandsWatcher)_watcher).StopProcessEvent += FtpMonitor_StopProcessEvent;
+            //CreateUserFolders();
+            //((FileCommandsWatcher)_watcher).StartProcessEvent += FtpMonitor_StartProcessEvent;
+            //((FileCommandsWatcher)_watcher).StopProcessEvent += FtpMonitor_StopProcessEvent;
         }
 
         public void ReadFtpFiles()
@@ -31,10 +31,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 try
                 {
-                    if (CheckConfigChanges())
-                    {
-                        CreateUserFolders();
-                    }
+                    CheckConfigChanges();                    
 
                     foreach (IUserConfiguration user in _users)
                     {
@@ -114,7 +111,8 @@ namespace Relay.BulkSenderService.Processors
                 return;
             }
 
-            int totalFiles = _configuration.MaxNumberOfThreads * 2;
+            //int totalFiles = _configuration.MaxNumberOfThreads * 2;
+            int totalFiles = user.MaxParallelProcessors * 2;
 
             Thread threadDownload = new Thread(new ThreadStart(() =>
             {
@@ -178,15 +176,7 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return true;
-        }
-
-        private void CreateUserFolders()
-        {
-            foreach (IUserConfiguration user in _users)
-            {
-                new FilePathHelper(_configuration, user.Name).CreateUserFolders();
-            }
-        }
+        }       
 
         private bool IsAckFile(string fileName, AckConfiguration ackConfiguration)
         {

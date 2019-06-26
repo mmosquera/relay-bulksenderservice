@@ -13,13 +13,13 @@ namespace Relay.BulkSenderService.Processors
         private Dictionary<string, int> _threadsCount;
         private object _lockObj;
 
-        public LocalMonitor(ILog logger, IConfiguration configuration, IWatcher watcher) : base(logger, configuration, watcher)
+        public LocalMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _threadsCount = new Dictionary<string, int>();
             _lockObj = new object();
             CreateFoldersAndThreadsCount();
-            ((FileCommandsWatcher)_watcher).AddThreadEvent += FtpMonitor_AddThreadEvent;
-            ((FileCommandsWatcher)_watcher).RemoveThreadEvent += FtpMonitor_RemoveThreadEvent;
+            //((FileCommandsWatcher)_watcher).AddThreadEvent += FtpMonitor_AddThreadEvent;
+            //((FileCommandsWatcher)_watcher).RemoveThreadEvent += FtpMonitor_RemoveThreadEvent;
         }
 
         public void ReadLocalFiles()
@@ -28,10 +28,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 try
                 {
-                    if (CheckConfigChanges())
-                    {
-                        CreateFoldersAndThreadsCount();
-                    }
+                    CheckConfigChanges();
 
                     foreach (IUserConfiguration user in _users)
                     {
@@ -65,39 +62,14 @@ namespace Relay.BulkSenderService.Processors
 
                 Thread.Sleep(_configuration.LocalFilesInterval);
             }
-        }
-
-        private void FtpMonitor_AddThreadEvent(object sender, CommandsEventArgs e)
-        {
-            _logger.Info($"Add 1 thread to user {e.User}");
-            string key = e.User.ToUpper();
-            lock (_lockObj)
-            {
-                if (_threadsCount.ContainsKey(key))
-                {
-                    _threadsCount[key] -= 1;
-                }
-            }
-        }
-
-        private void FtpMonitor_RemoveThreadEvent(object sender, CommandsEventArgs e)
-        {
-            _logger.Info($"Remove 1 thread from user {e.User}");
-            string key = e.User.ToUpper();
-            lock (_lockObj)
-            {
-                if (_threadsCount.ContainsKey(key))
-                {
-                    _threadsCount[key] += 1;
-                }
-            }
-        }
+        }        
 
         private bool ProcessFile(string fileName, IUserConfiguration user, FilePathHelper filePathHelper)
         {
             int threadsUserCount = GetThreadCount(user.Name);
 
-            if (threadsUserCount >= _configuration.MaxNumberOfThreads)
+            //if (threadsUserCount >= _configuration.MaxNumberOfThreads)
+            if (threadsUserCount >= user.MaxParallelProcessors)
             {
                 _logger.Debug($"There is no thread available for user {user.Name}. Is working with {threadsUserCount} threads.");
                 return false;
@@ -134,7 +106,7 @@ namespace Relay.BulkSenderService.Processors
             };
 
             // Subscribe processor to stop event.
-            ((FileCommandsWatcher)_watcher).StopSendEvent += processor.Processor_StopSendEvent;
+            //((FileCommandsWatcher)_watcher).StopSendEvent += processor.Processor_StopSendEvent;
 
             IncrementUserThreadCount(user.Name);
             ThreadPool.QueueUserWorkItem(new WaitCallback(processor.DoWork), threadState);
@@ -166,7 +138,7 @@ namespace Relay.BulkSenderService.Processors
 
             DecrementUserThreadCount(args.Name);
 
-            ((FileCommandsWatcher)_watcher).StopSendEvent -= ((Processor)sender).Processor_StopSendEvent;
+            //((FileCommandsWatcher)_watcher).StopSendEvent -= ((Processor)sender).Processor_StopSendEvent;
         }
 
         private void IncrementUserThreadCount(string user)
@@ -177,6 +149,10 @@ namespace Relay.BulkSenderService.Processors
                 if (_threadsCount.ContainsKey(key))
                 {
                     _threadsCount[key]++;
+                }
+                else
+                {
+                    _threadsCount.Add(key, 1);
                 }
             }
         }
