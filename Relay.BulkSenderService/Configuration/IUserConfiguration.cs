@@ -18,6 +18,7 @@ namespace Relay.BulkSenderService.Configuration
         bool HasDeleteFtp { get; set; }
         IResultConfiguration Results { get; set; }
         int UserGMT { get; set; }
+        int MaxParallelProcessors { get; set; }
         AckConfiguration Ack { get; set; }
         CredentialsConfiguration Credentials { get; set; }
         IFtpConfiguration Ftp { get; set; }

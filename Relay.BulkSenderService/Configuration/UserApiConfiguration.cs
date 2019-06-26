@@ -27,6 +27,7 @@ namespace Relay.BulkSenderService.Configuration
         public ReportConfiguration Reports { get; set; }
         public AlertConfiguration Alerts { get; set; }
         public IPreProcessorConfiguration PreProcessor { get; set; }
+        public int MaxParallelProcessors { get; set; }
 
         public DateTimeOffset GetUserDateTime()
         {
@@ -66,6 +67,7 @@ namespace Relay.BulkSenderService.Configuration
             configuration.Name = this.Name;
             configuration.UserGMT = this.UserGMT;
             configuration.AttachmentsFolder = this.AttachmentsFolder;
+            configuration.MaxParallelProcessors = this.MaxParallelProcessors;
 
             if (this.Errors != null)
             {

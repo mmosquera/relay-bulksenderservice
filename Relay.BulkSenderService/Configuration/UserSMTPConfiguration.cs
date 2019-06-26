@@ -32,6 +32,7 @@ namespace Relay.BulkSenderService.Configuration
         public AlertConfiguration Alerts { get; set; }
         public List<ITemplateConfiguration> Templates { get; set; }
         public IPreProcessorConfiguration PreProcessor { get; set; }
+        public int MaxParallelProcessors { get; set; }
 
         public Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName)
         {
@@ -73,6 +74,7 @@ namespace Relay.BulkSenderService.Configuration
             configuration.TemplateFilePath = this.TemplateFilePath;
             configuration.UserGMT = this.UserGMT;
             configuration.AttachmentsFolder = this.AttachmentsFolder;
+            configuration.MaxParallelProcessors = this.MaxParallelProcessors;
 
             if (this.Errors != null)
             {
