@@ -10,8 +10,6 @@ namespace Relay.BulkSenderService.Configuration
         int Port { get; set; }
         bool HasSSL { get; set; }
 
-        IFtpConfiguration Clone();
-
         IFtpHelper GetFtpHelper(ILog log);
     }
 }

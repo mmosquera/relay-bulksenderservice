@@ -8,21 +8,6 @@ namespace Relay.BulkSenderService.Configuration
         public string Message { get; set; }
         public IReportName FileName { get; set; }
 
-        public IResultConfiguration Clone()
-        {
-            var resultMessageConfiguration = new ResultMessageConfiguration();
-
-            resultMessageConfiguration.Folder = this.Folder;
-            resultMessageConfiguration.Message = this.Message;
-
-            if (this.FileName != null)
-            {
-                resultMessageConfiguration.FileName = this.FileName.Clone();
-            }
-
-            return resultMessageConfiguration;
-        }
-
         public string SaveAndGetName(string fileName, string resultsFolder)
         {
             string resultsFileName = FileName.GetReportName(fileName);

@@ -10,19 +10,6 @@ namespace Relay.BulkSenderService.Configuration
         public int Port { get; set; }
         public bool HasSSL { get; set; }
 
-        public IFtpConfiguration Clone()
-        {
-            var ftpConfiguration = new FtpConfiguration();
-
-            ftpConfiguration.Host = this.Host;
-            ftpConfiguration.Username = this.Username;
-            ftpConfiguration.Password = this.Password;
-            ftpConfiguration.Port = this.Port;
-            ftpConfiguration.HasSSL = this.HasSSL;
-
-            return ftpConfiguration;
-        }
-
         public IFtpHelper GetFtpHelper(ILog log)
         {
             var ftpHelper = new FTPHelper(log, this.Host, this.Port, this.Username, this.Password, this.HasSSL);

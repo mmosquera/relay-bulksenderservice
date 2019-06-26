@@ -16,38 +16,6 @@ namespace Relay.BulkSenderService.Configuration
         public List<FieldConfiguration> Fields { get; set; }
         public bool AllowDuplicates { get; set; }
 
-        public ITemplateConfiguration Clone()
-        {
-            ITemplateConfiguration templateConfiguration = (ITemplateConfiguration)Activator.CreateInstance(this.GetType());
-
-            templateConfiguration.FileNamePartSeparator = this.FileNamePartSeparator;
-            templateConfiguration.FieldSeparator = this.FieldSeparator;
-            templateConfiguration.TemplateId = this.TemplateId;
-            templateConfiguration.TemplateName = this.TemplateName;
-            templateConfiguration.HasHeaders = this.HasHeaders;
-            templateConfiguration.AllowDuplicates = this.AllowDuplicates;
-
-            if (this.FileNameParts != null)
-            {
-                templateConfiguration.FileNameParts = new List<string>();
-                foreach (string fileNamePart in this.FileNameParts)
-                {
-                    templateConfiguration.FileNameParts.Add(fileNamePart);
-                }
-            }
-
-            if (this.Fields != null)
-            {
-                templateConfiguration.Fields = new List<FieldConfiguration>();
-                foreach (FieldConfiguration fieldConfiguration in this.Fields)
-                {
-                    templateConfiguration.Fields.Add(fieldConfiguration.Clone());
-                }
-            }
-
-            return templateConfiguration;
-        }
-
         public abstract Processor GetProcessor(ILog logger, IConfiguration configuration);
     }
 }

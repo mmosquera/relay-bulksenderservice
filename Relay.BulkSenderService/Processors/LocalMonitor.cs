@@ -62,7 +62,7 @@ namespace Relay.BulkSenderService.Processors
 
                 Thread.Sleep(_configuration.LocalFilesInterval);
             }
-        }        
+        }
 
         private bool ProcessFile(string fileName, IUserConfiguration user, FilePathHelper filePathHelper)
         {
@@ -101,7 +101,7 @@ namespace Relay.BulkSenderService.Processors
             var threadState = new ThreadStateInfo
             {
                 FileName = destFileName,
-                User = user.Clone(),
+                User = user,
                 Handler = new EventHandler<ThreadEventArgs>(ProcessFinishedHandler)
             };
 

@@ -32,8 +32,6 @@ namespace Relay.BulkSenderService.Configuration
 
         DateTimeOffset GetUserDateTime();
 
-        IUserConfiguration Clone();
-
         PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration);
     }
 }

@@ -9,21 +9,11 @@ namespace Relay.BulkSenderService.Configuration
     {
         string GetValue();
         void Reset();
-        IReportNamePart Clone();
     }
 
     public class FixReportNamePart : IReportNamePart
     {
         public string Value { get; set; }
-
-        public IReportNamePart Clone()
-        {
-            var fixReportNamePart = new FixReportNamePart();
-
-            fixReportNamePart.Value = this.Value;
-
-            return fixReportNamePart;
-        }
 
         public string GetValue()
         {
@@ -35,11 +25,6 @@ namespace Relay.BulkSenderService.Configuration
 
     public class DateReportNamePart : IReportNamePart
     {
-        public IReportNamePart Clone()
-        {
-            return new DateReportNamePart();
-        }
-
         public string GetValue()
         {
             return DateTime.UtcNow.AddHours(-3).ToString("yyyyMMdd"); // TODO: Replace for configuration GMT.
@@ -50,11 +35,6 @@ namespace Relay.BulkSenderService.Configuration
 
     public class DateTimeReportNamePart : IReportNamePart
     {
-        public IReportNamePart Clone()
-        {
-            return new DateTimeReportNamePart();
-        }
-
         public string GetValue()
         {
             return DateTime.UtcNow.AddHours(-3).ToString("yyyyMMddHHmmss");
@@ -67,11 +47,6 @@ namespace Relay.BulkSenderService.Configuration
 
     public class TimeReportNamePart : IReportNamePart
     {
-        public IReportNamePart Clone()
-        {
-            return new TimeReportNamePart();
-        }
-
         public string GetValue()
         {
             return DateTime.UtcNow.AddHours(-3).ToString("HHmmss");
@@ -91,15 +66,6 @@ namespace Relay.BulkSenderService.Configuration
         {
             get { return digits; }
             set { digits = value; }
-        }
-
-        public IReportNamePart Clone()
-        {
-            var numberReportNamePart = new NumberReportNamePart();
-
-            numberReportNamePart.Digits = this.Digits;
-
-            return numberReportNamePart;
         }
 
         public string GetValue()
@@ -126,11 +92,6 @@ namespace Relay.BulkSenderService.Configuration
     {
         private string value = "{{FILENAME}}";
 
-        public IReportNamePart Clone()
-        {
-            return new FileNameReportNamePart();
-        }
-
         public string GetValue()
         {
             return value;
@@ -152,8 +113,6 @@ namespace Relay.BulkSenderService.Configuration
         /// <returns>Return the report name.</returns>
         string GetReportName(string file = "", string path = "");
         string Extension { get; set; }
-
-        IReportName Clone();
     }
 
     public class ReportName : IReportName
@@ -161,25 +120,6 @@ namespace Relay.BulkSenderService.Configuration
         public string Extension { get; set; }
         public string PartSeparator { get; set; }
         public List<IReportNamePart> Parts { get; set; }
-
-        public IReportName Clone()
-        {
-            var reportName = new ReportName();
-
-            reportName.Extension = this.Extension;
-            reportName.PartSeparator = this.PartSeparator;
-
-            if (this.Parts != null)
-            {
-                reportName.Parts = new List<IReportNamePart>();
-                foreach (IReportNamePart part in this.Parts)
-                {
-                    reportName.Parts.Add(part);
-                }
-            }
-
-            return reportName;
-        }
 
         public string GetReportName(string file = "", string path = "")
         {
@@ -249,25 +189,6 @@ namespace Relay.BulkSenderService.Configuration
         public string GetReportName(string file, string path = "")
         {
             return $"{Path.GetFileNameWithoutExtension(file)}.{Extension}";
-        }
-
-        public IReportName Clone()
-        {
-            var simpleReportName = new SimpleReportName();
-
-            simpleReportName.Extension = this.Extension;
-            simpleReportName.PartSeparator = this.PartSeparator;
-
-            if (this.Parts != null)
-            {
-                simpleReportName.Parts = new List<IReportNamePart>();
-                foreach (IReportNamePart part in Parts)
-                {
-                    simpleReportName.Parts.Add(part.Clone());
-                }
-            }
-
-            return simpleReportName;
         }
     }
 }

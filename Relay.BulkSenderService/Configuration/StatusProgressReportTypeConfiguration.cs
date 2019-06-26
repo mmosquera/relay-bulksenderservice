@@ -7,54 +7,6 @@ namespace Relay.BulkSenderService.Configuration
 {
     public class StatusProgressReportTypeConfiguration : ReportTypeConfiguration
     {
-        public override ReportTypeConfiguration Clone()
-        {
-            var statusProgressReportTypeConfiguration = new StatusProgressReportTypeConfiguration()
-            {
-                ReportId = this.ReportId,
-                OffsetHour = this.OffsetHour,
-                RunHour = this.RunHour,
-                DateFormat = this.DateFormat
-            };
-
-            if (this.Name != null)
-            {
-                statusProgressReportTypeConfiguration.Name = this.Name.Clone();
-            }
-
-            if (this.ReportFields != null)
-            {
-                statusProgressReportTypeConfiguration.ReportFields = new List<ReportFieldConfiguration>();
-
-                foreach (ReportFieldConfiguration field in this.ReportFields)
-                {
-                    statusProgressReportTypeConfiguration.ReportFields.Add(field.Clone());
-                }
-            }
-
-            if (this.ReportItems != null)
-            {
-                statusProgressReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
-
-                foreach (ReportItemConfiguration reportItem in this.ReportItems)
-                {
-                    statusProgressReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
-                }
-            }
-
-            if (this.ReportItems != null)
-            {
-                statusProgressReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
-
-                foreach (ReportItemConfiguration reportItem in this.ReportItems)
-                {
-                    statusProgressReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
-                }
-            }
-
-            return statusProgressReportTypeConfiguration;
-        }
-
         public override List<ReportExecution> GetReportExecution(IUserConfiguration user, ReportExecution lastExecution)
         {
             var reports = new List<ReportExecution>();

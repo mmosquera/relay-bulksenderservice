@@ -7,54 +7,6 @@ namespace Relay.BulkSenderService.Configuration
 {
     public class BanorteResumeReportTypeConfiguration : ReportTypeConfiguration
     {
-        public override ReportTypeConfiguration Clone()
-        {
-            var banorteResumeReportTypeConfiguration = new BanorteResumeReportTypeConfiguration()
-            {
-                ReportId = this.ReportId,
-                OffsetHour = this.OffsetHour,
-                RunHour = this.RunHour,
-                DateFormat = this.DateFormat,
-            };
-
-            if (this.Name != null)
-            {
-                banorteResumeReportTypeConfiguration.Name = this.Name.Clone();
-            }
-
-            if (this.ReportFields != null)
-            {
-                banorteResumeReportTypeConfiguration.ReportFields = new List<ReportFieldConfiguration>();
-
-                foreach (ReportFieldConfiguration field in this.ReportFields)
-                {
-                    banorteResumeReportTypeConfiguration.ReportFields.Add(field.Clone());
-                }
-            }
-
-            if (this.ReportItems != null)
-            {
-                banorteResumeReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
-
-                foreach (ReportItemConfiguration reportItem in this.ReportItems)
-                {
-                    banorteResumeReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
-                }
-            }
-
-            if (this.ReportItems != null)
-            {
-                banorteResumeReportTypeConfiguration.ReportItems = new List<ReportItemConfiguration>();
-
-                foreach (ReportItemConfiguration reportItem in this.ReportItems)
-                {
-                    banorteResumeReportTypeConfiguration.ReportItems.Add(reportItem.Clone());
-                }
-            }
-
-            return banorteResumeReportTypeConfiguration;
-        }
-
         public override List<ReportExecution> GetReportExecution(IUserConfiguration user, ReportExecution lastExecution)
         {
             DateTime now = DateTime.UtcNow.AddHours(user.UserGMT);

@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
 {
-	public abstract class ReportTypeConfiguration
+    public abstract class ReportTypeConfiguration
     {
         public string ReportId { get; set; }
         public int OffsetHour { get; set; }
@@ -15,8 +15,6 @@ namespace Relay.BulkSenderService.Configuration
         public string DateFormat { get; set; }
         public List<ReportItemConfiguration> ReportItems { get; set; }
         public List<ReportFieldConfiguration> ReportFields { get; set; }
-
-        public abstract ReportTypeConfiguration Clone();
 
         public abstract ReportProcessor GetReportProcessor(IConfiguration configuration, ILog logger);
 

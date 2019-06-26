@@ -15,8 +15,6 @@ namespace Relay.BulkSenderService.Configuration
         List<string> FileNameParts { get; set; }
         List<FieldConfiguration> Fields { get; set; }
 
-        ITemplateConfiguration Clone();
-
         Processor GetProcessor(ILog logger, IConfiguration configuration);
     }
 }
