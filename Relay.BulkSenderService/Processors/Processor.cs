@@ -402,15 +402,7 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return errorsFilePath;
-        }
-
-        public void Processor_StopSendEvent(object sender, CommandsEventArgs e)
-        {
-            lock (_lockStop)
-            {
-                _stop = true;
-            }
-        }
+        }        
 
         protected bool MustStop()
         {

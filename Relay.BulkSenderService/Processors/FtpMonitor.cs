@@ -15,14 +15,13 @@ namespace Relay.BulkSenderService.Processors
         private List<string> _pausedUsers;
         private object _lockObject;
 
+        //TODO: Add methods to start or stop paused for user;
+
         public FtpMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _nextRun = new Dictionary<string, DateTime>();
             _pausedUsers = new List<string>();
             _lockObject = new object();
-            //CreateUserFolders();
-            //((FileCommandsWatcher)_watcher).StartProcessEvent += FtpMonitor_StartProcessEvent;
-            //((FileCommandsWatcher)_watcher).StopProcessEvent += FtpMonitor_StopProcessEvent;
         }
 
         public void ReadFtpFiles()
@@ -31,7 +30,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 try
                 {
-                    CheckConfigChanges();                    
+                    CheckConfigChanges();
 
                     foreach (IUserConfiguration user in _users)
                     {
@@ -69,32 +68,6 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        private void FtpMonitor_StopProcessEvent(object sender, CommandsEventArgs e)
-        {
-            _logger.Debug($"Stop process event for user {e.User}");
-            string key = e.User.ToUpper();
-            lock (_lockObject)
-            {
-                if (!_pausedUsers.Contains(key))
-                {
-                    _pausedUsers.Add(key);
-                }
-            }
-        }
-
-        private void FtpMonitor_StartProcessEvent(object sender, CommandsEventArgs e)
-        {
-            _logger.Debug($"Start process event for user {e.User}");
-            string key = e.User.ToUpper();
-            lock (_lockObject)
-            {
-                if (_pausedUsers.Contains(key))
-                {
-                    _pausedUsers.Remove(key);
-                }
-            }
-        }
-
         private bool IsProcessPaused(string user)
         {
             string key = user.ToUpper();
@@ -112,7 +85,7 @@ namespace Relay.BulkSenderService.Processors
             }
 
             int parallelProcessors = user.MaxParallelProcessors != 0 ? user.MaxParallelProcessors : _configuration.MaxNumberOfThreads;
-                        
+
             int totalFiles = parallelProcessors * 2;
 
             Thread threadDownload = new Thread(new ThreadStart(() =>
@@ -177,7 +150,7 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return true;
-        }       
+        }
 
         private bool IsAckFile(string fileName, AckConfiguration ackConfiguration)
         {
