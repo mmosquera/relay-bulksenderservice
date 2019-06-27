@@ -58,9 +58,6 @@ namespace Relay.BulkSenderService.Processors
 
             string configFilePath = $"{AppDomain.CurrentDomain.BaseDirectory}configs";
 
-            //TO LOCAL TEST
-            //string configFilePath = $"{AppDomain.CurrentDomain.BaseDirectory}configs\\test";
-
             string[] configFiles = Directory.GetFiles(configFilePath);
 
             foreach (string configFile in configFiles)

@@ -111,8 +111,9 @@ namespace Relay.BulkSenderService.Processors
                 return;
             }
 
-            //int totalFiles = _configuration.MaxNumberOfThreads * 2;
-            int totalFiles = user.MaxParallelProcessors * 2;
+            int parallelProcessors = user.MaxParallelProcessors != 0 ? user.MaxParallelProcessors : _configuration.MaxNumberOfThreads;
+                        
+            int totalFiles = parallelProcessors * 2;
 
             Thread threadDownload = new Thread(new ThreadStart(() =>
             {

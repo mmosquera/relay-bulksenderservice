@@ -68,8 +68,9 @@ namespace Relay.BulkSenderService.Processors
         {
             int threadsUserCount = GetThreadCount(user.Name);
 
-            //if (threadsUserCount >= _configuration.MaxNumberOfThreads)
-            if (threadsUserCount >= user.MaxParallelProcessors)
+            int parallelProcessors = user.MaxParallelProcessors != 0 ? user.MaxParallelProcessors : _configuration.MaxNumberOfThreads;
+
+            if (threadsUserCount >= parallelProcessors)
             {
                 _logger.Debug($"There is no thread available for user {user.Name}. Is working with {threadsUserCount} threads.");
                 return false;
