@@ -293,10 +293,8 @@
     <Compile Include="Processors\APIProcessorKeyIterator.cs" />
     <Compile Include="Processors\BaseWorker.cs" />
     <Compile Include="Processors\CleanProcessor.cs" />
-    <Compile Include="Processors\FileCommandsWatcher.cs" />
     <Compile Include="Processors\FtpMonitor.cs" />
     <Compile Include="Processors\LocalMonitor.cs" />
-    <Compile Include="Processors\IWatcher.cs" />
     <Compile Include="Classes\ReportExecution.cs" />
     <Compile Include="Processors\ReportGenerator.cs" />
     <Compile Include="Processors\SMTPProcessor.cs" />
@@ -342,57 +340,31 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Configs\arba.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <None Include="Configs\arba.config.json" />
     <None Include="Configs\bancorRemote.config.json" />
     <None Include="Configs\BasicSmpt.config.json" />
     <None Include="Configs\bpn.config.json" />
-    <None Include="Configs\compumundo.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\ebay.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\favacard.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\fiden.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\garbarino.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <None Include="Configs\compumundo.config.json" />
+    <None Include="Configs\ebay.config.json" />
+    <None Include="Configs\favacard.config.json" />
+    <None Include="Configs\fiden.config.json" />
+    <None Include="Configs\garbarino.config.json" />
     <None Include="Configs\GarbarinoViajes.config.json" />
-    <None Include="Configs\gire.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <None Include="Configs\gire.config.json" />
     <None Include="Configs\hipotecario.config.json" />
     <None Include="Configs\lmontano.config.json" />
-    <None Include="Configs\makinthal.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    <None Include="Configs\makinthal.config.json" />
+    <None Include="Configs\multigol.config.json" />
+    <None Include="Configs\mobo.config.json" />
+    <None Include="Configs\reywal-mrftp.config.json" />
+    <None Include="Configs\ricoh.config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="Configs\multigol.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\mobo.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\sales.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\sas.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\socialms.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\tdominguez.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\bancor.config.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <None Include="Configs\sales.config.json" />
+    <None Include="Configs\sas.config.json" />
+    <None Include="Configs\socialms.config.json" />
+    <None Include="Configs\tdominguez.config.json" />
+    <None Include="Configs\bancor.config.json" />
     <None Include="packages.config" />
     <None Include="PostBuildTasks\install_service.cmd" />
     <None Include="PostBuildTasks\scripts\InstallService.ps1">

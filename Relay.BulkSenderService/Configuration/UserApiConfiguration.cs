@@ -28,6 +28,7 @@ namespace Relay.BulkSenderService.Configuration
         public AlertConfiguration Alerts { get; set; }
         public IPreProcessorConfiguration PreProcessor { get; set; }
         public int MaxParallelProcessors { get; set; }
+        public int DeliveryDelay { get; set; }
 
         public DateTimeOffset GetUserDateTime()
         {

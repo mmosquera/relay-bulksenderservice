@@ -1,13 +1,11 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
-using System;
 using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Processors
 {
     public class APIProcessorBanorte : APIProcessor
     {
-
         public APIProcessorBanorte(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
         protected override void FillRecipientAttachments(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, UserApiConfiguration user, ProcessResult result)
@@ -33,9 +31,7 @@ namespace Relay.BulkSenderService.Processors
                     recipient.HasError = true;
                     recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                     _logger.Error(message);
-                    string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                    result.WriteError(errorMessage);
-                    result.ErrorsCount++;
+                    result.AddProcessError(_lineNumber, message);
                 }
             }
 

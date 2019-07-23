@@ -52,7 +52,6 @@ namespace Relay.BulkSenderService
             _container.RegisterType<BaseWorker, ReportGenerator>();
             _container.RegisterType<BaseWorker, CleanProcessor>();
             _container.RegisterType<BaseWorker, PreProcessWorker>();
-            _container.RegisterType<IWatcher, FileCommandsWatcher>();
 
             var logManager = _container.Resolve<ILogManager>();
             _container.RegisterInstance<ILog>(logManager.GetLogger("BulkSenderService"));

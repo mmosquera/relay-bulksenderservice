@@ -115,6 +115,8 @@ namespace Relay.BulkSenderService.Processors
                     {
                         RemoveFileFromFtp(ftpFileName, user, ftpHelper);
                     }
+
+                    //TODO: add upload error process
                 }
             }));
             threadDownload.Start();
@@ -212,9 +214,8 @@ namespace Relay.BulkSenderService.Processors
             }
             else
             {
-                string message = $"{DateTime.UtcNow}:Problems to download the file {file}.";
-                result.Type = ResulType.DOWNLOAD;
-                result.WriteError(message);
+                result.AddDownloadError($"Problems to download the file {file}.");
+
                 _logger.Error($"Download problems with file {file}.");
 
                 return false;
@@ -267,10 +268,8 @@ namespace Relay.BulkSenderService.Processors
 
             if (File.Exists($@"{processedPath}\{name}.processed"))
             {
-                string message = $"{DateTime.UtcNow}:The file {Path.GetFileName(fileName)} is already processed.";
                 _logger.Error($"The file {fileName} is already processed.");
-                result.Type = ResulType.REPEATED;
-                result.WriteError(message);
+                result.AddRepeatedError($"The file {Path.GetFileName(fileName)} is already processed.");
                 return false;
             }
 

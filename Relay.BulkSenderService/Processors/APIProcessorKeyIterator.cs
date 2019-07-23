@@ -109,7 +109,7 @@ namespace Relay.BulkSenderService.Processors
             return recipient;
         }
 
-        protected override void SendRecipientsList(List<ApiRecipient> recipients, string resultsFileName, char separator, ProcessResult result, CredentialsConfiguration credentials)
+        protected override void SendRecipientsList(List<ApiRecipient> recipients, string resultsFileName, char separator, ProcessResult result, CredentialsConfiguration credentials, int deliveryDelay)
         {
             ApiRecipient recipient = null;
             int count = recipients.Count();
@@ -126,9 +126,9 @@ namespace Relay.BulkSenderService.Processors
                 {
                     if (!recipients[i].HasError)
                     {
-                        SendEmail(credentials.ApiKey, credentials.AccountId, recipients[i], separator, result);
+                        SendEmailWithRetries(credentials.ApiKey, credentials.AccountId, recipients[i], separator, result);
 
-                        Thread.Sleep(_configuration.DeliveryInterval);
+                        Thread.Sleep(deliveryDelay);
                     }
                     sw.WriteLine(recipients[i].ResultLine);
                     sw.Flush();

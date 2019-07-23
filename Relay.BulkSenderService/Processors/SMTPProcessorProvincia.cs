@@ -38,7 +38,13 @@ namespace Relay.BulkSenderService.Processors
 
                 using (StreamReader reader = new StreamReader(localFileName))
                 {
-                    string line = templateConfiguration.HasHeaders ? reader.ReadLine() : null;
+                    string line = null;
+
+                    if (templateConfiguration.HasHeaders)
+                    {
+                        line = reader.ReadLine();
+                        _lineNumber++;
+                    }
 
                     string headers = GetHeaderLine(line, templateConfiguration);
 
@@ -50,7 +56,7 @@ namespace Relay.BulkSenderService.Processors
 
                         string[] recipientArray = line.Split(templateConfiguration.FieldSeparator);
 
-                        result.ProcessedCount++;
+                        result.AddProcessed();
 
                         SMTPRecipient recipient = CreateRecipientFromString(recipientArray, line, ((UserSMTPConfiguration)user).TemplateFilePath, ((UserSMTPConfiguration)user).AttachmentsFolder, templateConfiguration.FieldSeparator);
 
@@ -62,11 +68,13 @@ namespace Relay.BulkSenderService.Processors
 
                         if (recipients.Count == _configuration.BulkEmailCount)
                         {
-                            SendRecipientList(recipients, ((UserSMTPConfiguration)user).SmtpUser, ((UserSMTPConfiguration)user).SmtpPass, resultsFileName, templateConfiguration.FieldSeparator);
+                            SendRecipientList(recipients, ((UserSMTPConfiguration)user).SmtpUser, ((UserSMTPConfiguration)user).SmtpPass, resultsFileName, templateConfiguration.FieldSeparator, user.DeliveryDelay);
                         }
+
+                        _lineNumber++;
                     }
 
-                    SendRecipientList(recipients, ((UserSMTPConfiguration)user).SmtpUser, ((UserSMTPConfiguration)user).SmtpPass, resultsFileName, templateConfiguration.FieldSeparator);
+                    SendRecipientList(recipients, ((UserSMTPConfiguration)user).SmtpUser, ((UserSMTPConfiguration)user).SmtpPass, resultsFileName, templateConfiguration.FieldSeparator, user.DeliveryDelay);
                 }
             }
             catch (Exception e)
@@ -119,9 +127,10 @@ namespace Relay.BulkSenderService.Processors
                     recipient.HasError = true;
                     recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                     _logger.Error(message);
-                    string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                    result.WriteError(errorMessage);
-                    result.ErrorsCount++;
+                    //string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
+                    //result.WriteError(errorMessage);
+                    //result.ErrorsCount++;
+                    result.AddProcessError(_lineNumber, message);
                 }
             }
 
@@ -155,9 +164,10 @@ namespace Relay.BulkSenderService.Processors
                         recipient.HasError = true;
                         recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                         _logger.Error(message);
-                        string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                        result.WriteError(errorMessage);
-                        result.ErrorsCount++;
+                        //string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
+                        //result.WriteError(errorMessage);
+                        //result.ErrorsCount++;
+                        result.AddProcessError(_lineNumber, message);
                     }
                 }
             }

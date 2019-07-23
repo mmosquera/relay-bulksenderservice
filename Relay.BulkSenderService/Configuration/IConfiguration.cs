@@ -5,7 +5,6 @@
         string LocalDownloadFolder { get; }
         string SmtpHost { get; }
         int SmtpPort { get; }
-        int DeliveryInterval { get; }
         string BaseUrl { get; }
         string TemplateUrl { get; }
         string AccountUrl { get; }
@@ -22,5 +21,8 @@
         string ReportsFolder { get; }
         int PreProcessorInterval { get; }
         string UserFiles { get; }
+        int DeliveryRetryCount { get; }
+        int DeliveryRetryInterval { get; }
+        int DeliveryFailCount { get; }
     }
 }

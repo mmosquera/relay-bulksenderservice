@@ -43,9 +43,7 @@ namespace Relay.BulkSenderService.Processors
                         recipient.HasError = true;
                         recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                         _logger.Error(message);
-                        string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                        result.WriteError(errorMessage);
-                        result.ErrorsCount++;
+                        result.AddProcessError(_lineNumber, message);
                     }
                 }
             }
@@ -89,8 +87,6 @@ namespace Relay.BulkSenderService.Processors
                     File.Copy(imageFilePath, privatePath);
 
                     _hostedFiles.Add(hostedFile, publicPath);
-
-
                 }
                 else
                 {
@@ -98,9 +94,7 @@ namespace Relay.BulkSenderService.Processors
                     recipient.HasError = true;
                     recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                     _logger.Error(message);
-                    string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                    result.WriteError(errorMessage);
-                    result.ErrorsCount++;
+                    result.AddProcessError(_lineNumber, message);
                 }
             }
 

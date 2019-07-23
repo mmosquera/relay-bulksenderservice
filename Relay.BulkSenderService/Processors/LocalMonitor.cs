@@ -17,9 +17,6 @@ namespace Relay.BulkSenderService.Processors
         {
             _threadsCount = new Dictionary<string, int>();
             _lockObj = new object();
-            CreateFoldersAndThreadsCount();
-            //((FileCommandsWatcher)_watcher).AddThreadEvent += FtpMonitor_AddThreadEvent;
-            //((FileCommandsWatcher)_watcher).RemoveThreadEvent += FtpMonitor_RemoveThreadEvent;
         }
 
         public void ReadLocalFiles()
@@ -106,9 +103,6 @@ namespace Relay.BulkSenderService.Processors
                 Handler = new EventHandler<ThreadEventArgs>(ProcessFinishedHandler)
             };
 
-            // Subscribe processor to stop event.
-            //((FileCommandsWatcher)_watcher).StopSendEvent += processor.Processor_StopSendEvent;
-
             IncrementUserThreadCount(user.Name);
             ThreadPool.QueueUserWorkItem(new WaitCallback(processor.DoWork), threadState);
 
@@ -118,28 +112,11 @@ namespace Relay.BulkSenderService.Processors
             return true;
         }
 
-        private void CreateFoldersAndThreadsCount()
-        {
-            foreach (IUserConfiguration user in _users)
-            {
-                var filePathHelper = new FilePathHelper(_configuration, user.Name);
-                filePathHelper.CreateUserFolders();
-
-                string key = user.Name.ToUpper();
-                if (!_threadsCount.ContainsKey(key))
-                {
-                    _threadsCount.Add(user.Name.ToUpper(), 0);
-                }
-            }
-        }
-
         private void ProcessFinishedHandler(object sender, ThreadEventArgs args)
         {
             _logger.Debug($"Finish to process ThreadId:{Thread.CurrentThread.ManagedThreadId} for user:{args.Name}");
 
             DecrementUserThreadCount(args.Name);
-
-            //((FileCommandsWatcher)_watcher).StopSendEvent -= ((Processor)sender).Processor_StopSendEvent;
         }
 
         private void IncrementUserThreadCount(string user)

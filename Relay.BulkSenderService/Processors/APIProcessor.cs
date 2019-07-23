@@ -29,9 +29,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 if (!ValidateCredentials(user.Credentials))
                 {
-                    string message = $"{DateTime.UtcNow}:Error to authenticate user {user.Name}";
-                    result.Type = ResulType.LOGIN;
-                    result.WriteError(message);
+                    result.AddLoginError();
                     return null;
                 }
 
@@ -43,9 +41,7 @@ namespace Relay.BulkSenderService.Processors
 
                 if (templateConfiguration == null)
                 {
-                    string message = $"{DateTime.UtcNow}:There is not template configuration.";
-                    result.Type = ResulType.PROCESS;
-                    result.WriteError(message);
+                    result.AddProcessError(_lineNumber, "There is not template configuration.");
                     return resultsFileName;
                 }
 
@@ -55,15 +51,19 @@ namespace Relay.BulkSenderService.Processors
 
                 using (StreamReader reader = new StreamReader(localFileName))
                 {
-                    string line = templateConfiguration.HasHeaders ? reader.ReadLine() : null;
+                    string line = null;
+
+                    if (templateConfiguration.HasHeaders)
+                    {
+                        line = reader.ReadLine();
+                        _lineNumber++;
+                    }
 
                     string headers = GetHeaderLine(line, templateConfiguration);
 
                     if (string.IsNullOrEmpty(headers))
                     {
-                        string message = $"{DateTime.UtcNow}:There are not headers.";
-                        result.Type = ResulType.PROCESS;
-                        result.WriteError(message);
+                        result.AddProcessError(_lineNumber, "The file has not headers.");
                         return resultsFileName;
                     }
 
@@ -95,14 +95,16 @@ namespace Relay.BulkSenderService.Processors
 
                         if (string.IsNullOrEmpty(line))
                         {
+                            _lineNumber++;
                             continue;
                         }
 
                         string[] recipientArray = GetDataLine(line, templateConfiguration);
 
                         ApiRecipient recipient = GetRecipient(recipients, recipientArray, templateConfiguration);
+                        recipient.LineNumber = _lineNumber;
 
-                        result.ProcessedCount++;
+                        result.AddProcessed();
 
                         if (recipientArray.Length == headersArray.Length)
                         {
@@ -123,9 +125,7 @@ namespace Relay.BulkSenderService.Processors
                                     recipient.HasError = true;
                                     recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                                     _logger.Error(message);
-                                    string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                                    result.WriteError(errorMessage);
-                                    result.ErrorsCount++;
+                                    result.AddProcessError(_lineNumber, message);
                                 }
                                 else if (string.IsNullOrEmpty(recipient.ToEmail))
                                 {
@@ -133,9 +133,7 @@ namespace Relay.BulkSenderService.Processors
                                     recipient.HasError = true;
                                     recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                                     _logger.Error(message);
-                                    string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                                    result.WriteError(errorMessage);
-                                    result.ErrorsCount++;
+                                    result.AddProcessError(_lineNumber, message);
                                 }
                             }
                             else
@@ -144,9 +142,7 @@ namespace Relay.BulkSenderService.Processors
                                 recipient.HasError = true;
                                 recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                                 _logger.Error(message);
-                                string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                                result.WriteError(errorMessage);
-                                result.ErrorsCount++;
+                                result.AddProcessError(_lineNumber, message);
                             }
                         }
                         else
@@ -155,9 +151,7 @@ namespace Relay.BulkSenderService.Processors
                             recipient.HasError = true;
                             recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                             _logger.Error(message);
-                            string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                            result.WriteError(errorMessage);
-                            result.ErrorsCount++;
+                            result.AddProcessError(_lineNumber, message);
                         }
 
                         CustomRecipientValidations(recipient, recipientArray, line, templateConfiguration.FieldSeparator, result);
@@ -166,18 +160,19 @@ namespace Relay.BulkSenderService.Processors
 
                         if (recipients.Count() == _configuration.BulkEmailCount)
                         {
-                            SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, result, user.Credentials);
+                            SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, result, user.Credentials, user.DeliveryDelay);
                         }
+
+                        _lineNumber++;
                     }
 
-                    SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, result, user.Credentials);
+                    SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, result, user.Credentials, user.DeliveryDelay);
                 }
             }
             catch (Exception e)
             {
-                // TODO check if needed return null.
-                string message = $"{DateTime.UtcNow}:GENERAL ERROR PROCESS contact admin for more information.";
-                result.WriteError(message);
+                // TODO check if needed return null.                
+                result.AddUnexpectedError(_lineNumber);
                 _logger.Error($"ERROR on process file {localFileName} -- {e}");
             }
 
@@ -253,7 +248,26 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected void SendEmail(string apiKey, int accountId, ApiRecipient recipient, char separator, ProcessResult result)
+        protected void SendEmailWithRetries(string apiKey, int accountId, ApiRecipient recipient, char separator, ProcessResult result)
+        {
+            int count = 0;
+
+            while (count < _configuration.DeliveryRetryCount && !SendEmail(apiKey, accountId, recipient, separator, result))
+            {
+                count++;
+
+                if (count == _configuration.DeliveryRetryCount)
+                {
+                    result.AddUnexpectedError(recipient.LineNumber);
+                }
+                else
+                {
+                    Thread.Sleep(_configuration.DeliveryRetryInterval);
+                }
+            }
+        }
+
+        protected bool SendEmail(string apiKey, int accountId, ApiRecipient recipient, char separator, ProcessResult result)
         {
             var restClient = new RestClient(_configuration.BaseUrl);
 
@@ -294,7 +308,9 @@ namespace Relay.BulkSenderService.Processors
 
                     // TODO: Improvements to add results.
                     string linkResult = apiResult._links.Count >= 2 ? apiResult._links[1].href : string.Empty;
+
                     string sentResult = $"Send OK{separator}{apiResult.createdResourceId}{separator}{linkResult}";
+
                     recipient.AddSentResult(separator, sentResult);
                 }
                 else
@@ -303,26 +319,22 @@ namespace Relay.BulkSenderService.Processors
 
                     _logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
 
-                    string message = $"{DateTime.UtcNow}:{response.StatusCode} -- Send fail to {recipient.ToEmail}";
-                    result.WriteError(message);
-
-                    result.ErrorsCount++;
+                    result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());
 
                     recipient.AddSentResult(separator, $"Send Fail ({jsonResult.title})");
                 }
+
+                return true;
             }
             catch (Exception se)
             {
-                string message = $"{DateTime.UtcNow}:Send error to {recipient.ToEmail}";
-                result.WriteError(message);
-
-                result.ErrorsCount++;
-
                 _logger.Error($"SENDING ERROR to: {recipient.ToEmail}. -- {se}");
+
+                return false;
             }
         }
 
-        protected virtual void SendRecipientsList(List<ApiRecipient> recipients, string resultsFileName, char separator, ProcessResult result, CredentialsConfiguration credentials)
+        protected virtual void SendRecipientsList(List<ApiRecipient> recipients, string resultsFileName, char separator, ProcessResult result, CredentialsConfiguration credentials, int deliveryDelay)
         {
             using (StreamWriter sw = new StreamWriter(resultsFileName, true))
             {
@@ -330,9 +342,9 @@ namespace Relay.BulkSenderService.Processors
                 {
                     if (!recipient.HasError)
                     {
-                        SendEmail(credentials.ApiKey, credentials.AccountId, recipient, separator, result);
+                        SendEmailWithRetries(credentials.ApiKey, credentials.AccountId, recipient, separator, result);
 
-                        Thread.Sleep(_configuration.DeliveryInterval);
+                        Thread.Sleep(deliveryDelay);
                     }
                     sw.WriteLine(recipient.ResultLine);
                     sw.Flush();
@@ -465,9 +477,7 @@ namespace Relay.BulkSenderService.Processors
                         recipient.HasError = true;
                         recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                         _logger.Error(message);
-                        string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                        result.WriteError(errorMessage);
-                        result.ErrorsCount++;
+                        result.AddProcessError(_lineNumber, message);
                     }
                 }
             }
@@ -487,7 +497,7 @@ namespace Relay.BulkSenderService.Processors
         {
             string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\FinishProcess.es.html");
 
-            return string.Format(body, Path.GetFileName(file), user.GetUserDateTime().DateTime, result.ProcessedCount, result.ErrorsCount);
+            return string.Format(body, Path.GetFileName(file), user.GetUserDateTime().DateTime, result.GetProcessedCount(), result.GetErrorsCount());
         }
 
         protected override List<string> GetAttachments(string file, string usarName)

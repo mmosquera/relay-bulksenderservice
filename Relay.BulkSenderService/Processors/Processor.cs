@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Mail;
+using System.Text;
 using System.Threading;
 
 namespace Relay.BulkSenderService.Processors
@@ -18,6 +19,7 @@ namespace Relay.BulkSenderService.Processors
         protected readonly IConfiguration _configuration;
         protected bool _stop;
         protected object _lockStop;
+        protected int _lineNumber;
 
         public event EventHandler<ThreadEventArgs> ProcessFinished;
 
@@ -27,6 +29,7 @@ namespace Relay.BulkSenderService.Processors
             _configuration = configuration;
             _stop = false;
             _lockStop = new object();
+            _lineNumber = 0;
         }
 
         public void DoWork(object stateInfo)
@@ -41,11 +44,11 @@ namespace Relay.BulkSenderService.Processors
             {
                 _logger.Debug($"Start to process {fileName} for User:{user.Name} in Thread:{Thread.CurrentThread.ManagedThreadId}");
 
-                result.ErrorFileName = GetErrorsFileName(fileName, user);
-
                 SendStartProcessEmail(fileName, user);
 
                 string resultFileName = Process(user, fileName, result);
+
+                GenerateErrorFile(fileName, user, result);
 
                 var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
@@ -77,6 +80,22 @@ namespace Relay.BulkSenderService.Processors
                     Name = user.Name
                 };
                 OnProcessFinished(args);
+            }
+        }
+
+        private void GenerateErrorFile(string fileName, IUserConfiguration user, ProcessResult processResult)
+        {
+            processResult.ErrorFileName = GetErrorsFileName(fileName, user);
+
+            var stringBuilder = new StringBuilder();
+            foreach (ProcessError processError in processResult.Errors.OrderBy(x => x.LineNumber))
+            {
+                stringBuilder.AppendLine(processError.GetErrorLine());
+            }
+
+            using (var streamWriter = new StreamWriter(processResult.ErrorFileName))
+            {
+                streamWriter.Write(stringBuilder);
             }
         }
 
@@ -320,7 +339,7 @@ namespace Relay.BulkSenderService.Processors
 
         private void SendErrorEmail(string file, AlertConfiguration alerts, ProcessResult result)
         {
-            if (result.Type != ResulType.PROCESS
+            if (result.Errors.Any(x => x.Type != ErrorType.PROCESS)
                 && alerts != null
                 && alerts.GetErrorAlert() != null
                 && alerts.Emails.Count > 0)
@@ -339,19 +358,23 @@ namespace Relay.BulkSenderService.Processors
                 {
                     mailMessage.To.Add(email);
                 }
+
                 string body = null;
-                switch (result.Type)
+
+                ProcessError error = result.Errors.FirstOrDefault(x => x.Type != ErrorType.PROCESS);
+
+                switch (error.Type)
                 {
-                    case ResulType.DOWNLOAD:
+                    case ErrorType.DOWNLOAD:
                         body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorDownload.es.html");
                         break;
-                    case ResulType.LOGIN:
+                    case ErrorType.LOGIN:
                         body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorLogin.es.html");
                         break;
-                    case ResulType.UNZIP:
+                    case ErrorType.UNZIP:
                         body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorUnzip.es.html");
                         break;
-                    case ResulType.REPEATED:
+                    case ErrorType.REPEATED:
                         body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorRepeated.es.html");
                         break;
                 }
@@ -392,17 +415,21 @@ namespace Relay.BulkSenderService.Processors
         {
             string errorsFilePath = null;
 
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+            string errorsPath = filePathHelper.GetResultsFilesFolder();
+
             if (user.Errors != null)
             {
-                var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
-                string errorsPath = filePathHelper.GetResultsFilesFolder();
-
                 errorsFilePath = $@"{errorsPath}\{user.Errors.Name.GetReportName(file, errorsPath)}";
+            }
+            else
+            {
+                errorsFilePath = $@"{errorsPath}\{Path.GetFileNameWithoutExtension(file)}.error";
             }
 
             return errorsFilePath;
-        }        
+        }
 
         protected bool MustStop()
         {

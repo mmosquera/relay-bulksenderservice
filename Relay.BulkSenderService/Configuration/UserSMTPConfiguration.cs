@@ -33,6 +33,7 @@ namespace Relay.BulkSenderService.Configuration
         public List<ITemplateConfiguration> Templates { get; set; }
         public IPreProcessorConfiguration PreProcessor { get; set; }
         public int MaxParallelProcessors { get; set; }
+        public int DeliveryDelay { get; set; }
 
         public Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName)
         {

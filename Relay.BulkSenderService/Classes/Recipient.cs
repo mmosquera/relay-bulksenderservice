@@ -11,6 +11,7 @@
         public string Subject { get; set; }
         public bool HasError { get; set; }
         public string ResultLine { get; set; }
+        public int LineNumber { get; set; }
 
         public void AddProcessedResult(string line, char separator, string message)
         {

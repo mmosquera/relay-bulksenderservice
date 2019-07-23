@@ -1,6 +1,5 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
-using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -82,16 +81,14 @@ namespace Relay.BulkSenderService.Processors
                 string message = "The recipient is already processed.";
                 recipient.HasError = true;
                 recipient.ResultLine = $"{line}{fielSeparator}{message}";
-                string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
-                result.WriteError(errorMessage);
-                result.ErrorsCount++;
+                result.AddProcessError(_lineNumber, message);
             }
         }
 
         protected override string GetBody(string file, IUserConfiguration user, ProcessResult result)
         {
             var templateGenerator = new TemplateGenerator();
-            templateGenerator.AddItem(Path.GetFileNameWithoutExtension(file), user.GetUserDateTime().DateTime.ToString(), result.ProcessedCount.ToString(), result.ErrorsCount.ToString());
+            templateGenerator.AddItem(Path.GetFileNameWithoutExtension(file), user.GetUserDateTime().DateTime.ToString(), result.GetProcessedCount().ToString(), result.GetErrorsCount().ToString());
 
             return templateGenerator.GenerateHtml();
         }

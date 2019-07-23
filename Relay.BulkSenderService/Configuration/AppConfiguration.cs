@@ -14,11 +14,6 @@ namespace Relay.BulkSenderService.Configuration
             get { return int.Parse(ConfigurationManager.AppSettings["smtpPort"]); }
         }
 
-        public int DeliveryInterval
-        {
-            get { return int.Parse(ConfigurationManager.AppSettings["DeliveryInterval"]); }
-        }
-
         public string LocalDownloadFolder
         {
             get { return ConfigurationManager.AppSettings["LocalDownloadFolder"]; }
@@ -102,6 +97,21 @@ namespace Relay.BulkSenderService.Configuration
         public string UserFiles
         {
             get { return ConfigurationManager.AppSettings["UserFiles"]; }
+        }
+
+        public int DeliveryRetryCount
+        {
+            get { return int.Parse(ConfigurationManager.AppSettings["DeliveryRetryCount"]); }
+        }
+
+        public int DeliveryRetryInterval
+        {
+            get { return int.Parse(ConfigurationManager.AppSettings["DeliveryRetryInterval"]); }
+        }
+
+        public int DeliveryFailCount
+        {
+            get { return int.Parse(ConfigurationManager.AppSettings["DeliveryFailCount"]); }
         }
     }
 }
