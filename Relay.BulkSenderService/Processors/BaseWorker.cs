@@ -40,7 +40,7 @@ namespace Relay.BulkSenderService.Processors
 
             if (lastWrite >= _lastConfigLoad)
             {
-                _logger.Info("There are changes on configuration.");
+                _logger.Info($"{GetType()}. There are changes on configuration.");
 
                 _users.Clear();
 
