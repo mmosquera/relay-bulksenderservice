@@ -10,6 +10,7 @@ namespace Relay.BulkSenderService.Processors
     public class ApiProcessorProvincia : APIProcessor
     {
         private readonly Dictionary<string, string> _hostedFiles;
+        private const string SPLIT = "split"; //TODO: get from user configuration for split pre processor.
 
         public ApiProcessorProvincia(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
@@ -31,7 +32,9 @@ namespace Relay.BulkSenderService.Processors
                         continue;
                     }
 
-                    string localAttachement = GetAttachmentFile(attachName, fileName, user);
+                    string originalFileName = GetOriginalFileName(fileName);
+
+                    string localAttachement = GetAttachmentFile(attachName, originalFileName, user);
 
                     if (!string.IsNullOrEmpty(localAttachement))
                     {
@@ -54,7 +57,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected override void HostFile(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string line, string originalFileName, IUserConfiguration user, ProcessResult result)
+        protected override void HostFile(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string line, string fileName, IUserConfiguration user, ProcessResult result)
         {
             string hostedFile = recipientArray[5];
 
@@ -72,16 +75,19 @@ namespace Relay.BulkSenderService.Processors
             else
             {
                 var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+                string originalFileName = GetOriginalFileName(fileName);
+
                 string imageFilePath = $@"{filePathHelper.GetAttachmentsFilesFolder()}\{Path.GetFileNameWithoutExtension(originalFileName)}\{hostedFile}";
 
                 if (File.Exists(imageFilePath))
                 {
-                    string hostedFileName = $"{Path.GetFileNameWithoutExtension(hostedFile)}_{DateTime.Now.Ticks}{Path.GetExtension(hostedFile)}";
+                    string hostedFileName = $"{Path.GetFileNameWithoutExtension(originalFileName)}.{hostedFile}_{DateTime.Now.Ticks}{Path.GetExtension(hostedFile)}";
 
                     //TODO: aca va el nombre del archivo nuevo
                     string privatePath = $@"{_configuration.UserFiles}\{hostedFileName}";
 
-                    publicPath = $"http://files.bancoprovinciamail.com.ar/relay/{hostedFileName}";
+                    publicPath = $"{_configuration.PublicUserFiles}/{hostedFileName}";
 
                     // Copy jpg file to be hosted.
                     File.Copy(imageFilePath, privatePath);
@@ -99,6 +105,15 @@ namespace Relay.BulkSenderService.Processors
             }
 
             recipient.Fields.Add("hostedImage", publicPath);
+        }
+
+        private string GetOriginalFileName(string fileName)
+        {
+            int index = fileName.IndexOf(SPLIT);
+
+            string originalFileName = index != -1 ? fileName.Remove(index, SPLIT.Length + 3) : fileName;
+
+            return originalFileName;
         }
     }
 }

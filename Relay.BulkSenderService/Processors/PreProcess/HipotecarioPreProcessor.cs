@@ -19,57 +19,64 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 return;
             }
 
-            if (Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                var filePathHelper = new FilePathHelper(_configuration, userName);
-
-                string downloadPath = filePathHelper.GetDownloadsFolder();
-                string processedPath = filePathHelper.GetProcessedFilesFolder();
-
-
-                List<string> zipEntries = new ZipHelper().UnzipFile(fileName, downloadPath);
-
-                try
+                if (Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                 {
-                    File.Delete(fileName); // Delete zip file                        
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"Error trying to delete zip file -- {e}");
-                }
+                    var filePathHelper = new FilePathHelper(_configuration, userName);
 
-                foreach (string zipEntry in zipEntries)
-                {
-                    string name = Path.GetFileNameWithoutExtension(zipEntry);
+                    string downloadPath = filePathHelper.GetDownloadsFolder();
+                    string processedPath = filePathHelper.GetProcessedFilesFolder();
 
-                    if (File.Exists($@"{downloadPath}\{name}.processing") || File.Exists($@"{processedPath}\{name}.processing"))
+
+                    List<string> zipEntries = new ZipHelper().UnzipFile(fileName, downloadPath);
+
+                    try
                     {
-                        _logger.Info($"The file {zipEntry} is processing.");
-
-                        File.Delete(zipEntry);
-
-                        continue;
+                        File.Delete(fileName); // Delete zip file                        
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Error($"Error trying to delete zip file -- {e}");
                     }
 
-                    if (File.Exists($@"{processedPath}\{name}.processed"))
+                    foreach (string zipEntry in zipEntries)
                     {
-                        _logger.Error($"The file {zipEntry} is already processed.");
+                        string name = Path.GetFileNameWithoutExtension(zipEntry);
 
-                        File.Delete(zipEntry);
+                        if (File.Exists($@"{downloadPath}\{name}.processing") || File.Exists($@"{processedPath}\{name}.processing"))
+                        {
+                            _logger.Info($"The file {zipEntry} is processing.");
 
-                        continue;
+                            File.Delete(zipEntry);
+
+                            continue;
+                        }
+
+                        if (File.Exists($@"{processedPath}\{name}.processed"))
+                        {
+                            _logger.Error($"The file {zipEntry} is already processed.");
+
+                            File.Delete(zipEntry);
+
+                            continue;
+                        }
+
+                        string newFileName = zipEntry.Replace(Path.GetExtension(zipEntry), ".processing");
+
+                        File.Move(zipEntry, newFileName);
                     }
+                }
+                else
+                {
+                    string newFileName = fileName.Replace(Path.GetExtension(fileName), ".processing");
 
-                    string newFileName = zipEntry.Replace(Path.GetExtension(zipEntry), ".processing");
-
-                    File.Move(zipEntry, newFileName);
+                    File.Move(fileName, newFileName);
                 }
             }
-            else
+            catch (Exception e)
             {
-                string newFileName = fileName.Replace(Path.GetExtension(fileName), ".processing");
-
-                File.Move(fileName, newFileName);
+                _logger.Error($"ERROR HIPOTECARIO PRE PROCESSOR: {e}");
             }
         }
     }
