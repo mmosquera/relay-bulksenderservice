@@ -21,6 +21,7 @@
         string ReportsFolder { get; }
         int PreProcessorInterval { get; }
         string UserFiles { get; }
+        string PublicUserFiles { get; }
         int DeliveryRetryCount { get; }
         int DeliveryRetryInterval { get; }
         int DeliveryFailCount { get; }

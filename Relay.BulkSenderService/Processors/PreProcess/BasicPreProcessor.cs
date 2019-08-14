@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using System;
 using System.IO;
 
 namespace Relay.BulkSenderService.Processors.PreProcess
@@ -19,7 +20,14 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
             string newFileName = fileName.Replace(Path.GetExtension(fileName), ".processing");
 
-            File.Move(fileName, newFileName);
+            try
+            {
+                File.Move(fileName, newFileName);
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"ERROR BASIC PRE PROCESSOR: {e}");
+            }
         }
     }
 }

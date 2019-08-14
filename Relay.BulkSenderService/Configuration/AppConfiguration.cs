@@ -99,6 +99,11 @@ namespace Relay.BulkSenderService.Configuration
             get { return ConfigurationManager.AppSettings["UserFiles"]; }
         }
 
+        public string PublicUserFiles
+        {
+            get { return ConfigurationManager.AppSettings["PublicUserFiles"]; }
+        }
+
         public int DeliveryRetryCount
         {
             get { return int.Parse(ConfigurationManager.AppSettings["DeliveryRetryCount"]); }
