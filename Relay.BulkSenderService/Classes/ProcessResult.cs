@@ -5,6 +5,7 @@ namespace Relay.BulkSenderService.Classes
 {
     public class ProcessResult
     {
+        private int _totalCount;
         private int _processedCount;
         private int _errorsCount;
         public string ErrorFileName { get; set; }
@@ -15,6 +16,11 @@ namespace Relay.BulkSenderService.Classes
             _processedCount = 0;
             _errorsCount = 0;
             Errors = new List<ProcessError>();
+        }
+
+        public void SetTotalCount(int total)
+        {
+            _totalCount = total;
         }
 
         public void AddProcessed()

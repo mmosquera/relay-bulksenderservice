@@ -12,11 +12,15 @@ namespace Relay.BulkSenderService.Processors
     {
         private Dictionary<string, int> _threadsCount;
         private object _lockObj;
+        private Dictionary<string, object> _lockFiles;
+        private object _lockFileObj;
 
         public LocalMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _threadsCount = new Dictionary<string, int>();
             _lockObj = new object();
+            _lockFiles = new Dictionary<string, object>();
+            _lockFileObj = new object();
         }
 
         public void ReadLocalFiles()
@@ -119,6 +123,36 @@ namespace Relay.BulkSenderService.Processors
             DecrementUserThreadCount(args.Name);
         }
 
+        private void StatusEventHandler(object sender, StatusEventArgs args)
+        {
+            object locker;
+            lock (_lockFileObj)
+            {
+                if (_lockFiles.ContainsKey(args.Name))
+                {
+                    locker = _lockFiles[args.Name];
+                }
+                else
+                {
+                    locker = new object();
+                    _lockFiles.Add(args.Name, locker);
+                }
+            }
+
+            lock (locker)
+            {
+                string userFolder = new FilePathHelper(_configuration, args.Name).GetUserFolder();
+                string file = "status.txt";
+
+                string fileName = $@"{userFolder}\{file}";
+
+                using (var streamReader = new StreamWriter(fileName, false))
+                {
+
+                }
+            }
+        }
+
         private void IncrementUserThreadCount(string user)
         {
             string key = user.ToUpper();
@@ -166,10 +200,17 @@ namespace Relay.BulkSenderService.Processors
         public IUserConfiguration User { get; set; }
         public string FileName { get; set; }
         public EventHandler<ThreadEventArgs> Handler { get; set; }
+        public EventHandler<StatusEventArgs> StatusEventHandler { get; set; }
     }
 
     public class ThreadEventArgs : EventArgs
     {
         public string Name { get; set; }
+    }
+
+    public class StatusEventArgs : EventArgs
+    {
+        public string Name { get; set; }
+        public ProcessResult Status { get; set; }
     }
 }

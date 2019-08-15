@@ -22,7 +22,7 @@ namespace Relay.BulkSenderService.Processors
         protected int _lineNumber;
 
         public event EventHandler<ThreadEventArgs> ProcessFinished;
-        //public event EventHandler<StatusEventArgs> ProcessStatus;
+        public event EventHandler<StatusEventArgs> ProcessStatus;
 
         public Processor(ILog logger, IConfiguration configuration)
         {
@@ -47,7 +47,7 @@ namespace Relay.BulkSenderService.Processors
 
                 SendStartProcessEmail(fileName, user);
 
-                //result.SetTotalCount(GetTotalLines(fileName));
+                result.SetTotalCount(GetTotalLines(fileName));
 
                 string resultFileName = Process(user, fileName, result);
 
@@ -439,6 +439,26 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return errorsFilePath;
+        }
+
+        private int GetTotalLines(string fileName)
+        {
+            if (!File.Exists(fileName))
+            {
+                return 0;
+            }
+
+            int totalLines = 0;
+
+            using (var streamReader = new StreamReader(fileName))
+            {
+                while (streamReader.ReadLine() != null)
+                {
+                    totalLines++;
+                }
+            }
+
+            return totalLines;
         }
 
         //private int GetTotalLines(string fileName)
