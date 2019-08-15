@@ -497,7 +497,10 @@ namespace Relay.BulkSenderService.Processors
         {
             string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\FinishProcess.es.html");
 
-            return string.Format(body, Path.GetFileName(file), user.GetUserDateTime().DateTime, result.GetProcessedCount(), result.GetErrorsCount());
+            return body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file))
+                .Replace("{{time}}", user.GetUserDateTime().DateTime.ToString())
+                .Replace("{{processed}}", result.GetProcessedCount().ToString())
+                .Replace("{{errors}}", result.GetErrorsCount().ToString());
         }
 
         protected override List<string> GetAttachments(string file, string usarName)

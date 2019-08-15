@@ -22,6 +22,7 @@ namespace Relay.BulkSenderService.Processors
         protected int _lineNumber;
 
         public event EventHandler<ThreadEventArgs> ProcessFinished;
+        //public event EventHandler<StatusEventArgs> ProcessStatus;
 
         public Processor(ILog logger, IConfiguration configuration)
         {
@@ -45,6 +46,8 @@ namespace Relay.BulkSenderService.Processors
                 _logger.Debug($"Start to process {fileName} for User:{user.Name} in Thread:{Thread.CurrentThread.ManagedThreadId}");
 
                 SendStartProcessEmail(fileName, user);
+
+                //result.SetTotalCount(GetTotalLines(fileName));
 
                 string resultFileName = Process(user, fileName, result);
 
@@ -85,6 +88,11 @@ namespace Relay.BulkSenderService.Processors
 
         private void GenerateErrorFile(string fileName, IUserConfiguration user, ProcessResult processResult)
         {
+            if (processResult.Errors.Count == 0)
+            {
+                return;
+            }
+
             processResult.ErrorFileName = GetErrorsFileName(fileName, user);
 
             var stringBuilder = new StringBuilder();
@@ -259,7 +267,8 @@ namespace Relay.BulkSenderService.Processors
 
                 string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\StartProcess.es.html");
 
-                mailMessage.Body = string.Format(body, Path.GetFileNameWithoutExtension(file), user.GetUserDateTime().DateTime);
+                mailMessage.Body = body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file)).Replace("{{time}}", user.GetUserDateTime().DateTime.ToString());
+                mailMessage.IsBodyHtml = true;
 
                 try
                 {
@@ -384,7 +393,8 @@ namespace Relay.BulkSenderService.Processors
                     body = "Error processing file {0}.";
                 }
 
-                mailMessage.Body = string.Format(body, Path.GetFileName(file));
+                mailMessage.Body = body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file));
+                mailMessage.IsBodyHtml = true;
 
                 try
                 {
@@ -430,6 +440,26 @@ namespace Relay.BulkSenderService.Processors
 
             return errorsFilePath;
         }
+
+        //private int GetTotalLines(string fileName)
+        //{
+        //    if (!File.Exists(fileName))
+        //    {
+        //        return 0;
+        //    }
+
+        //    int totalLines = 0;
+
+        //    using (var streamReader = new StreamReader(fileName))
+        //    {
+        //        while (streamReader.ReadLine() != null)
+        //        {
+        //            totalLines++;
+        //        }
+        //    }
+
+        //    return totalLines;
+        //}
 
         protected bool MustStop()
         {
