@@ -1,4 +1,5 @@
-﻿using Relay.BulkSenderService.Classes;
+﻿using Newtonsoft.Json;
+using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
 using System;
 using System.Collections.Generic;
@@ -104,7 +105,8 @@ namespace Relay.BulkSenderService.Processors
             {
                 FileName = destFileName,
                 User = user,
-                Handler = new EventHandler<ThreadEventArgs>(ProcessFinishedHandler)
+                Handler = new EventHandler<ThreadEventArgs>(ProcessFinishedHandler),
+                StatusEventHandler = new EventHandler<StatusEventArgs>(StatusEventHandler)
             };
 
             IncrementUserThreadCount(user.Name);
@@ -125,31 +127,100 @@ namespace Relay.BulkSenderService.Processors
 
         private void StatusEventHandler(object sender, StatusEventArgs args)
         {
-            object locker;
-            lock (_lockFileObj)
+            try
             {
-                if (_lockFiles.ContainsKey(args.Name))
+
+                object locker;
+                lock (_lockFileObj)
                 {
-                    locker = _lockFiles[args.Name];
+                    if (_lockFiles.ContainsKey(args.UserName))
+                    {
+                        locker = _lockFiles[args.UserName];
+                    }
+                    else
+                    {
+                        locker = new object();
+                        _lockFiles.Add(args.UserName, locker);
+                    }
                 }
-                else
+
+                lock (locker)
                 {
-                    locker = new object();
-                    _lockFiles.Add(args.Name, locker);
+                    string userFolder = new FilePathHelper(_configuration, args.UserName).GetUserFolder();
+                    string file = $"status.{args.UserName}.json";
+
+                    string fileName = $@"{userFolder}\{file}";
+
+                    UserFilesStatus userFilesStatus;
+                    string jsonContent;
+
+                    if (File.Exists(fileName))
+                    {
+                        using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        using (var streamReader = new StreamReader(fileStream))
+                        {
+                            jsonContent = streamReader.ReadToEnd();
+                        }
+
+                        userFilesStatus = JsonConvert.DeserializeObject<UserFilesStatus>(jsonContent);
+
+                        int hours = _users.FirstOrDefault(x => x.Name.Equals(args.UserName, StringComparison.InvariantCultureIgnoreCase)).Status.LastViewingHours;
+
+                        userFilesStatus.Files.RemoveAll(x => x.Finished && DateTime.UtcNow.Subtract(x.LastUpdate).TotalHours > hours);
+
+                        FileStatus fileStatus = userFilesStatus.Files.FirstOrDefault(x => x.FileName == args.Status.FileName);
+
+                        if (fileStatus != null)
+                        {
+                            fileStatus.Processed = args.Status.GetProcessedCount();
+                            fileStatus.Finished = args.Status.Finished;
+                            fileStatus.LastUpdate = DateTime.UtcNow;
+                        }
+                        else
+                        {
+                            userFilesStatus.Files.Add(new FileStatus()
+                            {
+                                FileName = args.Status.FileName,
+                                Total = args.Status.GetTotalCount(),
+                                Processed = args.Status.GetProcessedCount(),
+                                Finished = args.Status.Finished,
+                                LastUpdate = DateTime.UtcNow
+                            });
+                        }
+                    }
+                    else
+                    {
+                        userFilesStatus = new UserFilesStatus()
+                        {
+                            UserName = args.UserName,
+                            Files = new List<FileStatus>() {
+                            new FileStatus()
+                            {
+                                FileName = args.Status.FileName,
+                                Total = args.Status.GetTotalCount(),
+                                Processed = args.Status.GetProcessedCount(),
+                                Finished = args.Status.Finished,
+                                LastUpdate = DateTime.UtcNow
+                            }
+                        }
+                        };
+                    }
+
+                    jsonContent = JsonConvert.SerializeObject(userFilesStatus);
+
+                    using (var fileStream = new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
+                    {
+                        fileStream.SetLength(0);
+                        using (var streamWriter = new StreamWriter(fileStream))
+                        {
+                            streamWriter.WriteLine(jsonContent);
+                        }
+                    }
                 }
             }
-
-            lock (locker)
+            catch (Exception e)
             {
-                string userFolder = new FilePathHelper(_configuration, args.Name).GetUserFolder();
-                string file = "status.txt";
-
-                string fileName = $@"{userFolder}\{file}";
-
-                using (var streamReader = new StreamWriter(fileName, false))
-                {
-
-                }
+                _logger.Error($"Problems to update processor status:{e}");
             }
         }
 
@@ -210,7 +281,22 @@ namespace Relay.BulkSenderService.Processors
 
     public class StatusEventArgs : EventArgs
     {
-        public string Name { get; set; }
+        public string UserName { get; set; }
         public ProcessResult Status { get; set; }
+    }
+
+    public class UserFilesStatus
+    {
+        public string UserName { get; set; }
+        public List<FileStatus> Files { get; set; }
+    }
+
+    public class FileStatus
+    {
+        public string FileName { get; set; }
+        public int Total { get; set; }
+        public int Processed { get; set; }
+        public DateTime LastUpdate { get; set; }
+        public bool Finished { get; set; }
     }
 }

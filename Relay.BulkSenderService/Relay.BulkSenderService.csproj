@@ -246,6 +246,8 @@
     <Compile Include="Configuration\IPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\ProvinciaApiTemplateConfiguration.cs" />
     <Compile Include="Configuration\ProvinciaTemplateConfiguration.cs" />
+    <Compile Include="Configuration\IStatusConfiguration.cs" />
+    <Compile Include="Configuration\FtpStatusConfiguration.cs" />
     <Compile Include="Configuration\StatusProgressReportTypeConfiguration.cs" />
     <Compile Include="Configuration\RicohStatusReportTypeConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioCabeceraReportTypeConfiguration.cs" />
@@ -310,6 +312,9 @@
     <Compile Include="BulkSenderService.Designer.cs">
       <DependentUpon>BulkSenderService.cs</DependentUpon>
     </Compile>
+    <Compile Include="Processors\Status\FtpStatusProcessor.cs" />
+    <Compile Include="Processors\Status\StatusWorker.cs" />
+    <Compile Include="Processors\Status\StatusProcessor.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
@@ -353,12 +358,17 @@
     <None Include="Configs\fiden.config.json" />
     <None Include="Configs\garbarino.config.json" />
     <None Include="Configs\GarbarinoViajes.config.json" />
-    <None Include="Configs\gire.config.json" />
+    <None Include="Configs\gire.config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Configs\hipotecario.config.json" />
     <None Include="Configs\lmontano.config.json" />
     <None Include="Configs\makinthal.config.json" />
     <None Include="Configs\multigol.config.json" />
     <None Include="Configs\mobo.config.json" />
+    <None Include="Configs\ricoh.config.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Include="Configs\sales.config.json" />
     <None Include="Configs\sas.config.json" />
     <None Include="Configs\socialms.config.json" />

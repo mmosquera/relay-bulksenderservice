@@ -1,6 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Processors;
 using Relay.BulkSenderService.Processors.PreProcess;
+using Relay.BulkSenderService.Processors.Status;
 using System.ServiceProcess;
 using System.Threading;
 
@@ -14,13 +15,15 @@ namespace Relay.BulkSenderService
         private readonly ReportGenerator _reportGenerator;
         private readonly CleanProcessor _cleanProcessor;
         private readonly PreProcessWorker _preProcess;
+        private readonly StatusWorker _statusWorker;
         private Thread _ftpMonitorThread;
         private Thread _localMonitorThread;
         private Thread _reportGeneratorThread;
         private Thread _cleanThread;
         private Thread _preProcessThread;
+        private Thread _statusThread;
 
-        public BulkSenderService(ILog logger, LocalMonitor localMonitor, FtpMonitor ftpMonitor, ReportGenerator reportGenerator, CleanProcessor cleanProcessor, PreProcessWorker preProcess)
+        public BulkSenderService(ILog logger, LocalMonitor localMonitor, FtpMonitor ftpMonitor, ReportGenerator reportGenerator, CleanProcessor cleanProcessor, PreProcessWorker preProcess, StatusWorker statusWorker)
         {
             _logger = logger;
             _localMonitor = localMonitor;
@@ -28,6 +31,7 @@ namespace Relay.BulkSenderService
             _cleanProcessor = cleanProcessor;
             _reportGenerator = reportGenerator;
             _preProcess = preProcess;
+            _statusWorker = statusWorker;
             InitializeComponent();
         }
 
@@ -52,6 +56,10 @@ namespace Relay.BulkSenderService
             _logger.Debug("Starting pre process thread...");
             _preProcessThread = new Thread(new ThreadStart(_preProcess.Process));
             _preProcessThread.Start();
+
+            _logger.Debug("Starting status thread...");
+            _statusThread = new Thread(new ThreadStart(_statusWorker.Process));
+            _statusThread.Start();
         }
 
         protected override void OnStop()
@@ -70,6 +78,9 @@ namespace Relay.BulkSenderService
 
             _logger.Debug("Stopping pre process thread...");
             _preProcessThread.Abort();
+
+            _logger.Debug("Stopping status thread...");
+            _statusThread.Abort();
         }
     }
 }

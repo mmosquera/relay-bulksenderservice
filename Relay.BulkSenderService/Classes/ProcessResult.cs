@@ -8,8 +8,10 @@ namespace Relay.BulkSenderService.Classes
         private int _totalCount;
         private int _processedCount;
         private int _errorsCount;
+        public string FileName { get; set; }
         public string ErrorFileName { get; set; }
         public List<ProcessError> Errors { get; set; }
+        public bool Finished { get; set; }
 
         public ProcessResult()
         {
@@ -21,6 +23,11 @@ namespace Relay.BulkSenderService.Classes
         public void SetTotalCount(int total)
         {
             _totalCount = total;
+        }
+
+        public int GetTotalCount()
+        {
+            return _totalCount;
         }
 
         public void AddProcessed()

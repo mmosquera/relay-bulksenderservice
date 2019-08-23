@@ -45,6 +45,9 @@ namespace Relay.BulkSenderService.Processors
                     return resultsFileName;
                 }
 
+                int totalLines = templateConfiguration.HasHeaders ? GetTotalLines(localFileName) - 1 : GetTotalLines(localFileName);
+                result.SetTotalCount(totalLines);
+
                 CustomProcessForFile(localFileName, user.Name, templateConfiguration);
 
                 _logger.Debug($"Start to read file {localFileName}");
@@ -90,6 +93,8 @@ namespace Relay.BulkSenderService.Processors
 
                             return null;
                         }
+
+                        GetProcessStatus(user, result);
 
                         line = reader.ReadLine();
 
@@ -167,6 +172,10 @@ namespace Relay.BulkSenderService.Processors
                     }
 
                     SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, result, user.Credentials, user.DeliveryDelay);
+
+                    result.Finished = true;
+
+                    GetProcessStatus(user, result);
                 }
             }
             catch (Exception e)
@@ -323,6 +332,14 @@ namespace Relay.BulkSenderService.Processors
 
                     recipient.AddSentResult(separator, $"Send Fail ({jsonResult.title})");
                 }
+
+                /************TO TEST PROCESS WITHOUT SEND***********************/
+                //string resourceid = "fakeresourceid";
+                //string linkResult = "deliverylink";
+                //string sentResult = $"Send OK{separator}{resourceid}{separator}{linkResult}";
+                //recipient.AddSentResult(separator, sentResult);
+                //Thread.Sleep(200);
+                /***************************************************************/
 
                 return true;
             }

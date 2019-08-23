@@ -20,6 +20,8 @@ namespace Relay.BulkSenderService.Processors
         protected bool _stop;
         protected object _lockStop;
         protected int _lineNumber;
+        private DateTime _lastStatusDate;
+        private const int STATUS_MINUTES = 5;
 
         public event EventHandler<ThreadEventArgs> ProcessFinished;
         public event EventHandler<StatusEventArgs> ProcessStatus;
@@ -31,23 +33,26 @@ namespace Relay.BulkSenderService.Processors
             _stop = false;
             _lockStop = new object();
             _lineNumber = 0;
+            _lastStatusDate = DateTime.MinValue;
         }
 
         public void DoWork(object stateInfo)
         {
             ProcessFinished += ((ThreadStateInfo)stateInfo).Handler;
+            ProcessStatus += ((ThreadStateInfo)stateInfo).StatusEventHandler;
 
             IUserConfiguration user = ((ThreadStateInfo)stateInfo).User;
             string fileName = ((ThreadStateInfo)stateInfo).FileName;
-            var result = new ProcessResult();
+            var result = new ProcessResult()
+            {
+                FileName = Path.GetFileNameWithoutExtension(fileName)
+            };
 
             try
             {
                 _logger.Debug($"Start to process {fileName} for User:{user.Name} in Thread:{Thread.CurrentThread.ManagedThreadId}");
 
                 SendStartProcessEmail(fileName, user);
-
-                result.SetTotalCount(GetTotalLines(fileName));
 
                 string resultFileName = Process(user, fileName, result);
 
@@ -165,6 +170,29 @@ namespace Relay.BulkSenderService.Processors
             ProcessFinished?.Invoke(this, args);
         }
 
+        protected virtual void OnProcessStatus(StatusEventArgs args)
+        {
+            ProcessStatus?.Invoke(this, args);
+        }
+        
+        protected void GetProcessStatus(IUserConfiguration user, ProcessResult processResult)
+        {
+            if (user.Status == null || !processResult.Finished && DateTime.Now.Subtract(_lastStatusDate).TotalMinutes < STATUS_MINUTES)
+            {
+                return;
+            }
+
+            var statusEventArgs = new StatusEventArgs()
+            {
+                UserName = user.Name,
+                Status = processResult
+            };
+
+            OnProcessStatus(statusEventArgs);
+
+            _lastStatusDate = DateTime.Now;
+        }
+
         protected string GetAttachmentFile(string attachmentFile, string originalFile, IUserConfiguration user)
         {
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
@@ -251,8 +279,6 @@ namespace Relay.BulkSenderService.Processors
         {
             if (user.Alerts != null && user.Alerts.GetStartAlert() != null && user.Alerts.Emails.Count > 0)
             {
-                _logger.Debug($"Send start to send email for file {file}");
-
                 var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
                 smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
 
@@ -285,8 +311,6 @@ namespace Relay.BulkSenderService.Processors
         {
             if (user.Alerts != null && user.Alerts.GetEndAlert() != null && user.Alerts.Emails.Count > 0)
             {
-                _logger.Debug($"Send end process email for file {file}");
-
                 var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
                 smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
 
@@ -353,8 +377,6 @@ namespace Relay.BulkSenderService.Processors
                 && alerts.GetErrorAlert() != null
                 && alerts.Emails.Count > 0)
             {
-                _logger.Debug($"Send end process email for file {file}");
-
                 var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
                 smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
 
@@ -390,7 +412,7 @@ namespace Relay.BulkSenderService.Processors
 
                 if (string.IsNullOrEmpty(body))
                 {
-                    body = "Error processing file {0}.";
+                    body = "Error processing file {{filename}}.";
                 }
 
                 mailMessage.Body = body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file));
@@ -441,7 +463,7 @@ namespace Relay.BulkSenderService.Processors
             return errorsFilePath;
         }
 
-        private int GetTotalLines(string fileName)
+        protected int GetTotalLines(string fileName)
         {
             if (!File.Exists(fileName))
             {
@@ -460,26 +482,6 @@ namespace Relay.BulkSenderService.Processors
 
             return totalLines;
         }
-
-        //private int GetTotalLines(string fileName)
-        //{
-        //    if (!File.Exists(fileName))
-        //    {
-        //        return 0;
-        //    }
-
-        //    int totalLines = 0;
-
-        //    using (var streamReader = new StreamReader(fileName))
-        //    {
-        //        while (streamReader.ReadLine() != null)
-        //        {
-        //            totalLines++;
-        //        }
-        //    }
-
-        //    return totalLines;
-        //}
 
         protected bool MustStop()
         {

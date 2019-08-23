@@ -21,7 +21,6 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
             try
             {
-
                 if (Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                 {
                     var filePathHelper = new FilePathHelper(_configuration, userName);

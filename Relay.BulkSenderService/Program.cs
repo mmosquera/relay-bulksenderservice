@@ -2,6 +2,7 @@
 using Relay.BulkSenderService.Configuration;
 using Relay.BulkSenderService.Processors;
 using Relay.BulkSenderService.Processors.PreProcess;
+using Relay.BulkSenderService.Processors.Status;
 using System.ServiceProcess;
 using Unity;
 
@@ -31,12 +32,14 @@ namespace Relay.BulkSenderService
             //ReportGenerator rg = _container.Resolve<ReportGenerator>();
             //PreProcessWorker pp = _container.Resolve<PreProcessWorker>();
             //CleanProcessor cp = _container.Resolve<CleanProcessor>();
+            //StatusWorker st = _container.Resolve<StatusWorker>();
 
-            //fm.ReadFtpFiles();            
+            //fm.ReadFtpFiles();
             //lm.ReadLocalFiles();
-            //rg.Process();            
+            //rg.Process();
             //cp.Process();
             //pp.Process();
+            //st.Process();
             #endregion
         }
         static void Configure()
@@ -52,6 +55,7 @@ namespace Relay.BulkSenderService
             _container.RegisterType<BaseWorker, ReportGenerator>();
             _container.RegisterType<BaseWorker, CleanProcessor>();
             _container.RegisterType<BaseWorker, PreProcessWorker>();
+            _container.RegisterType<BaseWorker, StatusWorker>();
 
             var logManager = _container.Resolve<ILogManager>();
             _container.RegisterInstance<ILog>(logManager.GetLogger("BulkSenderService"));
