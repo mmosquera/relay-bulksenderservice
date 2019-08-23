@@ -35,24 +35,36 @@ namespace Relay.BulkSenderService.Processors.Status
 
                 UserFilesStatus userFilesStatus = JsonConvert.DeserializeObject<UserFilesStatus>(jsonContent);
 
+                if (userFilesStatus.Files.Count == 0)
+                {
+                    return;
+                }
+
                 var stringBuilder = new StringBuilder();
+
+                stringBuilder.AppendLine("NOMBRE|TOTAL|PROCESADOS|FECHA");
 
                 foreach (FileStatus fileStatus in userFilesStatus.Files)
                 {
-                    string line = $"NOMBRE={fileStatus.FileName}|TOTAL={fileStatus.Total}|PROCESADAS={fileStatus.Processed}|FECHA={fileStatus.LastUpdate.AddHours(-3)}";
+                    string datatime = fileStatus.LastUpdate
+                        .AddHours(userConfiguration.UserGMT)
+                        .ToString(((FtpStatusConfiguration)userConfiguration.Status).StatusFileDateFormat);
+
+                    string line = $"{fileStatus.FileName}|{fileStatus.Total}|{fileStatus.Processed}|{datatime}";
+
                     stringBuilder.AppendLine(line);
                 }
 
                 var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
 
-                string resultsFilePath = $@"{filePathHelper.GetReportsFilesFolder()}\status.{DateTime.UtcNow.AddHours(-3).ToString("yyyyMMddhhmm")}.txt";
+                string resultsFilePath = $@"{filePathHelper.GetReportsFilesFolder()}\status.{DateTime.UtcNow.AddHours(userConfiguration.UserGMT).ToString("yyyyMMddhhmm")}.txt";
 
                 using (var streamWriter = new StreamWriter(resultsFilePath))
                 {
                     streamWriter.Write(stringBuilder.ToString());
                 }
 
-                string ftpFileName = $@"{userConfiguration.Results.Folder}/{Path.GetFileName(resultsFilePath)}";
+                string ftpFileName = $@"{((FtpStatusConfiguration)userConfiguration.Status).FtpFolder}/{Path.GetFileName(resultsFilePath)}";
 
                 var ftpHelper = userConfiguration.Ftp.GetFtpHelper(_logger);
 

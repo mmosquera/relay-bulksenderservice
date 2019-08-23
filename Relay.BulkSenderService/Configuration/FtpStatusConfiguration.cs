@@ -7,6 +7,8 @@ namespace Relay.BulkSenderService.Configuration
     {
         public int LastViewingHours { get; set; }
         public int MinutesToRefresh { get; set; }
+        public string FtpFolder { get; set; }
+        public string StatusFileDateFormat { get; set; }
 
         public StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration)
         {
