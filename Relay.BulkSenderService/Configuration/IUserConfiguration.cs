@@ -2,6 +2,7 @@
 using Relay.BulkSenderService.Configuration.Alerts;
 using Relay.BulkSenderService.Processors;
 using Relay.BulkSenderService.Processors.PreProcess;
+using Relay.BulkSenderService.Processors.Status;
 using System;
 using System.Collections.Generic;
 
@@ -26,6 +27,7 @@ namespace Relay.BulkSenderService.Configuration
         ReportConfiguration Reports { get; set; }
         AlertConfiguration Alerts { get; set; }
         IPreProcessorConfiguration PreProcessor { get; set; }
+        IStatusConfiguration Status { get; set; }
 
         Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName); // TODO get from container.
 
@@ -34,5 +36,7 @@ namespace Relay.BulkSenderService.Configuration
         DateTimeOffset GetUserDateTime();
 
         PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration);
+
+        StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration);
     }
 }

@@ -2,6 +2,7 @@
 using Relay.BulkSenderService.Configuration.Alerts;
 using Relay.BulkSenderService.Processors;
 using Relay.BulkSenderService.Processors.PreProcess;
+using Relay.BulkSenderService.Processors.Status;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -29,6 +30,7 @@ namespace Relay.BulkSenderService.Configuration
         public IPreProcessorConfiguration PreProcessor { get; set; }
         public int MaxParallelProcessors { get; set; }
         public int DeliveryDelay { get; set; }
+        public IStatusConfiguration Status { get; set; }
 
         public DateTimeOffset GetUserDateTime()
         {
@@ -62,6 +64,11 @@ namespace Relay.BulkSenderService.Configuration
         public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration)
         {
             return PreProcessor.GetPreProcessor(logger, configuration);
+        }
+
+        public StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration)
+        {
+            return Status.GetStatusProcessor(logger, configuration);
         }
     }
 }

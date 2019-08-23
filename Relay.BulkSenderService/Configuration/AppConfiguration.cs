@@ -118,5 +118,10 @@ namespace Relay.BulkSenderService.Configuration
         {
             get { return int.Parse(ConfigurationManager.AppSettings["DeliveryFailCount"]); }
         }
+
+        public int StatusProcessorInterval
+        {
+            get { return int.Parse(ConfigurationManager.AppSettings["StatusProcessorInterval"]); }
+        }
     }
 }

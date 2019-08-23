@@ -25,5 +25,6 @@
         int DeliveryRetryCount { get; }
         int DeliveryRetryInterval { get; }
         int DeliveryFailCount { get; }
+        int StatusProcessorInterval { get; }
     }
 }
