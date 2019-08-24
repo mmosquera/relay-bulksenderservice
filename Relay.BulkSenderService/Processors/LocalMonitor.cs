@@ -34,6 +34,8 @@ namespace Relay.BulkSenderService.Processors
 
                     foreach (IUserConfiguration user in _users)
                     {
+                        CleanStatusFile(user);
+
                         var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
                         List<string> retryFiles = Directory.GetFiles(filePathHelper.GetRetriesFilesFolder(), "*.retry").ToList();
@@ -63,6 +65,75 @@ namespace Relay.BulkSenderService.Processors
                 }
 
                 Thread.Sleep(_configuration.LocalFilesInterval);
+            }
+        }
+
+        private void CleanStatusFile(IUserConfiguration user)
+        {
+            if (user.Status == null)
+            {
+                return;
+            }
+
+            object locker;
+            lock (_lockFileObj)
+            {
+                if (_lockFiles.ContainsKey(user.Name))
+                {
+                    locker = _lockFiles[user.Name];
+                }
+                else
+                {
+                    locker = new object();
+                    _lockFiles.Add(user.Name, locker);
+                }
+            }
+
+            lock (locker)
+            {
+                string userFolder = new FilePathHelper(_configuration, user.Name).GetUserFolder();
+                string file = $"status.{user.Name}.json";
+
+                string fileName = $@"{userFolder}\{file}";
+
+                UserFilesStatus userFilesStatus;
+                string jsonContent;
+
+                if (File.Exists(fileName))
+                {
+                    using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
+                    using (var streamReader = new StreamReader(fileStream))
+                    {
+                        jsonContent = streamReader.ReadToEnd();
+                    }
+
+                    userFilesStatus = JsonConvert.DeserializeObject<UserFilesStatus>(jsonContent);
+
+                    int count = userFilesStatus.Files.Count;
+
+                    if (count == 0)
+                    {
+                        return;
+                    }
+
+                    userFilesStatus.Files.RemoveAll(x => x.Finished && DateTime.UtcNow.Subtract(x.LastUpdate).TotalHours > user.Status.LastViewingHours);
+
+                    if (count == userFilesStatus.Files.Count)
+                    {
+                        return;
+                    }
+
+                    jsonContent = JsonConvert.SerializeObject(userFilesStatus);
+
+                    using (var fileStream = new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
+                    {
+                        fileStream.SetLength(0);
+                        using (var streamWriter = new StreamWriter(fileStream))
+                        {
+                            streamWriter.WriteLine(jsonContent);
+                        }
+                    }
+                }
             }
         }
 
@@ -156,17 +227,13 @@ namespace Relay.BulkSenderService.Processors
 
                     if (File.Exists(fileName))
                     {
-                        using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                        using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
                         using (var streamReader = new StreamReader(fileStream))
                         {
                             jsonContent = streamReader.ReadToEnd();
                         }
 
                         userFilesStatus = JsonConvert.DeserializeObject<UserFilesStatus>(jsonContent);
-
-                        int hours = _users.FirstOrDefault(x => x.Name.Equals(args.UserName, StringComparison.InvariantCultureIgnoreCase)).Status.LastViewingHours;
-
-                        userFilesStatus.Files.RemoveAll(x => x.Finished && DateTime.UtcNow.Subtract(x.LastUpdate).TotalHours > hours);
 
                         FileStatus fileStatus = userFilesStatus.Files.FirstOrDefault(x => x.FileName == args.Status.FileName);
 

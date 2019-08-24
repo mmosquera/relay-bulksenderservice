@@ -22,7 +22,6 @@ namespace Relay.BulkSenderService.Processors.Status
 
             try
             {
-
                 _logger.Debug($"Start to process status file for user {userConfiguration.Name}");
 
                 string jsonContent;
@@ -41,8 +40,6 @@ namespace Relay.BulkSenderService.Processors.Status
                 }
 
                 var stringBuilder = new StringBuilder();
-
-                stringBuilder.AppendLine("NOMBRE|TOTAL|PROCESADOS|FECHA");
 
                 foreach (FileStatus fileStatus in userFilesStatus.Files)
                 {
