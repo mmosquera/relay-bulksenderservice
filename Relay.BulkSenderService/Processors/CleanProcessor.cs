@@ -11,7 +11,6 @@ namespace Relay.BulkSenderService.Processors
     {
         public CleanProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
-
         }
 
         public void Process()
@@ -28,7 +27,7 @@ namespace Relay.BulkSenderService.Processors
                     {
                         DeleteAttachmentsFiles(user);
 
-                        DeleteLocalFiles(user);
+                        DeleteUserFiles(user);
                     }
 
                     DeleteReportsFiles();
@@ -48,6 +47,8 @@ namespace Relay.BulkSenderService.Processors
 
             DateTime filterDate = DateTime.UtcNow.AddDays(-_configuration.CleanAttachmentsDays);
 
+            DeleteFilesRecursively(attachmentsFolder, filterDate);
+
             DirectoryInfo directory = new DirectoryInfo(attachmentsFolder);
 
             if (directory.Exists)
@@ -56,12 +57,8 @@ namespace Relay.BulkSenderService.Processors
 
                 foreach (DirectoryInfo subDirectory in directories)
                 {
-                    DeleteFilesFromFolder(subDirectory, filterDate);
-
                     DeleteFolder(subDirectory, filterDate);
                 }
-
-                DeleteFilesFromFolder(directory, filterDate);
             }
         }
 
@@ -75,14 +72,34 @@ namespace Relay.BulkSenderService.Processors
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"Error trying to delete folder {folder.FullName} -- {e}");
+                    _logger.Error($"Error trying to delete folder:{folder.FullName} -- {e}");
                 }
             }
         }
 
-        private void DeleteFilesFromFolder(DirectoryInfo folder, DateTime dateFilter)
+        private void DeleteUserFiles(IUserConfiguration userConfiguration)
         {
-            FileInfo[] files = folder.GetFiles().Where(f => f.CreationTimeUtc < dateFilter).ToArray();
+            string folder = new FilePathHelper(_configuration, userConfiguration.Name).GetUserFolder();
+
+            DateTime filterDate = DateTime.UtcNow.AddDays(-_configuration.CleanDays);
+
+            DeleteFilesRecursively(folder, filterDate);
+        }
+
+        private void DeleteFilesRecursively(string folder, DateTime filter)
+        {
+            if (!Directory.Exists(folder))
+            {
+                return;
+            }
+
+            var directoryInfo = new DirectoryInfo(folder);
+            foreach (DirectoryInfo subDirectory in directoryInfo.GetDirectories())
+            {
+                DeleteFilesRecursively(subDirectory.FullName, filter);
+            }
+
+            FileInfo[] files = directoryInfo.GetFiles().Where(f => f.CreationTimeUtc < filter).ToArray();
 
             foreach (FileInfo file in files)
             {
@@ -92,21 +109,8 @@ namespace Relay.BulkSenderService.Processors
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"Error trying to delete attach file {file.FullName} -- {e}");
+                    _logger.Error($"Error trying to delete file:{file.FullName} -- {e}");
                 }
-            }
-        }
-
-        private void DeleteLocalFiles(IUserConfiguration user)
-        {
-            string path = new FilePathHelper(_configuration, user.Name).GetUserFolder();
-
-            DateTime filterDate = DateTime.UtcNow.AddDays(-_configuration.CleanDays);
-
-            var baseDirectory = new DirectoryInfo(path);
-            if (baseDirectory.Exists)
-            {
-                DeleteFilesFromFolder(baseDirectory, filterDate);
             }
         }
 
@@ -114,11 +118,7 @@ namespace Relay.BulkSenderService.Processors
         {
             DateTime filterDate = DateTime.UtcNow.AddDays(-_configuration.CleanDays);
 
-            var directory = new DirectoryInfo(_configuration.ReportsFolder);
-            if (directory.Exists)
-            {
-                DeleteFilesFromFolder(directory, filterDate);
-            }
+            DeleteFilesRecursively(_configuration.ReportsFolder, filterDate);
         }
     }
 }
