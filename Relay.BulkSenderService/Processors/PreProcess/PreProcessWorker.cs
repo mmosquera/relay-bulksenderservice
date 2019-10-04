@@ -21,15 +21,10 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             {
                 try
                 {
+                    CheckConfigChanges();
+
                     foreach (IUserConfiguration user in _users)
                     {
-                        //TODO : IsProcessPaused estaria bueno mandarlo a base worker y sacar el watcher.
-                        //if (IsProcessPaused(user.Name))
-                        //{
-                        //    _logger.Info($"The process is temporally paused for user {user.Name}");
-                        //    continue;
-                        //}                        
-
                         var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
                         List<string> downloadFiles = Directory.GetFiles(filePathHelper.GetDownloadsFolder()).ToList();
