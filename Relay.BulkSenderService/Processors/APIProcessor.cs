@@ -76,8 +76,6 @@ namespace Relay.BulkSenderService.Processors
 
                     List<CustomHeader> customHeaders = GetHeaderList(headersArray);
 
-                    int maxHeaderPosition = templateConfiguration.Fields.Max(x => x.Position);
-
                     string templateId = templateConfiguration != null ? templateConfiguration.TemplateId : null;
 
                     var recipients = new List<ApiRecipient>();
@@ -113,37 +111,26 @@ namespace Relay.BulkSenderService.Processors
 
                         if (recipientArray.Length == headersArray.Length)
                         {
-                            if (recipientArray.Length > maxHeaderPosition)
-                            {
-                                FillRecipientBasics(recipient, recipientArray, templateConfiguration.Fields, templateId);
-                                FillRecipientCustoms(recipient, recipientArray, customHeaders, templateConfiguration.Fields);
-                                FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, (UserApiConfiguration)user, result);
-                                HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user, result);
+                            FillRecipientBasics(recipient, recipientArray, templateConfiguration.Fields, templateId);
+                            FillRecipientCustoms(recipient, recipientArray, customHeaders, templateConfiguration.Fields);
+                            FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, (UserApiConfiguration)user, result);
+                            HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user, result);
 
-                                if (!recipient.HasError && !string.IsNullOrEmpty(recipient.TemplateId) && !string.IsNullOrEmpty(recipient.ToEmail))
-                                {
-                                    recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{Constants.PROCESS_RESULT_OK}";
-                                }
-                                else if (string.IsNullOrEmpty(recipient.TemplateId))
-                                {
-                                    string message = "Has not template to send.";
-                                    recipient.HasError = true;
-                                    recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
-                                    _logger.Error(message);
-                                    result.AddProcessError(_lineNumber, message);
-                                }
-                                else if (string.IsNullOrEmpty(recipient.ToEmail))
-                                {
-                                    string message = "Has not email to send.";
-                                    recipient.HasError = true;
-                                    recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
-                                    _logger.Error(message);
-                                    result.AddProcessError(_lineNumber, message);
-                                }
-                            }
-                            else
+                            if (!recipient.HasError && !string.IsNullOrEmpty(recipient.TemplateId) && !string.IsNullOrEmpty(recipient.ToEmail))
                             {
-                                string message = "Wrong recipient data.";
+                                recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{Constants.PROCESS_RESULT_OK}";
+                            }
+                            else if (string.IsNullOrEmpty(recipient.TemplateId))
+                            {
+                                string message = "Has not template to send.";
+                                recipient.HasError = true;
+                                recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
+                                _logger.Error(message);
+                                result.AddProcessError(_lineNumber, message);
+                            }
+                            else if (string.IsNullOrEmpty(recipient.ToEmail))
+                            {
+                                string message = "Has not email to send.";
                                 recipient.HasError = true;
                                 recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                                 _logger.Error(message);
@@ -154,7 +141,22 @@ namespace Relay.BulkSenderService.Processors
                         {
                             string message = "The fields number is different to headers number.";
                             recipient.HasError = true;
-                            recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
+
+                            string newLine = "";
+                            for (int i = 0; i < headersArray.Length; i++)
+                            {
+                                if (recipientArray.Length > i)
+                                {
+                                    newLine += $"{recipientArray[i]}{templateConfiguration.FieldSeparator}";
+                                }
+                                else
+                                {
+                                    newLine += $"{templateConfiguration.FieldSeparator}";
+                                }
+                            }
+
+                            recipient.ResultLine = $"{newLine}{message}";
+
                             _logger.Error(message);
                             result.AddProcessError(_lineNumber, message);
                         }
