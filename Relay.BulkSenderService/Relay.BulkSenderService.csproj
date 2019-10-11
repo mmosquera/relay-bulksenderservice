@@ -121,6 +121,7 @@
       <HintPath>..\packages\System.Management.Automation.dll.10.0.10586.0\lib\net40\System.Management.Automation.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="System.Messaging" />
     <Reference Include="System.Net.Http, Version=4.1.1.2, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Net.Http.4.3.3\lib\net46\System.Net.Http.dll</HintPath>
       <Private>True</Private>
@@ -323,6 +324,10 @@
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Queues\BulkQueueMessage.cs" />
+    <Compile Include="Queues\IBulkQueue.cs" />
+    <Compile Include="Queues\IBulkQueueMessage.cs" />
+    <Compile Include="Queues\WindowsBulkQueue.cs" />
     <Compile Include="Reports\BanorteResumeReportProcessor.cs" />
     <Compile Include="Reports\TemplateReport.cs" />
     <Compile Include="Reports\FileCsvReportProcessor.cs" />
