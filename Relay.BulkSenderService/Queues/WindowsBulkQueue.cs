@@ -27,6 +27,11 @@ namespace Relay.BulkSenderService.Queues
             return (IBulkQueueMessage)queue.Receive(waitTime).Body;
         }
 
+        public IBulkQueueMessage ReceiveMessage()
+        {
+            return (IBulkQueueMessage)queue.Receive().Body;
+        }
+
         public void SendMessage(IBulkQueueMessage bulkQueueMessage)
         {
             queue.Send(bulkQueueMessage);

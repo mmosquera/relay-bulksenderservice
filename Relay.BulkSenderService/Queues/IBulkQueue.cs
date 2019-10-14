@@ -1,9 +1,9 @@
 ﻿namespace Relay.BulkSenderService.Queues
 {
-    interface IBulkQueue
+    public interface IBulkQueue
     {
         void SendMessage(IBulkQueueMessage bulkQueueMessage);
 
-        IBulkQueueMessage ReceiveMessage(int waitSeconds = 0);
+        IBulkQueueMessage ReceiveMessage();
     }
 }

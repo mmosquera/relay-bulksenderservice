@@ -212,6 +212,7 @@
     <Compile Include="Classes\Enums\DeliveryStatus.cs" />
     <Compile Include="Classes\Enums\MailStatus.cs" />
     <Compile Include="Classes\ExcelHelper.cs" />
+    <Compile Include="Classes\FileWriter.cs" />
     <Compile Include="Classes\IFtpHelper.cs" />
     <Compile Include="Classes\ILog.cs" />
     <Compile Include="Classes\ILogManager.cs" />
@@ -327,6 +328,10 @@
     <Compile Include="Queues\BulkQueueMessage.cs" />
     <Compile Include="Queues\IBulkQueue.cs" />
     <Compile Include="Queues\IBulkQueueMessage.cs" />
+    <Compile Include="Queues\IQueueConsumer.cs" />
+    <Compile Include="Queues\IQueueProducer.cs" />
+    <Compile Include="Queues\MemoryBulkQueue.cs" />
+    <Compile Include="Queues\QueueResult.cs" />
     <Compile Include="Queues\WindowsBulkQueue.cs" />
     <Compile Include="Reports\BanorteResumeReportProcessor.cs" />
     <Compile Include="Reports\TemplateReport.cs" />
