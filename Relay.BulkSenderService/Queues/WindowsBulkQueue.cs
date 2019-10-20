@@ -20,6 +20,11 @@ namespace Relay.BulkSenderService.Queues
             queue = new MessageQueue(baseQueueName);
         }
 
+        public int GetCount()
+        {
+            return queue.GetAllMessages().Length;
+        }
+
         public IBulkQueueMessage ReceiveMessage(int waitSeconds)
         {
             TimeSpan waitTime = TimeSpan.FromSeconds(waitSeconds);

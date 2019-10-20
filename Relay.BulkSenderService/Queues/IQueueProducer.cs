@@ -1,12 +1,13 @@
 ﻿using Relay.BulkSenderService.Configuration;
 using System;
+using System.Threading;
 
 namespace Relay.BulkSenderService.Queues
 {
     public interface IQueueProducer
     {
-        event EventHandler<QueueResult> ErrorEvent;
+        event EventHandler<QueueErrorEventArgs> ErrorEvent;
 
-        void GetMessages(IUserConfiguration user, IBulkQueue queue, string fileName);
+        void GetMessages(IConfiguration configuration, IUserConfiguration userConfiguration, IBulkQueue queue, string localFileName, CancellationToken cancellationToken);
     }
 }
