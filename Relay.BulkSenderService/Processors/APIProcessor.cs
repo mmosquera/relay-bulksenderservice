@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using Relay.BulkSenderService.Queues;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -113,6 +114,7 @@ namespace Relay.BulkSenderService.Processors
                         {
                             FillRecipientBasics(recipient, recipientArray, templateConfiguration.Fields, templateId);
                             FillRecipientCustoms(recipient, recipientArray, customHeaders, templateConfiguration.Fields);
+                            //TODO : move to consumer
                             FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, (UserApiConfiguration)user, result);
                             HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user, result);
 
@@ -163,6 +165,7 @@ namespace Relay.BulkSenderService.Processors
 
                         CustomRecipientValidations(recipient, recipientArray, line, templateConfiguration.FieldSeparator, result);
 
+                        //TODO: replace for add to queue
                         AddRecipient(recipients, recipient);
 
                         if (recipients.Count() == _configuration.BulkEmailCount)
@@ -525,6 +528,29 @@ namespace Relay.BulkSenderService.Processors
         protected override List<string> GetAttachments(string file, string usarName)
         {
             return new List<string>();
+        }
+
+        protected override IQueueProducer GetProducer()
+        {
+            IQueueProducer producer = new ApiProcessorProducer();
+            producer.ErrorEvent += Processor_ErrorEvent;
+
+            return producer;
+        }
+
+        protected override List<IQueueConsumer> GetConsumers(int count)
+        {
+            var consumers = new List<IQueueConsumer>();
+
+            for (int i = 0; i < count; i++)
+            {
+                IQueueConsumer consumer = new ApiProcessorConsumer();
+                consumer.ErrorEvent += Processor_ErrorEvent;
+                consumer.ResultEvent += Processor_ResultEvent;
+                consumers.Add(consumer);
+            }
+
+            return consumers;
         }
     }
 }

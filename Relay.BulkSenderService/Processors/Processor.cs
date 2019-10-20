@@ -2,6 +2,8 @@
 using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
 using Relay.BulkSenderService.Configuration.Alerts;
+using Relay.BulkSenderService.Queues;
+using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,6 +12,7 @@ using System.Net;
 using System.Net.Mail;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Relay.BulkSenderService.Processors
 {
@@ -22,6 +25,7 @@ namespace Relay.BulkSenderService.Processors
         protected int _lineNumber;
         private DateTime _lastStatusDate;
         private const int STATUS_MINUTES = 5;
+        private const int THREADS = 1;
 
         public event EventHandler<ThreadEventArgs> ProcessFinished;
         public event EventHandler<StatusEventArgs> ProcessStatus;
@@ -52,9 +56,25 @@ namespace Relay.BulkSenderService.Processors
             {
                 _logger.Debug($"Start to process {fileName} for User:{user.Name} in Thread:{Thread.CurrentThread.ManagedThreadId}");
 
+                if (!ValidateCredentials(user.Credentials))
+                {
+                    //result.AddLoginError();
+                    //return null;
+                }
+
                 SendStartProcessEmail(fileName, user);
 
-                string resultFileName = Process(user, fileName, result);
+                //descontar 1 linea por el header y las vacias.
+                int totalLines = GetTotalLines(fileName);
+
+                //CustomProcessForFile(localFileName, user.Name, templateConfiguration);
+
+                var outboundQueue = new MemoryBulkQueue();
+
+                ProcessFile(user, outboundQueue, fileName);
+
+                //string resultFileName = Process(user, fileName, result);  
+                string resultFileName = null;
 
                 GenerateErrorFile(fileName, user, result);
 
@@ -174,7 +194,7 @@ namespace Relay.BulkSenderService.Processors
         {
             ProcessStatus?.Invoke(this, args);
         }
-        
+
         protected void GetProcessStatus(IUserConfiguration user, ProcessResult processResult)
         {
             if (user.Status == null || !processResult.Finished && DateTime.Now.Subtract(_lastStatusDate).TotalMinutes < STATUS_MINUTES)
@@ -475,7 +495,8 @@ namespace Relay.BulkSenderService.Processors
 
             int totalLines = 0;
 
-            using (var streamReader = new StreamReader(fileName))
+            using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var streamReader = new StreamReader(fileStream))
             {
                 while (streamReader.ReadLine() != null)
                 {
@@ -491,6 +512,97 @@ namespace Relay.BulkSenderService.Processors
             lock (_lockStop)
             {
                 return _stop;
+            }
+        }
+
+        public void ProcessFile(IUserConfiguration userConfiguration, IBulkQueue queue, string fileName)
+        {
+            IQueueProducer producer = GetProducer();
+            //TODO sacar threads count from userConfiguration.
+            List<IQueueConsumer> consumers = GetConsumers(THREADS);
+
+            var tokenSource = new CancellationTokenSource();
+            CancellationToken cancellationToken = tokenSource.Token;
+
+            Task taskProducer = Task.Factory.StartNew(() => producer.GetMessages(_configuration, userConfiguration, queue, fileName, cancellationToken), cancellationToken);
+
+            //descomentar para probar el productor
+            //taskProducer.Wait();
+
+            var tasks = new List<Task>();
+
+            foreach (IQueueConsumer queueConsumer in consumers)
+            {
+                Task taskConsumer = Task.Factory.StartNew(() => queueConsumer.ProcessMessages(_configuration, userConfiguration, queue, cancellationToken), cancellationToken);
+
+                tasks.Add(taskConsumer);
+            }
+
+            try
+            {
+                taskProducer.Wait();
+            }
+            catch (Exception e)
+            {
+                //cacheo error;
+            }
+            finally
+            {
+                //espero que se vacie la lista y aviso con el cancel token a los consumidores.
+                while (queue.GetCount() > 0)
+                {
+                    Thread.Sleep(1000);
+                }
+
+                tokenSource.Cancel();
+
+                Task.WaitAll(tasks.ToArray());
+            }
+        }
+
+        protected abstract IQueueProducer GetProducer();
+
+        protected abstract List<IQueueConsumer> GetConsumers(int count);
+
+        protected void Processor_ErrorEvent(object sender, QueueErrorEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected void Processor_ResultEvent(object sender, QueueResultEventArgs e)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool ValidateCredentials(CredentialsConfiguration credentials)
+        {
+            var restClient = new RestClient(_configuration.BaseUrl);
+
+            string resource = _configuration.AccountUrl.Replace("{AccountId}", credentials.AccountId.ToString());
+            var request = new RestRequest(resource, Method.GET);
+
+            string value = $"token {credentials.ApiKey}";
+            request.AddHeader("Authorization", value);
+
+            try
+            {
+                IRestResponse response = restClient.Execute(request);
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    return true;
+                }
+                else
+                {
+                    string result = response.Content;
+                    _logger.Info($"Validate credentials fail:{result}");
+                    return false;
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Validate credentials error -- {e}");
+                return false;
             }
         }
     }

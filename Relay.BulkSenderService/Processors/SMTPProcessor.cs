@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using Relay.BulkSenderService.Queues;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -246,6 +247,16 @@ namespace Relay.BulkSenderService.Processors
                 .Replace("{{time}}", user.GetUserDateTime().DateTime.ToString())
                 .Replace("{{processed}}", result.GetProcessedCount().ToString())
                 .Replace("{{errors}}", result.GetErrorsCount().ToString());
+        }
+
+        protected override IQueueProducer GetProducer()
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override List<IQueueConsumer> GetConsumers(int count)
+        {
+            throw new NotImplementedException();
         }
     }
 }

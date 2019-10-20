@@ -1,15 +1,17 @@
-﻿using System;
+﻿using Relay.BulkSenderService.Queues;
+using System;
 using System.Collections.Generic;
 using System.IO;
 
 namespace Relay.BulkSenderService.Classes
 {
-    public class ApiRecipient : Recipient
+    public class ApiRecipient : Recipient, IBulkQueueMessage
     {
         public string TemplateId { get; set; }
         public Dictionary<string, object> Fields { get; set; }
         public string Key { get; set; }
         public List<RecipientAttachment> Attachments { get; set; }
+        public string Message { get; set; }
 
         public ApiRecipient()
         {
