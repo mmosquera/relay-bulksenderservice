@@ -14,6 +14,6 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             _configuration = configuration;
         }
 
-        public abstract void ProcessFile(string fileName, string userName);
+        public abstract void ProcessFile(string fileName, IUserConfiguration userConfiguration);
     }
 }

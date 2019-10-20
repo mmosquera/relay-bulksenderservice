@@ -37,7 +37,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                         foreach (string filterFile in filterFiles)
                         {
-                            preProcessor.ProcessFile(filterFile, user.Name);
+                            preProcessor.ProcessFile(filterFile, user);
                         }
                     }
                 }

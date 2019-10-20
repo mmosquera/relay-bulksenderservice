@@ -12,7 +12,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
         {
         }
 
-        public override void ProcessFile(string fileName, string userName)
+        public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
         {
             if (!File.Exists(fileName))
             {
@@ -23,7 +23,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             {
                 if (Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
                 {
-                    var filePathHelper = new FilePathHelper(_configuration, userName);
+                    var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
 
                     string downloadPath = filePathHelper.GetDownloadsFolder();
                     string processedPath = filePathHelper.GetProcessedFilesFolder();

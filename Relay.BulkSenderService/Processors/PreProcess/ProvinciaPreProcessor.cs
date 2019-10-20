@@ -15,7 +15,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
         {
         }
 
-        public override void ProcessFile(string fileName, string userName)
+        public void ProcessFile(string fileName, string userName)
         {
             if (!File.Exists(fileName) || !Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
             {
@@ -88,6 +88,11 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             {
                 _logger.Error($"ERROR PROVINCIA PRE PROCESSOR: {e}");
             }
+        }
+
+        public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
+        {
+            throw new NotImplementedException();
         }
     }
 }
