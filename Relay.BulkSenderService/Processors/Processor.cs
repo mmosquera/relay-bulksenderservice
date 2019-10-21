@@ -524,7 +524,7 @@ namespace Relay.BulkSenderService.Processors
             var tokenSource = new CancellationTokenSource();
             CancellationToken cancellationToken = tokenSource.Token;
 
-            Task taskProducer = Task.Factory.StartNew(() => producer.GetMessages(_configuration, userConfiguration, queue, fileName, cancellationToken), cancellationToken);
+            Task taskProducer = Task.Factory.StartNew(() => producer.GetMessages(userConfiguration, queue, fileName, cancellationToken), cancellationToken);
 
             //descomentar para probar el productor
             //taskProducer.Wait();
@@ -533,7 +533,7 @@ namespace Relay.BulkSenderService.Processors
 
             foreach (IQueueConsumer queueConsumer in consumers)
             {
-                Task taskConsumer = Task.Factory.StartNew(() => queueConsumer.ProcessMessages(_configuration, userConfiguration, queue, cancellationToken), cancellationToken);
+                Task taskConsumer = Task.Factory.StartNew(() => queueConsumer.ProcessMessages(userConfiguration, queue, cancellationToken), cancellationToken);
 
                 tasks.Add(taskConsumer);
             }

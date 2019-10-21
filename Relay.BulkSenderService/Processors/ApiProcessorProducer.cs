@@ -11,9 +11,15 @@ namespace Relay.BulkSenderService.Processors
 {
     public class ApiProcessorProducer : IQueueProducer
     {
+        private readonly IConfiguration _configuration;
         public event EventHandler<QueueErrorEventArgs> ErrorEvent;
 
-        public void GetMessages(IConfiguration configuration, IUserConfiguration userConfiguration, IBulkQueue queue, string localFileName, CancellationToken cancellationToken)
+        public ApiProcessorProducer(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
+        public void GetMessages(IUserConfiguration userConfiguration, IBulkQueue queue, string localFileName, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(localFileName))
             {
@@ -54,7 +60,7 @@ namespace Relay.BulkSenderService.Processors
 
                 var recipients = new List<ApiRecipient>();
 
-                string attachmentsFolder = new FilePathHelper(configuration, userConfiguration.Name).GetAttachmentsFilesFolder();
+                string attachmentsFolder = new FilePathHelper(_configuration, userConfiguration.Name).GetAttachmentsFilesFolder();
 
                 while (!reader.EndOfStream)
                 {
@@ -100,33 +106,6 @@ namespace Relay.BulkSenderService.Processors
 
                     if (!recipient.HasError)
                     {
-                        //dynamic dinObject = DictionaryToObject(recipient.Fields);
-
-                        //string json = Newtonsoft.Json.JsonConvert.SerializeObject(
-                        //    new
-                        //    {
-                        //        from_name = recipient.FromName,
-                        //        from_email = recipient.FromEmail,
-                        //        recipients = new[] { new {
-                        //        email = recipient.ToEmail,
-                        //        name = recipient.ToName,
-                        //        type = "to" }
-                        //    },
-                        //        reply_to = !string.IsNullOrEmpty(recipient.ReplyToEmail) ? new
-                        //        {
-                        //            email = recipient.ReplyToEmail,
-                        //            name = recipient.ReplyToName
-                        //        } : null,
-                        //        model = dinObject,
-                        //        attachments = recipient.Attachments
-                        //    });
-                        //armo el mensaje y lo encolo.
-                        //IBulkQueueMessage message = new BulkQueueMessage()
-                        //{
-                        //    LineNumber = recipient.LineNumber,
-                        //    TemplateId = recipient.TemplateId,
-                        //    Message = json
-                        //};
                         queue.SendMessage(recipient);
                     }
                     else

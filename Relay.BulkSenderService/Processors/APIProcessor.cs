@@ -532,7 +532,7 @@ namespace Relay.BulkSenderService.Processors
 
         protected override IQueueProducer GetProducer()
         {
-            IQueueProducer producer = new ApiProcessorProducer();
+            IQueueProducer producer = new ApiProcessorProducer(_configuration);
             producer.ErrorEvent += Processor_ErrorEvent;
 
             return producer;
@@ -544,7 +544,7 @@ namespace Relay.BulkSenderService.Processors
 
             for (int i = 0; i < count; i++)
             {
-                IQueueConsumer consumer = new ApiProcessorConsumer();
+                IQueueConsumer consumer = new ApiProcessorConsumer(_configuration, _logger);
                 consumer.ErrorEvent += Processor_ErrorEvent;
                 consumer.ResultEvent += Processor_ResultEvent;
                 consumers.Add(consumer);

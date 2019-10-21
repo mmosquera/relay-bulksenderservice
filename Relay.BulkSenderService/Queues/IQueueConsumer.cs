@@ -9,6 +9,6 @@ namespace Relay.BulkSenderService.Queues
         event EventHandler<QueueResultEventArgs> ResultEvent;
         event EventHandler<QueueErrorEventArgs> ErrorEvent;
 
-        void ProcessMessages(IConfiguration configuration, IUserConfiguration userConfiguration, IBulkQueue queue, CancellationToken cancellationToken);
+        void ProcessMessages(IUserConfiguration userConfiguration, IBulkQueue queue, CancellationToken cancellationToken);
     }
 }

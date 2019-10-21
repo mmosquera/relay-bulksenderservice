@@ -12,18 +12,23 @@ namespace Relay.BulkSenderService.Processors
 {
     public class ApiProcessorConsumer : IQueueConsumer
     {
+        private readonly IConfiguration _configuration;
+        private readonly ILog _logger;
         public event EventHandler<QueueResultEventArgs> ResultEvent;
         public event EventHandler<QueueErrorEventArgs> ErrorEvent;
 
-        public void ProcessMessages(IConfiguration configuration, IUserConfiguration userConfiguration, IBulkQueue queue, CancellationToken cancellationToken)
+        public ApiProcessorConsumer(IConfiguration configuration, ILog logger)
+        {
+            _configuration = configuration;
+            _logger = logger;
+        }
+
+        public void ProcessMessages(IUserConfiguration userConfiguration, IBulkQueue queue, CancellationToken cancellationToken)
         {
             if (cancellationToken.IsCancellationRequested)
             {
                 cancellationToken.ThrowIfCancellationRequested();
             }
-
-            //var waitTime = TimeSpan.FromSeconds(2);
-            //int retries = 0;              
 
             IBulkQueueMessage bulkQueueMessage = null;
 
@@ -31,46 +36,14 @@ namespace Relay.BulkSenderService.Processors
             {
                 if (cancellationToken.IsCancellationRequested)
                 {
-                    //cancellationToken.ThrowIfCancellationRequested();
                     break;
                 }
-
-                //if (retries == 3)
-                //{
-                //    break;
-                //}
 
                 bulkQueueMessage = queue.ReceiveMessage();
 
                 if (bulkQueueMessage != null)
                 {
-                    SendEmailWithRetries(configuration, userConfiguration, (ApiRecipient)bulkQueueMessage);
-
-                    bool result = true;
-                    string text;
-
-                    if (result)
-                    {
-                        text = "OK";
-                        var resultEventArgs = new QueueResultEventArgs()
-                        {
-                            LineNumber = bulkQueueMessage.LineNumber,
-                            Message = text
-                        };
-                        ResultEvent?.Invoke(this, resultEventArgs);
-                    }
-                    else
-                    {
-                        text = "ERROR";
-                        var errorEventArgs = new QueueErrorEventArgs()
-                        {
-                            LineNumber = bulkQueueMessage.LineNumber,
-                            Type = ErrorType.DELIVERY,
-                            Date = DateTime.UtcNow,
-                            Message = text
-                        };
-                        ErrorEvent?.Invoke(this, errorEventArgs);
-                    }
+                    SendEmailWithRetries(_configuration, userConfiguration, (ApiRecipient)bulkQueueMessage);
                 }
                 else
                 {
@@ -79,34 +52,30 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected bool SendEmailWithRetries(IConfiguration configuration, IUserConfiguration userConfiguration, ApiRecipient apiRecipient)
+        protected void SendEmailWithRetries(IConfiguration configuration, IUserConfiguration userConfiguration, ApiRecipient apiRecipient)
         {
             int count = 0;
 
-            while (count < configuration.DeliveryRetryCount)
+            while (count < configuration.DeliveryRetryCount && !SendEmail(configuration.BaseUrl, configuration.TemplateUrl, userConfiguration.Credentials.ApiKey, userConfiguration.Credentials.AccountId, apiRecipient))
             {
                 count++;
 
-                try
+                if (count == configuration.DeliveryRetryCount)
                 {
-                    return SendEmail(configuration.BaseUrl, configuration.TemplateUrl, userConfiguration.Credentials.ApiKey, userConfiguration.Credentials.AccountId, apiRecipient);
+                    var errorEventArgs = new QueueErrorEventArgs()
+                    {
+                        LineNumber = apiRecipient.LineNumber,
+                        Type = ErrorType.DELIVERY,
+                        Date = DateTime.UtcNow,
+                        Message = "Unexpected error.Contact support for more information."
+                    };
+                    ErrorEvent?.Invoke(this, errorEventArgs);
                 }
-                catch (Exception e)
+                else
                 {
-                    if (count == configuration.DeliveryRetryCount)
-                    {
-                        apiRecipient.Message = "Unexpected error. Contact support for more information.";
-                        //result.AddUnexpectedError(recipient.LineNumber);
-                        //error
-                    }
-                    else
-                    {
-                        Thread.Sleep(configuration.DeliveryRetryInterval);
-                    }
+                    Thread.Sleep(configuration.DeliveryRetryInterval);
                 }
             }
-
-            return false;
         }
 
         protected bool SendEmail(string baseUrl, string templateUrl, string apiKey, int accountId, ApiRecipient apiRecipient)
@@ -154,22 +123,34 @@ namespace Relay.BulkSenderService.Processors
                     // TODO: Improvements to add results.
                     string linkResult = apiResult._links.Count >= 2 ? apiResult._links[1].href : string.Empty;
 
-                    string sentResult = $"Send OK|{apiResult.createdResourceId}|{linkResult}";
-                    apiRecipient.Message = sentResult;
-                    //recipient.AddSentResult(separator, sentResult);
-                    return true;
+                    var resultEventArgs = new QueueResultEventArgs()
+                    {
+                        LineNumber = apiRecipient.LineNumber,
+                        Message = "Send OK",
+                        ResourceId = apiResult.createdResourceId.ToString(),
+                        DeliveryLink = linkResult
+                    };
+                    ResultEvent?.Invoke(this, resultEventArgs);                    
                 }
                 else
                 {
                     dynamic jsonResult = JsonConvert.DeserializeObject(response.Content);
 
                     //_logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
-                    //result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());
-                    //recipient.AddSentResult(separator, $"Send Fail ({jsonResult.title})");
-                    apiRecipient.Message = $"Send Fail ({jsonResult.title})";
+                    //result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());                    
 
-                    return false;
+                    var errorEventArgs = new QueueErrorEventArgs()
+                    {
+                        LineNumber = apiRecipient.LineNumber,
+                        Type = ErrorType.DELIVERY,
+                        Date = DateTime.UtcNow,
+                        Message = jsonResult.title,
+                        Description = jsonResult.ToString()                        
+                    };
+                    ErrorEvent?.Invoke(this, errorEventArgs);                                    
                 }
+
+                return true;
 
                 /************TO TEST PROCESS WITHOUT SEND***********************/
                 //string resourceid = "fakeresourceid";
@@ -179,11 +160,11 @@ namespace Relay.BulkSenderService.Processors
                 //Thread.Sleep(200);
                 /***************************************************************/
             }
-            catch (Exception se)
+            catch (Exception e)
             {
-                //_logger.Error($"SENDING ERROR to: {recipient.ToEmail}. -- {se}");
+                _logger.Error($"SENDING ERROR to: {apiRecipient.ToEmail}. -- {e}");
 
-                throw se;
+                return false;
             }
         }
 
