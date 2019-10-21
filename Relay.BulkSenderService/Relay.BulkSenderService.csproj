@@ -348,32 +348,6 @@
     <None Include="App.config">
       <SubType>Designer</SubType>
     </None>
-    <None Include="Configs\arba.config.json" />
-    <None Include="Configs\bancorRemote.config.json" />
-    <None Include="Configs\BasicSmpt.config.json" />
-    <None Include="Configs\bpn.config.json" />
-    <None Include="Configs\compumundo.config.json" />
-    <None Include="Configs\ebay.config.json" />
-    <None Include="Configs\favacard.config.json" />
-    <None Include="Configs\fiden.config.json" />
-    <None Include="Configs\garbarino.config.json" />
-    <None Include="Configs\GarbarinoViajes.config.json" />
-    <None Include="Configs\gire.config.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\hipotecario.config.json" />
-    <None Include="Configs\lmontano.config.json" />
-    <None Include="Configs\makinthal.config.json" />
-    <None Include="Configs\multigol.config.json" />
-    <None Include="Configs\mobo.config.json" />
-    <None Include="Configs\ricoh.config.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Include="Configs\sales.config.json" />
-    <None Include="Configs\sas.config.json" />
-    <None Include="Configs\socialms.config.json" />
-    <None Include="Configs\tdominguez.config.json" />
-    <None Include="Configs\bancor.config.json" />
     <None Include="packages.config" />
     <None Include="PostBuildTasks\install_service.cmd" />
     <None Include="PostBuildTasks\scripts\InstallService.ps1">
@@ -416,7 +390,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Folder Include="Configs\" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <ProjectExtensions />
   <Import Project="..\packages\NETStandard.Library.2.0.3\build\netstandard2.0\NETStandard.Library.targets" Condition="Exists('..\packages\NETStandard.Library.2.0.3\build\netstandard2.0\NETStandard.Library.targets')" />
