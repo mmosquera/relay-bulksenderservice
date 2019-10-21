@@ -59,8 +59,9 @@ namespace Relay.BulkSenderService.Processors
                 List<CustomHeader> customHeaders = GetHeaderList(headersArray);
 
                 var recipients = new List<ApiRecipient>();
-
-                string attachmentsFolder = new FilePathHelper(_configuration, userConfiguration.Name).GetAttachmentsFilesFolder();
+                
+                var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+                string attachmentsFolder = filePathHelper.GetAttachmentsFilesFolder(Path.GetFileNameWithoutExtension(localFileName));
 
                 while (!reader.EndOfStream)
                 {

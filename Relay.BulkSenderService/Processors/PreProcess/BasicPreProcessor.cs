@@ -86,8 +86,16 @@ namespace Relay.BulkSenderService.Processors.PreProcess
         {
             var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
 
+            string subFolder = Path.GetFileNameWithoutExtension(originalFile);
+
+            string localAttachmentFolder = filePathHelper.GetAttachmentsFilesFolder(subFolder);
+
+            if (!Directory.Exists(localAttachmentFolder))
+            {
+                Directory.CreateDirectory(localAttachmentFolder);
+            }
+
             //local file 
-            string localAttachmentFolder = filePathHelper.GetAttachmentsFilesFolder();
             string localAttachmentFile = $@"{localAttachmentFolder}\{attachmentFile}";
 
             if (File.Exists(localAttachmentFile))
@@ -95,15 +103,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 return;
             }
 
-            //local file in subfolder
-            string subFolder = Path.GetFileNameWithoutExtension(originalFile);
-            string localAttachmentSubFile = $@"{localAttachmentFolder}\{subFolder}\{attachmentFile}";
-
-            if (File.Exists(localAttachmentSubFile))
-            {
-                return;
-            }
-
+            //get from ftp
             string ftpAttachmentFile = $@"{userConfiguration.AttachmentsFolder}/{attachmentFile}";
 
             var ftpHelper = userConfiguration.Ftp.GetFtpHelper(_logger);
@@ -115,23 +115,21 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 return;
             }
 
+            //get from zip file
             string zipAttachments = $@"{userConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}.zip";
-            string localZipAttachments = $@"{localAttachmentFolder}\{Path.GetFileNameWithoutExtension(originalFile)}.zip";
+            string localZipFile = $@"{filePathHelper.GetAttachmentsFilesFolder()}\{Path.GetFileNameWithoutExtension(originalFile)}.zip";
 
             // TODO: add retries.
-            ftpHelper.DownloadFile(zipAttachments, localZipAttachments);
+            ftpHelper.DownloadFile(zipAttachments, localZipFile);
 
-            if (File.Exists(localZipAttachments))
+            if (File.Exists(localZipFile))
             {
-                string newZipDirectory = $@"{localAttachmentFolder}\{subFolder}";
-                Directory.CreateDirectory(newZipDirectory);
-
                 var zipHelper = new ZipHelper();
-                zipHelper.UnzipFile(localZipAttachments, newZipDirectory);
+                zipHelper.UnzipFile(localZipFile, localAttachmentFolder);
 
                 ftpHelper.DeleteFile(zipAttachments);
-                File.Delete(localZipAttachments); //TODO add retries.
-            }            
+                File.Delete(localZipFile); //TODO add retries.
+            }
         }
     }
 }

@@ -2,7 +2,7 @@
 
 namespace Relay.BulkSenderService.Classes
 {
-    class FileWriter
+    public class FileWriter
     {
         private readonly string filePath;
         private readonly object locker;

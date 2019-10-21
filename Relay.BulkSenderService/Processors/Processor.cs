@@ -27,6 +27,10 @@ namespace Relay.BulkSenderService.Processors
         private const int STATUS_MINUTES = 5;
         private const int THREADS = 1;
 
+        private IBulkQueue outboundQueue;
+        private FileWriter resultFileWriter;
+        private FileWriter errorFileWriter;
+
         public event EventHandler<ThreadEventArgs> ProcessFinished;
         public event EventHandler<StatusEventArgs> ProcessStatus;
 
@@ -64,14 +68,16 @@ namespace Relay.BulkSenderService.Processors
 
                 SendStartProcessEmail(fileName, user);
 
-                //descontar 1 linea por el header y las vacias.
-                int totalLines = GetTotalLines(fileName);
+                int totalLines = GetTotalLines(user, fileName);
 
+                //estos custom los paso al preprocess para el que corresponda.
                 //CustomProcessForFile(localFileName, user.Name, templateConfiguration);
 
-                var outboundQueue = new MemoryBulkQueue();
+                outboundQueue = new MemoryBulkQueue();
+                errorFileWriter = new FileWriter(fileName);
+                resultFileWriter = new FileWriter(fileName);
 
-                ProcessFile(user, outboundQueue, fileName);
+                ProcessFile(user, fileName);
 
                 //string resultFileName = Process(user, fileName, result);  
                 string resultFileName = null;
@@ -216,7 +222,7 @@ namespace Relay.BulkSenderService.Processors
         protected string GetAttachmentFile(string attachmentFile, string originalFile, IUserConfiguration user)
         {
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
-                        
+
             string localAttachmentFolder = filePathHelper.GetAttachmentsFilesFolder();
 
             //1- local file 
@@ -486,9 +492,16 @@ namespace Relay.BulkSenderService.Processors
             return errorsFilePath;
         }
 
-        protected int GetTotalLines(string fileName)
+        protected int GetTotalLines(IUserConfiguration userConfiguration, string fileName)
         {
             if (!File.Exists(fileName))
+            {
+                return 0;
+            }
+
+            ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(fileName);
+
+            if (templateConfiguration == null)
             {
                 return 0;
             }
@@ -498,10 +511,19 @@ namespace Relay.BulkSenderService.Processors
             using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             using (var streamReader = new StreamReader(fileStream))
             {
-                while (streamReader.ReadLine() != null)
+                string line;
+                while ((line = streamReader.ReadLine()) != null)
                 {
-                    totalLines++;
+                    if (!string.IsNullOrEmpty(line))
+                    {
+                        totalLines++;
+                    }
                 }
+            }
+
+            if (templateConfiguration.HasHeaders)
+            {
+                totalLines--;
             }
 
             return totalLines;
@@ -515,16 +537,25 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        public void ProcessFile(IUserConfiguration userConfiguration, IBulkQueue queue, string fileName)
+        private void ProcessFile(IUserConfiguration userConfiguration, string fileName)
         {
+            var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+
+            string errorFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.error.tmp";
+            errorFileWriter = new FileWriter(errorFileName);
+
+            string resultFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.result.tmp";
+            resultFileWriter = new FileWriter(resultFileName);
+
             IQueueProducer producer = GetProducer();
+
             //TODO sacar threads count from userConfiguration.
             List<IQueueConsumer> consumers = GetConsumers(THREADS);
 
             var tokenSource = new CancellationTokenSource();
             CancellationToken cancellationToken = tokenSource.Token;
 
-            Task taskProducer = Task.Factory.StartNew(() => producer.GetMessages(userConfiguration, queue, fileName, cancellationToken), cancellationToken);
+            Task taskProducer = Task.Factory.StartNew(() => producer.GetMessages(userConfiguration, outboundQueue, fileName, cancellationToken), cancellationToken);
 
             //descomentar para probar el productor
             //taskProducer.Wait();
@@ -533,7 +564,7 @@ namespace Relay.BulkSenderService.Processors
 
             foreach (IQueueConsumer queueConsumer in consumers)
             {
-                Task taskConsumer = Task.Factory.StartNew(() => queueConsumer.ProcessMessages(userConfiguration, queue, cancellationToken), cancellationToken);
+                Task taskConsumer = Task.Factory.StartNew(() => queueConsumer.ProcessMessages(userConfiguration, outboundQueue, cancellationToken), cancellationToken);
 
                 tasks.Add(taskConsumer);
             }
@@ -549,7 +580,7 @@ namespace Relay.BulkSenderService.Processors
             finally
             {
                 //espero que se vacie la lista y aviso con el cancel token a los consumidores.
-                while (queue.GetCount() > 0)
+                while (outboundQueue.GetCount() > 0)
                 {
                     Thread.Sleep(1000);
                 }
@@ -566,12 +597,14 @@ namespace Relay.BulkSenderService.Processors
 
         protected void Processor_ErrorEvent(object sender, QueueErrorEventArgs e)
         {
-            throw new NotImplementedException();
+            string text = $"lineNumber:{e.LineNumber}|date:{e.Date}|type:{e.Type}|message:{e.Message}|description:{e.Description}";
+            errorFileWriter.WriteLine(text);
         }
 
         protected void Processor_ResultEvent(object sender, QueueResultEventArgs e)
         {
-            throw new NotImplementedException();
+            string text = $"lineNumber:{e.LineNumber}|resourceId:{e.ResourceId}|deliveryLink:{e.DeliveryLink}";
+            resultFileWriter.WriteLine(text);
         }
 
         public bool ValidateCredentials(CredentialsConfiguration credentials)

@@ -46,7 +46,8 @@ namespace Relay.BulkSenderService.Processors
                     return resultsFileName;
                 }
 
-                int totalLines = templateConfiguration.HasHeaders ? GetTotalLines(localFileName) - 1 : GetTotalLines(localFileName);
+                //int totalLines = templateConfiguration.HasHeaders ? GetTotalLines(localFileName) - 1 : GetTotalLines(localFileName);
+                int totalLines = 0;
                 result.SetTotalCount(totalLines);
 
                 CustomProcessForFile(localFileName, user.Name, templateConfiguration);
