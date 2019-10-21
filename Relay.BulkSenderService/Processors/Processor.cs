@@ -196,9 +196,10 @@ namespace Relay.BulkSenderService.Processors
         protected string GetAttachmentFile(string attachmentFile, string originalFile, IUserConfiguration user)
         {
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
-            //local file 
+                        
             string localAttachmentFolder = filePathHelper.GetAttachmentsFilesFolder();
+
+            //1- local file 
             string localAttachmentFile = $@"{localAttachmentFolder}\{attachmentFile}";
 
             if (File.Exists(localAttachmentFile))
@@ -206,7 +207,7 @@ namespace Relay.BulkSenderService.Processors
                 return localAttachmentFile;
             }
 
-            //local file in subfolder
+            //2- local file in subfolder
             string subFolder = Path.GetFileNameWithoutExtension(originalFile);
             string localAttachmentSubFile = $@"{localAttachmentFolder}\{subFolder}\{attachmentFile}";
 
@@ -215,6 +216,7 @@ namespace Relay.BulkSenderService.Processors
                 return localAttachmentSubFile;
             }
 
+            //3- donwload from ftp
             string ftpAttachmentFile = $@"{user.AttachmentsFolder}/{attachmentFile}";
 
             var ftpHelper = user.Ftp.GetFtpHelper(_logger);
@@ -226,6 +228,7 @@ namespace Relay.BulkSenderService.Processors
                 return localAttachmentFile;
             }
 
+            //4- zip file 
             string zipAttachments = $@"{user.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}.zip";
             string localZipAttachments = $@"{localAttachmentFolder}\{Path.GetFileNameWithoutExtension(originalFile)}.zip";
 
@@ -244,9 +247,9 @@ namespace Relay.BulkSenderService.Processors
                 File.Delete(localZipAttachments); //TODO add retries.
             }
 
-            if (File.Exists(localAttachmentFile))
+            if (File.Exists(localAttachmentSubFile))
             {
-                return localAttachmentFile;
+                return localAttachmentSubFile;
             }
 
             return null;
