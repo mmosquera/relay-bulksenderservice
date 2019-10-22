@@ -7,6 +7,7 @@
         public const string HEADER_MESSAGE_ID = "MessageId";
         public const string HEADER_DELIVERY_LINK = "DeliveryLink";
         public const string PROCESS_RESULT_OK = "Processed";
+        public const string DELIVERY_OK = "Send OK";
 
         public const string HEADER_STATUS = "DeliveryStatus";
         public const string HEADER_OPENS = "OpensCount";

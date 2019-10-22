@@ -35,6 +35,7 @@ namespace Relay.BulkSenderService.Configuration
         public IPreProcessorConfiguration PreProcessor { get; set; }
         public int MaxParallelProcessors { get; set; }
         public int DeliveryDelay { get; set; }
+        public int MaxThreadsNumber { get; set; }
         public IStatusConfiguration Status { get; set; }
 
         public Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName)

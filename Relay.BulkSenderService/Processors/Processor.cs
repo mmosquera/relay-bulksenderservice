@@ -25,7 +25,6 @@ namespace Relay.BulkSenderService.Processors
         protected int _lineNumber;
         private DateTime _lastStatusDate;
         private const int STATUS_MINUTES = 5;
-        private const int THREADS = 1;
 
         private IBulkQueue outboundQueue;
         private FileWriter resultFileWriter;
@@ -71,18 +70,13 @@ namespace Relay.BulkSenderService.Processors
                 int totalLines = GetTotalLines(user, fileName);
 
                 //estos custom los paso al preprocess para el que corresponda.
-                //CustomProcessForFile(localFileName, user.Name, templateConfiguration);
-
-                outboundQueue = new MemoryBulkQueue();
-                errorFileWriter = new FileWriter(fileName);
-                resultFileWriter = new FileWriter(fileName);
+                //CustomProcessForFile(localFileName, user.Name, templateConfiguration);                
 
                 ProcessFile(user, fileName);
 
                 //string resultFileName = Process(user, fileName, result);  
-                string resultFileName = null;
-
-                GenerateErrorFile(fileName, user, result);
+                string resultFileName = GenerateResultFile(fileName, user);
+                string errorFileName = GenerateErrorFile(fileName, user);
 
                 var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
@@ -117,25 +111,153 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        private void GenerateErrorFile(string fileName, IUserConfiguration user, ProcessResult processResult)
+        private string GenerateResultFile(string fileName, IUserConfiguration user)
         {
-            if (processResult.Errors.Count == 0)
+            int lineNumber = 0;
+            var errors = GetErrorsFromFile(user, fileName);
+            var results = GetResultsFromFile(user, fileName);
+            var templateConfiguration = user.GetTemplateConfiguration(fileName);
+
+            var sent = new StringBuilder();
+
+            using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var streamReader = new StreamReader(fileStream))
             {
-                return;
+                string line = null;
+
+                if (templateConfiguration.HasHeaders)
+                {
+                    line = streamReader.ReadLine();
+                    lineNumber++;
+                }
+
+                string headers = GetHeaderLine(line, templateConfiguration);
+                string resultHeaders = $"{headers}{templateConfiguration.FieldSeparator}{Constants.HEADER_PROCESS_RESULT}{templateConfiguration.FieldSeparator}{Constants.HEADER_DELIVERY_RESULT}{templateConfiguration.FieldSeparator}{Constants.HEADER_MESSAGE_ID}{templateConfiguration.FieldSeparator}{Constants.HEADER_DELIVERY_LINK}";
+
+                sent.AppendLine(resultHeaders);
+
+                while (!streamReader.EndOfStream)
+                {
+                    line = streamReader.ReadLine();
+
+                    if (string.IsNullOrEmpty(line))
+                    {
+                        lineNumber++;
+                        continue;
+                    }
+
+                    NewProcessResult processResult = results.FirstOrDefault(x => x.LineNumber == lineNumber);
+
+                    if (processResult != null)
+                    {
+                        line = $"{line}{templateConfiguration.FieldSeparator}{processResult.GetResultLine(templateConfiguration.FieldSeparator)}";
+                    }
+
+                    ProcessError processError = errors.FirstOrDefault(x => x.LineNumber == lineNumber);
+
+                    if (processError != null)
+                    {
+                        line = $"line{templateConfiguration.FieldSeparator}{processError.GetErrorLineResult(templateConfiguration.FieldSeparator)}";
+                    }
+
+                    sent.AppendLine(line);
+
+                    lineNumber++;
+                }
             }
 
-            processResult.ErrorFileName = GetErrorsFileName(fileName, user);
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+            string resultFileName = $@"{filePathHelper.GetResultsFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.sent";
+
+            using (var streamWriter = new StreamWriter(resultFileName))
+            {
+                streamWriter.Write(sent);
+            }
+
+            return resultFileName;
+        }
+
+        private string GenerateErrorFile(string fileName, IUserConfiguration user)
+        {
+            var errors = GetErrorsFromFile(user, fileName);
+
+            if (errors.Count == 0)
+            {
+                return null;
+            }
+
+            string errorFileName = GetErrorsFileName(fileName, user);
 
             var stringBuilder = new StringBuilder();
-            foreach (ProcessError processError in processResult.Errors.OrderBy(x => x.LineNumber))
+
+            foreach (ProcessError processError in errors.OrderBy(x => x.LineNumber))
             {
                 stringBuilder.AppendLine(processError.GetErrorLine());
             }
 
-            using (var streamWriter = new StreamWriter(processResult.ErrorFileName))
+            using (var streamWriter = new StreamWriter(errorFileName))
             {
                 streamWriter.Write(stringBuilder);
             }
+
+            return errorFileName;
+        }
+
+        private List<ProcessError> GetErrorsFromFile(IUserConfiguration userConfiguration, string fileName)
+        {
+            var errors = new List<ProcessError>();            
+
+            var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+            string errorQueue = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.error.tmp";
+
+            if (!File.Exists(errorQueue))
+            {
+                return errors;
+            }
+
+            using (var fileStream = new FileStream(errorQueue, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var streamReader = new StreamReader(fileStream))
+            {
+                while (!streamReader.EndOfStream)
+                {
+                    string line = streamReader.ReadLine();
+
+                    ProcessError processError = JsonConvert.DeserializeObject<ProcessError>(line);
+
+                    errors.Add(processError);
+                }
+            }
+
+            return errors;
+        }
+
+        private List<NewProcessResult> GetResultsFromFile(IUserConfiguration userConfiguration, string fileName)
+        {
+            var results = new List<NewProcessResult>();            
+
+            var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+            string resultQueue = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.result.tmp";
+
+            if (!File.Exists(resultQueue))
+            {
+                return results;
+            }
+
+            using (var fileStream = new FileStream(resultQueue, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var streamReader = new StreamReader(fileStream))
+            {
+                while (!streamReader.EndOfStream)
+                {
+                    string line = streamReader.ReadLine();
+
+                    NewProcessResult processResult = JsonConvert.DeserializeObject<NewProcessResult>(line);
+
+                    results.Add(processResult);
+                }
+            }
+
+            return results;
         }
 
         private void AddReportForFile(string fileName, IUserConfiguration user)
@@ -539,6 +661,8 @@ namespace Relay.BulkSenderService.Processors
 
         private void ProcessFile(IUserConfiguration userConfiguration, string fileName)
         {
+            outboundQueue = new MemoryBulkQueue();
+
             var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
 
             string errorFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.error.tmp";
@@ -550,7 +674,7 @@ namespace Relay.BulkSenderService.Processors
             IQueueProducer producer = GetProducer();
 
             //TODO sacar threads count from userConfiguration.
-            List<IQueueConsumer> consumers = GetConsumers(THREADS);
+            List<IQueueConsumer> consumers = GetConsumers(userConfiguration.MaxThreadsNumber);
 
             var tokenSource = new CancellationTokenSource();
             CancellationToken cancellationToken = tokenSource.Token;
@@ -597,13 +721,32 @@ namespace Relay.BulkSenderService.Processors
 
         protected void Processor_ErrorEvent(object sender, QueueErrorEventArgs e)
         {
-            string text = $"lineNumber:{e.LineNumber}|date:{e.Date}|type:{e.Type}|message:{e.Message}|description:{e.Description}";
+            var processError = new ProcessError()
+            {
+                LineNumber = e.LineNumber,
+                Date = e.Date,
+                Message = e.Message,
+                Type = e.Type,
+                Description = e.Description
+            };
+
+            string text = JsonConvert.SerializeObject(processError, Formatting.None);
+
             errorFileWriter.WriteLine(text);
         }
 
         protected void Processor_ResultEvent(object sender, QueueResultEventArgs e)
         {
-            string text = $"lineNumber:{e.LineNumber}|resourceId:{e.ResourceId}|deliveryLink:{e.DeliveryLink}";
+            var processResult = new NewProcessResult()
+            {
+                LineNumber = e.LineNumber,
+                ResourceId = e.ResourceId,
+                DeliveryLink = e.DeliveryLink,
+                Message = e.Message
+            };
+
+            string text = JsonConvert.SerializeObject(processResult, Formatting.None);
+
             resultFileWriter.WriteLine(text);
         }
 

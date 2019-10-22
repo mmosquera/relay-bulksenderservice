@@ -21,6 +21,7 @@ namespace Relay.BulkSenderService.Configuration
         int UserGMT { get; set; }
         int MaxParallelProcessors { get; set; }
         int DeliveryDelay { get; set; }
+        int MaxThreadsNumber { get; set; }
         AckConfiguration Ack { get; set; }
         CredentialsConfiguration Credentials { get; set; }
         IFtpConfiguration Ftp { get; set; }

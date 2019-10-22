@@ -89,12 +89,26 @@ namespace Relay.BulkSenderService.Classes
         }
     }
 
+    public class NewProcessResult
+    {
+        public int LineNumber { get; set; }
+        public string ResourceId { get; set; }
+        public string DeliveryLink { get; set; }
+        public string Message { get; set; }
+
+        public string GetResultLine(char separator)
+        {
+            return $"{Constants.PROCESS_RESULT_OK}{separator}{Constants.DELIVERY_OK}{separator}{ResourceId}{separator}{DeliveryLink}";
+        }
+    }
+
     public class ProcessError
     {
         public int LineNumber { get; set; }
         public string Message { get; set; }
         public ErrorType Type { get; set; }
         public DateTime Date { get; set; }
+        public string Description { get; set; }
 
         public string GetErrorLine()
         {
@@ -103,6 +117,24 @@ namespace Relay.BulkSenderService.Classes
             if (LineNumber != 0)
             {
                 line += $" processing line:{LineNumber}";
+            }
+
+            return line;
+        }
+
+        public string GetErrorLineResult(char separator)
+        {
+            string line = string.Empty;
+
+            //TODO: usar herencia en lugar de tipos de errores y cada uno define su metodo.
+            switch (Type)
+            {
+                case ErrorType.PROCESS:
+                    line = $"{Message}{separator}{separator}{separator}";
+                    break;
+                case ErrorType.DELIVERY:
+                    line = $"{Constants.PROCESS_RESULT_OK}{separator}Send Fail ({Message}){separator}{separator}";
+                    break;
             }
 
             return line;
