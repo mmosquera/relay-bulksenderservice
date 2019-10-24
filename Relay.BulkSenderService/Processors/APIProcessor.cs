@@ -94,8 +94,6 @@ namespace Relay.BulkSenderService.Processors
                             return null;
                         }
 
-                        GetProcessStatus(user, result);
-
                         line = reader.ReadLine();
 
                         if (string.IsNullOrEmpty(line))
@@ -180,8 +178,6 @@ namespace Relay.BulkSenderService.Processors
                     SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, result, user.Credentials, user.DeliveryDelay);
 
                     result.Finished = true;
-
-                    GetProcessStatus(user, result);
                 }
             }
             catch (Exception e)

@@ -24,11 +24,11 @@ namespace Relay.BulkSenderService.Processors.Status
                     {
                         var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-                        string statusFile = $@"{filePathHelper.GetUserFolder()}\status.{user.Name}.json";
-
                         StatusProcessor statusProcessor = user.GetStatusProcessor(_logger, _configuration);
 
-                        statusProcessor.ProcessStatusFile(user, statusFile);
+                        var directoryInfo = new DirectoryInfo(filePathHelper.GetQueueFilesFolder());
+
+                        statusProcessor.ProcessStatusFile(user, directoryInfo.GetFiles("*.status.tmp").Select(x => x.FullName).ToList());
                     }
                 }
                 catch (Exception ex)

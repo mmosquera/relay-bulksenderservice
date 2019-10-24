@@ -31,7 +31,11 @@ namespace Relay.BulkSenderService.Processors
         private FileWriter errorFileWriter;
 
         public event EventHandler<ThreadEventArgs> ProcessFinished;
-        public event EventHandler<StatusEventArgs> ProcessStatus;
+
+        private int _total;
+        private int _processed;
+        private object _lockProcessed;
+
 
         public Processor(ILog logger, IConfiguration configuration)
         {
@@ -41,12 +45,14 @@ namespace Relay.BulkSenderService.Processors
             _lockStop = new object();
             _lineNumber = 0;
             _lastStatusDate = DateTime.MinValue;
+            _total = 0;
+            _processed = 0;
+            _lockProcessed = new object();
         }
 
         public void DoWork(object stateInfo)
         {
             ProcessFinished += ((ThreadStateInfo)stateInfo).Handler;
-            ProcessStatus += ((ThreadStateInfo)stateInfo).StatusEventHandler;
 
             IUserConfiguration user = ((ThreadStateInfo)stateInfo).User;
             string fileName = ((ThreadStateInfo)stateInfo).FileName;
@@ -67,7 +73,7 @@ namespace Relay.BulkSenderService.Processors
 
                 SendStartProcessEmail(fileName, user);
 
-                int totalLines = GetTotalLines(user, fileName);
+                _total = GetTotalLines(user, fileName);
 
                 //estos custom los paso al preprocess para el que corresponda.
                 //CustomProcessForFile(localFileName, user.Name, templateConfiguration);                
@@ -204,9 +210,55 @@ namespace Relay.BulkSenderService.Processors
             return errorFileName;
         }
 
+        private void UpdateStatusFile(string fileName, IUserConfiguration user, CancellationToken cancellationToken)
+        {
+            if (cancellationToken.IsCancellationRequested)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+            }
+
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+            string statusFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.status.tmp";
+
+            var fileWriter = new FileWriter(statusFileName);
+
+            bool finished = false;
+
+            while (!finished)
+            {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    finished = true;
+                }
+
+                if (DateTime.Now.Subtract(_lastStatusDate).TotalMinutes > STATUS_MINUTES || finished)
+                {
+                    var filesStatus = new FileStatus()
+                    {
+                        FileName = fileName,
+                        Finished = finished,
+                        Total = _total,
+                        LastUpdate = DateTime.UtcNow
+                    };
+
+                    lock (_lockProcessed)
+                    {
+                        filesStatus.Processed = _processed;
+                    }
+
+                    string jsonContent = JsonConvert.SerializeObject(filesStatus, Formatting.None);
+
+                    fileWriter.WriteLine(jsonContent);
+
+                    _lastStatusDate = DateTime.Now;
+                }
+
+                Thread.Sleep(5000);
+            }
+        }
         private List<ProcessError> GetErrorsFromFile(IUserConfiguration userConfiguration, string fileName)
         {
-            var errors = new List<ProcessError>();            
+            var errors = new List<ProcessError>();
 
             var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
             string errorQueue = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.error.tmp";
@@ -234,7 +286,7 @@ namespace Relay.BulkSenderService.Processors
 
         private List<NewProcessResult> GetResultsFromFile(IUserConfiguration userConfiguration, string fileName)
         {
-            var results = new List<NewProcessResult>();            
+            var results = new List<NewProcessResult>();
 
             var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
             string resultQueue = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.result.tmp";
@@ -316,29 +368,6 @@ namespace Relay.BulkSenderService.Processors
         protected virtual void OnProcessFinished(ThreadEventArgs args)
         {
             ProcessFinished?.Invoke(this, args);
-        }
-
-        protected virtual void OnProcessStatus(StatusEventArgs args)
-        {
-            ProcessStatus?.Invoke(this, args);
-        }
-
-        protected void GetProcessStatus(IUserConfiguration user, ProcessResult processResult)
-        {
-            if (user.Status == null || !processResult.Finished && DateTime.Now.Subtract(_lastStatusDate).TotalMinutes < STATUS_MINUTES)
-            {
-                return;
-            }
-
-            var statusEventArgs = new StatusEventArgs()
-            {
-                UserName = user.Name,
-                Status = processResult
-            };
-
-            OnProcessStatus(statusEventArgs);
-
-            _lastStatusDate = DateTime.Now;
         }
 
         protected string GetAttachmentFile(string attachmentFile, string originalFile, IUserConfiguration user)
@@ -693,6 +722,13 @@ namespace Relay.BulkSenderService.Processors
                 tasks.Add(taskConsumer);
             }
 
+            if (userConfiguration.Status != null)
+            {
+                Task taskStatus = Task.Factory.StartNew(() => UpdateStatusFile(fileName, userConfiguration, cancellationToken), cancellationToken);
+
+                tasks.Add(taskStatus);
+            }
+
             try
             {
                 taskProducer.Wait();
@@ -732,7 +768,12 @@ namespace Relay.BulkSenderService.Processors
 
             string text = JsonConvert.SerializeObject(processError, Formatting.None);
 
-            errorFileWriter.WriteLine(text);
+            errorFileWriter.AppendLine(text);
+
+            lock (_lockProcessed)
+            {
+                _processed++;
+            }
         }
 
         protected void Processor_ResultEvent(object sender, QueueResultEventArgs e)
@@ -747,7 +788,12 @@ namespace Relay.BulkSenderService.Processors
 
             string text = JsonConvert.SerializeObject(processResult, Formatting.None);
 
-            resultFileWriter.WriteLine(text);
+            resultFileWriter.AppendLine(text);
+
+            lock (_lockProcessed)
+            {
+                _processed++;
+            }
         }
 
         public bool ValidateCredentials(CredentialsConfiguration credentials)

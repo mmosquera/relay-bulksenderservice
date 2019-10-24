@@ -2,6 +2,7 @@
 using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -13,9 +14,9 @@ namespace Relay.BulkSenderService.Processors.Status
         {
         }
 
-        public override void ProcessStatusFile(IUserConfiguration userConfiguration, string fileName)
+        public override void ProcessStatusFile(IUserConfiguration userConfiguration, List<string> statusFiles)
         {
-            if (!File.Exists(fileName))
+            if (statusFiles.Count == 0)
             {
                 return;
             }
@@ -25,24 +26,18 @@ namespace Relay.BulkSenderService.Processors.Status
                 _logger.Debug($"Start to process status file for user {userConfiguration.Name}");
 
                 string jsonContent;
-
-                using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (var streamReader = new StreamReader(fileStream))
-                {
-                    jsonContent = streamReader.ReadToEnd();
-                }
-
-                UserFilesStatus userFilesStatus = JsonConvert.DeserializeObject<UserFilesStatus>(jsonContent);
-
-                if (userFilesStatus.Files.Count == 0)
-                {
-                    return;
-                }
-
                 var stringBuilder = new StringBuilder();
 
-                foreach (FileStatus fileStatus in userFilesStatus.Files)
+                foreach (string fileName in statusFiles)
                 {
+                    using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    using (var streamReader = new StreamReader(fileStream))
+                    {
+                        jsonContent = streamReader.ReadToEnd();
+                    }
+
+                    FileStatus fileStatus = JsonConvert.DeserializeObject<FileStatus>(jsonContent);
+
                     string datatime = fileStatus.LastUpdate
                         .AddHours(userConfiguration.UserGMT)
                         .ToString(((FtpStatusConfiguration)userConfiguration.Status).StatusFileDateFormat);
@@ -58,7 +53,7 @@ namespace Relay.BulkSenderService.Processors.Status
 
                 using (var streamWriter = new StreamWriter(resultsFilePath))
                 {
-                    streamWriter.Write(stringBuilder.ToString());
+                    streamWriter.Write(stringBuilder);
                 }
 
                 string ftpFileName = $@"{((FtpStatusConfiguration)userConfiguration.Status).FtpFolder}/{Path.GetFileName(resultsFilePath)}";

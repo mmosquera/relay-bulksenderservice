@@ -13,7 +13,7 @@ namespace Relay.BulkSenderService.Classes
             locker = new object();
         }
 
-        public void WriteLine(string text)
+        public void AppendLine(string text)
         {
             lock (locker)
             {
@@ -21,6 +21,18 @@ namespace Relay.BulkSenderService.Classes
                 using (var streamWriter = new StreamWriter(fileStream))
                 {
                     streamWriter.WriteLine(text);
+                }
+            }
+        }
+
+        public void WriteLine(string text)
+        {
+            lock (locker)
+            {
+                using (FileStream fileStream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                using (StreamWriter streamWriter = new StreamWriter(fileStream))
+                {
+                    streamWriter.Write(text);
                 }
             }
         }

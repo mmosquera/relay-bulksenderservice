@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Processors.Status
 {
@@ -14,6 +15,6 @@ namespace Relay.BulkSenderService.Processors.Status
             _configuration = configuration;
         }
 
-        public abstract void ProcessStatusFile(IUserConfiguration userConfiguration, string fileName);
+        public abstract void ProcessStatusFile(IUserConfiguration userConfiguration, List<string> statusFiles);
     }
 }
