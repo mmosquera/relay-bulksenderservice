@@ -18,11 +18,18 @@ namespace Relay.BulkSenderService.Queues
 
             concurrentQueue.TryDequeue(out message);
 
+            if (message != null)
+            {
+                message.DequeueTime = DateTime.UtcNow;
+            }
+
             return message;
         }
 
         public void SendMessage(IBulkQueueMessage bulkQueueMessage)
         {
+            bulkQueueMessage.EnqueueTime = DateTime.UtcNow;
+
             concurrentQueue.Enqueue(bulkQueueMessage);
         }
 

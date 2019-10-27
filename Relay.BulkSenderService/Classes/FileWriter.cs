@@ -25,11 +25,11 @@ namespace Relay.BulkSenderService.Classes
             }
         }
 
-        public void WriteLine(string text)
+        public void WriteFile(string text)
         {
             lock (locker)
             {
-                using (FileStream fileStream = new FileStream(filePath, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Read))
+                using (FileStream fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None))
                 using (StreamWriter streamWriter = new StreamWriter(fileStream))
                 {
                     streamWriter.Write(text);

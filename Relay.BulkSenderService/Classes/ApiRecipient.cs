@@ -12,6 +12,8 @@ namespace Relay.BulkSenderService.Classes
         public string Key { get; set; }
         public List<RecipientAttachment> Attachments { get; set; }
         public string Message { get; set; }
+        public DateTime EnqueueTime { get; set; }
+        public DateTime DequeueTime { get; set; }
 
         public ApiRecipient()
         {
