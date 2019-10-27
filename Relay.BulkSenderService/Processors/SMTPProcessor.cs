@@ -15,7 +15,7 @@ namespace Relay.BulkSenderService.Processors
     {
         public SMTPProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
-        protected override string Process(IUserConfiguration user, string localFileName, ProcessResult result)
+        protected virtual string Process(IUserConfiguration user, string localFileName, ProcessResult result)
         {
             if (string.IsNullOrEmpty(localFileName))
             {

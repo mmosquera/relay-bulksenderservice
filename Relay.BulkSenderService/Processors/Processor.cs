@@ -25,7 +25,7 @@ namespace Relay.BulkSenderService.Processors
         protected int _lineNumber;
         private DateTime _lastStatusDate;
         private const int STATUS_MINUTES = 5;
-
+        private const int WAITING_CONSUMERS_TIME = 1000;
         private IBulkQueue outboundQueue;
         private FileWriter resultFileWriter;
         private FileWriter errorFileWriter;
@@ -35,7 +35,6 @@ namespace Relay.BulkSenderService.Processors
         private int _total;
         private int _processed;
         private object _lockProcessed;
-
 
         public Processor(ILog logger, IConfiguration configuration)
         {
@@ -67,8 +66,9 @@ namespace Relay.BulkSenderService.Processors
 
                 if (!ValidateCredentials(user.Credentials))
                 {
-                    //result.AddLoginError();
-                    //return null;
+                    _logger.Error($"Error to authenticate user:{user.Name}");
+                    return;
+                    //result.AddLoginError();                    
                 }
 
                 SendStartProcessEmail(fileName, user);
@@ -101,7 +101,9 @@ namespace Relay.BulkSenderService.Processors
 
                 AddReportForFile(resultFileName, user);
 
-                _logger.Debug($"Finish processing {fileName} for User:{user.Name} in Thread:{Thread.CurrentThread.ManagedThreadId}");
+                RemoveQueues(fileName, user);
+
+                _logger.Debug($"Finish processing {fileName} for User:{user.Name} in Thread:{Thread.CurrentThread.ManagedThreadId} at:{DateTime.UtcNow}");
             }
             catch (Exception e)
             {
@@ -114,6 +116,30 @@ namespace Relay.BulkSenderService.Processors
                     Name = user.Name
                 };
                 OnProcessFinished(args);
+            }
+        }
+
+        private void RemoveQueues(string fileName, IUserConfiguration userConfiguration)
+        {
+            var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+
+            try
+            {
+                string errorFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.error.tmp";
+                if (File.Exists(errorFileName))
+                {
+                    File.Delete(errorFileName);
+                }
+
+                string resultFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.result.tmp";
+                if (File.Exists(resultFileName))
+                {
+                    File.Delete(resultFileName);
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"Error trying to delete queues for file:{fileName} -- {e}");
             }
         }
 
@@ -152,21 +178,27 @@ namespace Relay.BulkSenderService.Processors
                         continue;
                     }
 
+                    string resultLine = string.Empty;
+
                     NewProcessResult processResult = results.FirstOrDefault(x => x.LineNumber == lineNumber);
 
                     if (processResult != null)
                     {
-                        line = $"{line}{templateConfiguration.FieldSeparator}{processResult.GetResultLine(templateConfiguration.FieldSeparator)}";
+                        resultLine = $"{processResult.GetResultLine(templateConfiguration.FieldSeparator)}";
                     }
 
                     ProcessError processError = errors.FirstOrDefault(x => x.LineNumber == lineNumber);
 
                     if (processError != null)
                     {
-                        line = $"line{templateConfiguration.FieldSeparator}{processError.GetErrorLineResult(templateConfiguration.FieldSeparator)}";
+                        resultLine = $"{processError.GetErrorLineResult(templateConfiguration.FieldSeparator)}";
                     }
 
-                    sent.AppendLine(line);
+                    if (!string.IsNullOrEmpty(resultLine))
+                    {
+                        line = $"{line}{templateConfiguration.FieldSeparator}{resultLine}";
+                        sent.AppendLine(line);
+                    }
 
                     lineNumber++;
                 }
@@ -248,7 +280,7 @@ namespace Relay.BulkSenderService.Processors
 
                     string jsonContent = JsonConvert.SerializeObject(filesStatus, Formatting.None);
 
-                    fileWriter.WriteLine(jsonContent);
+                    fileWriter.WriteFile(jsonContent);
 
                     _lastStatusDate = DateTime.Now;
                 }
@@ -256,6 +288,7 @@ namespace Relay.BulkSenderService.Processors
                 Thread.Sleep(5000);
             }
         }
+
         private List<ProcessError> GetErrorsFromFile(IUserConfiguration userConfiguration, string fileName)
         {
             var errors = new List<ProcessError>();
@@ -363,7 +396,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected abstract string Process(IUserConfiguration user, string file, ProcessResult result);
+        //protected abstract string Process(IUserConfiguration user, string file, ProcessResult result);
 
         protected virtual void OnProcessFinished(ThreadEventArgs args)
         {
@@ -735,14 +768,14 @@ namespace Relay.BulkSenderService.Processors
             }
             catch (Exception e)
             {
-                //cacheo error;
+                _logger.Error($"PROCESS FILE ERROR: {e}");
             }
             finally
             {
                 //espero que se vacie la lista y aviso con el cancel token a los consumidores.
                 while (outboundQueue.GetCount() > 0)
                 {
-                    Thread.Sleep(1000);
+                    Thread.Sleep(WAITING_CONSUMERS_TIME);
                 }
 
                 tokenSource.Cancel();
@@ -783,7 +816,10 @@ namespace Relay.BulkSenderService.Processors
                 LineNumber = e.LineNumber,
                 ResourceId = e.ResourceId,
                 DeliveryLink = e.DeliveryLink,
-                Message = e.Message
+                Message = e.Message,
+                EnqueueTime = e.EnqueueTime,
+                DequeueTime = e.DequeueTime,
+                DeliveryTime = e.DeliveryTime
             };
 
             string text = JsonConvert.SerializeObject(processResult, Formatting.None);
