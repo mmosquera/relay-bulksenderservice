@@ -17,7 +17,7 @@ namespace Relay.BulkSenderService.Processors
     {
         public APIProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
-        protected override string Process(IUserConfiguration user, string localFileName, ProcessResult result)
+        protected string Process(IUserConfiguration user, string localFileName, ProcessResult result)
         {
             string resultsFileName = string.Empty;
 
@@ -205,37 +205,37 @@ namespace Relay.BulkSenderService.Processors
 
         }
 
-        public bool ValidateCredentials(CredentialsConfiguration credentials)
-        {
-            var restClient = new RestClient(_configuration.BaseUrl);
+        //public bool ValidateCredentials(CredentialsConfiguration credentials)
+        //{
+        //    var restClient = new RestClient(_configuration.BaseUrl);
 
-            string resource = _configuration.AccountUrl.Replace("{AccountId}", credentials.AccountId.ToString());
-            var request = new RestRequest(resource, Method.GET);
+        //    string resource = _configuration.AccountUrl.Replace("{AccountId}", credentials.AccountId.ToString());
+        //    var request = new RestRequest(resource, Method.GET);
 
-            string value = $"token {credentials.ApiKey}";
-            request.AddHeader("Authorization", value);
+        //    string value = $"token {credentials.ApiKey}";
+        //    request.AddHeader("Authorization", value);
 
-            try
-            {
-                IRestResponse response = restClient.Execute(request);
+        //    try
+        //    {
+        //        IRestResponse response = restClient.Execute(request);
 
-                if (response.StatusCode == HttpStatusCode.OK)
-                {
-                    return true;
-                }
-                else
-                {
-                    string result = response.Content;
-                    _logger.Info($"Validate credentials fail:{result}");
-                    return false;
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.Error($"Validate credentials error -- {e}");
-                return false;
-            }
-        }
+        //        if (response.StatusCode == HttpStatusCode.OK)
+        //        {
+        //            return true;
+        //        }
+        //        else
+        //        {
+        //            string result = response.Content;
+        //            _logger.Info($"Validate credentials fail:{result}");
+        //            return false;
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        _logger.Error($"Validate credentials error -- {e}");
+        //        return false;
+        //    }
+        //}
 
         protected virtual void AddRecipient(List<ApiRecipient> recipients, ApiRecipient recipient)
         {

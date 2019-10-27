@@ -3,6 +3,7 @@ using Relay.BulkSenderService.Configuration;
 using Relay.BulkSenderService.Queues;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -58,8 +59,6 @@ namespace Relay.BulkSenderService.Processors
 
                 List<CustomHeader> customHeaders = GetHeaderList(headersArray);
 
-                var recipients = new List<ApiRecipient>();
-                
                 var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
                 string attachmentsFolder = filePathHelper.GetAttachmentsFilesFolder(Path.GetFileNameWithoutExtension(localFileName));
 
@@ -75,7 +74,7 @@ namespace Relay.BulkSenderService.Processors
 
                     string[] recipientArray = GetDataLine(line, templateConfiguration);
 
-                    ApiRecipient recipient = GetRecipient(recipients, recipientArray, templateConfiguration);
+                    ApiRecipient recipient = GetRecipient(recipientArray, templateConfiguration);
                     recipient.LineNumber = lineNumber;
 
                     if (recipientArray.Length == headersArray.Length)
@@ -107,7 +106,7 @@ namespace Relay.BulkSenderService.Processors
 
                     if (!recipient.HasError)
                     {
-                        queue.SendMessage(recipient);
+                        EnqueueRecipient(recipient, queue);
                     }
                     else
                     {
@@ -124,7 +123,15 @@ namespace Relay.BulkSenderService.Processors
 
                     lineNumber++;
                 }
+
+                //TODO: mejorar esto que se usa solo para key iterator.
+                ForceEnqueue(queue);
             }
+        }
+
+        protected virtual void ForceEnqueue(IBulkQueue queue)
+        {
+
         }
 
         protected virtual string GetHeaderLine(string line, ITemplateConfiguration templateConfiguration)
@@ -164,7 +171,7 @@ namespace Relay.BulkSenderService.Processors
             return line.Split(templateConfiguration.FieldSeparator);
         }
 
-        protected virtual ApiRecipient GetRecipient(List<ApiRecipient> recipients, string[] recipientArray, ITemplateConfiguration templateConfiguration)
+        protected virtual ApiRecipient GetRecipient(string[] recipientArray, ITemplateConfiguration templateConfiguration)
         {
             return new ApiRecipient();
         }
@@ -266,6 +273,11 @@ namespace Relay.BulkSenderService.Processors
             {
                 recipient.FillAttachments(attachmentsList);
             }
+        }
+
+        protected virtual void EnqueueRecipient(ApiRecipient recipient, IBulkQueue queue)
+        {
+            queue.SendMessage(recipient);
         }
 
         protected virtual void CustomRecipientValidations(ApiRecipient recipient, string[] recipientArray, string line, char fielSeparator)

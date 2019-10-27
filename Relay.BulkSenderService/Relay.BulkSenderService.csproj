@@ -285,6 +285,7 @@
     <Compile Include="Configuration\UserSMTPConfiguration.cs" />
     <Compile Include="Classes\FTPHelper.cs" />
     <Compile Include="Processors\ApiProcessorConsumer.cs" />
+    <Compile Include="Processors\ApiProcessorKeyIteratorProducer.cs" />
     <Compile Include="Processors\ApiProcessorProducer.cs" />
     <Compile Include="Processors\ApiProcessorProvincia.cs" />
     <Compile Include="Processors\PreProcess\BasicPreProcessor.cs" />
@@ -334,6 +335,7 @@
     <Compile Include="Queues\IQueueProducer.cs" />
     <Compile Include="Queues\MemoryBulkQueue.cs" />
     <Compile Include="Queues\QueueErrorEventArgs.cs" />
+    <Compile Include="Queues\QueueEventArgs.cs" />
     <Compile Include="Queues\QueueResultEventArgs.cs" />
     <Compile Include="Queues\WindowsBulkQueue.cs" />
     <Compile Include="Reports\BanorteResumeReportProcessor.cs" />
