@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 
 namespace Relay.BulkSenderService.Processors.Status
 {
@@ -30,6 +31,13 @@ namespace Relay.BulkSenderService.Processors.Status
 
                 foreach (string fileName in statusFiles)
                 {
+                    int retries = 0;
+                    while (IsFileInUse(fileName) && retries < 3)
+                    {
+                        Thread.Sleep(TIME_WAIT_FILE);
+                        retries++;
+                    }
+
                     using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
                     using (var streamReader = new StreamReader(fileStream))
                     {
@@ -64,7 +72,7 @@ namespace Relay.BulkSenderService.Processors.Status
             }
             catch (Exception e)
             {
-                _logger.Error($"Ftp Status error:{e}");
+                _logger.Error($"FTP STATUS PROCESSOR ERROR:{e}");
             }
         }
     }
