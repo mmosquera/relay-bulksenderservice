@@ -5,7 +5,6 @@ using Relay.BulkSenderService.Queues;
 using RestSharp;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Threading;
 
@@ -26,11 +25,6 @@ namespace Relay.BulkSenderService.Processors
 
         public void ProcessMessages(IUserConfiguration userConfiguration, IBulkQueue queue, CancellationToken cancellationToken)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
             IBulkQueueMessage bulkQueueMessage = null;
 
             while (true)
@@ -57,7 +51,7 @@ namespace Relay.BulkSenderService.Processors
         {
             int count = 0;
 
-            while (count < configuration.DeliveryRetryCount && !SendEmailTest(configuration.BaseUrl, configuration.TemplateUrl, userConfiguration.Credentials.ApiKey, userConfiguration.Credentials.AccountId, apiRecipient))
+            while (count < configuration.DeliveryRetryCount && !SendEmail(configuration.BaseUrl, configuration.TemplateUrl, userConfiguration.Credentials.ApiKey, userConfiguration.Credentials.AccountId, apiRecipient))
             {
                 count++;
 
@@ -79,6 +73,9 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
+        /// <summary>
+        /// To test emails without API
+        /// </summary>        
         protected bool SendEmailTest(string baseUrl, string templateUrl, string apiKey, int accountId, ApiRecipient apiRecipient)
         {
             dynamic dinObject = DictionaryToObject(apiRecipient.Fields);
@@ -152,99 +149,101 @@ namespace Relay.BulkSenderService.Processors
             return true;
         }
 
-        //protected bool SendEmail(string baseUrl, string templateUrl, string apiKey, int accountId, ApiRecipient apiRecipient)
-        //{
-        //    var restClient = new RestClient(baseUrl);
+        protected bool SendEmail(string baseUrl, string templateUrl, string apiKey, int accountId, ApiRecipient apiRecipient)
+        {
+            var restClient = new RestClient(baseUrl);
 
-        //    string resource = templateUrl.Replace("{AccountId}", accountId.ToString()).Replace("{TemplateId}", apiRecipient.TemplateId);
-        //    var request = new RestRequest(resource, Method.POST);
+            string resource = templateUrl.Replace("{AccountId}", accountId.ToString()).Replace("{TemplateId}", apiRecipient.TemplateId);
+            var request = new RestRequest(resource, Method.POST);
 
-        //    string value = $"token {apiKey}";
-        //    request.AddHeader("Authorization", value);
+            string value = $"token {apiKey}";
+            request.AddHeader("Authorization", value);
 
-        //    dynamic dinObject = DictionaryToObject(apiRecipient.Fields);
+            dynamic dinObject = DictionaryToObject(apiRecipient.Fields);
 
-        //    object body = new
-        //    {
-        //        from_name = apiRecipient.FromName,
-        //        from_email = apiRecipient.FromEmail,
-        //        recipients = new[] { new
-        //        {
-        //            email = apiRecipient.ToEmail,
-        //            name = apiRecipient.ToName,
-        //            type = "to"
-        //        }},
-        //        reply_to = !string.IsNullOrEmpty(apiRecipient.ReplyToEmail) ? new
-        //        {
-        //            email = apiRecipient.ReplyToEmail,
-        //            name = apiRecipient.ReplyToName
-        //        } : null,
-        //        model = dinObject,
-        //        attachments = apiRecipient.Attachments
-        //    };
+            object body = new
+            {
+                from_name = apiRecipient.FromName,
+                from_email = apiRecipient.FromEmail,
+                recipients = new[] { new
+                {
+                    email = apiRecipient.ToEmail,
+                    name = apiRecipient.ToName,
+                    type = "to"
+                }},
+                reply_to = !string.IsNullOrEmpty(apiRecipient.ReplyToEmail) ? new
+                {
+                    email = apiRecipient.ReplyToEmail,
+                    name = apiRecipient.ReplyToName
+                } : null,
+                model = dinObject,
+                attachments = apiRecipient.Attachments
+            };
 
-        //    request.RequestFormat = DataFormat.Json;
-        //    request.AddJsonBody(body);
+            request.RequestFormat = DataFormat.Json;
+            request.AddJsonBody(body);
 
-        //    try
-        //    {
-        //        var sw = new Stopwatch();
-        //        sw.Start();
-        //        IRestResponse response = restClient.Execute(request);
-        //        sw.Stop();
-        //        _logger.Info($"{apiRecipient.LineNumber} -- mensaje encolado en: {sw.ElapsedMilliseconds}ms.");
+            try
+            {
+                IRestResponse response = restClient.Execute(request);
 
-        //        if (response.IsSuccessful)
-        //        {
-        //            var apiResult = JsonConvert.DeserializeObject<ApiResponse>(response.Content);
+                if (response.IsSuccessful)
+                {
+                    var apiResult = JsonConvert.DeserializeObject<ApiResponse>(response.Content);
 
-        //            // TODO: Improvements to add results.
-        //            string linkResult = apiResult._links.Count >= 2 ? apiResult._links[1].href : string.Empty;
+                    // TODO: Improvements to add results.
+                    string linkResult = apiResult._links.Count >= 2 ? apiResult._links[1].href : string.Empty;
 
-        //            var resultEventArgs = new QueueResultEventArgs()
-        //            {
-        //                LineNumber = apiRecipient.LineNumber,
-        //                Message = "Send OK",
-        //                ResourceId = apiResult.createdResourceId.ToString(),
-        //                DeliveryLink = linkResult
-        //            };
-        //            ResultEvent?.Invoke(this, resultEventArgs);
-        //        }
-        //        else
-        //        {
-        //            dynamic jsonResult = JsonConvert.DeserializeObject(response.Content);
+                    var resultEventArgs = new QueueResultEventArgs()
+                    {
+                        LineNumber = apiRecipient.LineNumber,
+                        Message = "Send OK",
+                        ResourceId = apiResult.createdResourceId.ToString(),
+                        DeliveryLink = linkResult,
+                        EnqueueTime = apiRecipient.EnqueueTime,
+                        DequeueTime = apiRecipient.DequeueTime,
+                        DeliveryTime = DateTime.UtcNow
+                    };
+                    ResultEvent?.Invoke(this, resultEventArgs);
+                }
+                else
+                {
+                    dynamic jsonResult = JsonConvert.DeserializeObject(response.Content);
 
-        //            //_logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
-        //            //result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());                    
+                    //_logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
+                    //result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());                    
 
-        //            var errorEventArgs = new QueueErrorEventArgs()
-        //            {
-        //                LineNumber = apiRecipient.LineNumber,
-        //                Type = ErrorType.DELIVERY,
-        //                Date = DateTime.UtcNow,
-        //                Message = jsonResult.title,
-        //                Description = jsonResult.ToString()
-        //            };
-        //            ErrorEvent?.Invoke(this, errorEventArgs);
-        //        }
+                    var errorEventArgs = new QueueErrorEventArgs()
+                    {
+                        LineNumber = apiRecipient.LineNumber,
+                        Type = ErrorType.DELIVERY,
+                        Date = DateTime.UtcNow,
+                        Message = jsonResult.title,
+                        Description = jsonResult.ToString(),
+                        EnqueueTime = apiRecipient.EnqueueTime,
+                        DequeueTime = apiRecipient.DequeueTime,
+                        DeliveryTime = DateTime.UtcNow
+                    };
+                    ErrorEvent?.Invoke(this, errorEventArgs);
+                }
 
-        //        return true;
+                return true;
 
-        //        /************TO TEST PROCESS WITHOUT SEND***********************/
-        //        //string resourceid = "fakeresourceid";
-        //        //string linrkResult = "deliverylink";
-        //        //string sentResult = $"Send OK{separator}{resourceid}{separator}{linkResult}";
-        //        //recipient.AddSentResult(separator, sentResult);
-        //        //Thread.Sleep(200);
-        //        /***************************************************************/
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        _logger.Error($"SENDING ERROR to: {apiRecipient.ToEmail}. -- {e}");
+                /************TO TEST PROCESS WITHOUT SEND***********************/
+                //string resourceid = "fakeresourceid";
+                //string linrkResult = "deliverylink";
+                //string sentResult = $"Send OK{separator}{resourceid}{separator}{linkResult}";
+                //recipient.AddSentResult(separator, sentResult);
+                //Thread.Sleep(200);
+                /***************************************************************/
+            }
+            catch (Exception e)
+            {
+                _logger.Error($"SENDING ERROR to: {apiRecipient.ToEmail}. -- {e}");
 
-        //        return false;
-        //    }
-        //}
+                return false;
+            }
+        }
 
         private dynamic DictionaryToObject(Dictionary<string, object> dictionary)
         {

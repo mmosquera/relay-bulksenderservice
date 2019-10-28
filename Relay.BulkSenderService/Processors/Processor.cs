@@ -75,8 +75,8 @@ namespace Relay.BulkSenderService.Processors
 
                 _total = GetTotalLines(user, fileName);
 
-                //estos custom los paso al preprocess para el que corresponda.
-                //CustomProcessForFile(localFileName, user.Name, templateConfiguration);                
+                //TODO: estos custom los paso al preprocess para el que corresponda.
+                //CustomProcessForFile(localFileName, user.Name, templateConfiguration);                                 
 
                 ProcessFile(user, fileName);
 
@@ -244,11 +244,6 @@ namespace Relay.BulkSenderService.Processors
 
         private void UpdateStatusFile(string fileName, IUserConfiguration user, CancellationToken cancellationToken)
         {
-            if (cancellationToken.IsCancellationRequested)
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-            }
-
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
             string statusFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.status.tmp";
 
@@ -733,15 +728,23 @@ namespace Relay.BulkSenderService.Processors
             string resultFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.result.tmp";
             resultFileWriter = new FileWriter(resultFileName);
 
+            //get for retries.
+            //TODO: capaz que hay que hacer algo especial para los retries.
+            List<ProcessError> errorList = GetErrorsFromFile(userConfiguration, fileName);
+            List<NewProcessResult> resultList = GetResultsFromFile(userConfiguration, fileName);
+
             IQueueProducer producer = GetProducer();
 
             //TODO sacar threads count from userConfiguration.
             List<IQueueConsumer> consumers = GetConsumers(userConfiguration.MaxThreadsNumber);
 
-            var tokenSource = new CancellationTokenSource();
-            CancellationToken cancellationToken = tokenSource.Token;
+            var consumerCancellationTokenSource = new CancellationTokenSource();
+            CancellationToken consumerCancellationToken = consumerCancellationTokenSource.Token;
 
-            Task taskProducer = Task.Factory.StartNew(() => producer.GetMessages(userConfiguration, outboundQueue, fileName, cancellationToken), cancellationToken);
+            var statusCancellationTokenSource = new CancellationTokenSource();
+            CancellationToken statusCancellationToken = statusCancellationTokenSource.Token;
+
+            Task taskProducer = Task.Factory.StartNew(() => producer.GetMessages(userConfiguration, outboundQueue, errorList, resultList, fileName, consumerCancellationToken));
 
             //descomentar para probar el productor
             //taskProducer.Wait();
@@ -750,16 +753,14 @@ namespace Relay.BulkSenderService.Processors
 
             foreach (IQueueConsumer queueConsumer in consumers)
             {
-                Task taskConsumer = Task.Factory.StartNew(() => queueConsumer.ProcessMessages(userConfiguration, outboundQueue, cancellationToken), cancellationToken);
+                Task taskConsumer = Task.Factory.StartNew(() => queueConsumer.ProcessMessages(userConfiguration, outboundQueue, consumerCancellationToken));
 
                 tasks.Add(taskConsumer);
             }
 
             if (userConfiguration.Status != null)
             {
-                Task taskStatus = Task.Factory.StartNew(() => UpdateStatusFile(fileName, userConfiguration, cancellationToken), cancellationToken);
-
-                tasks.Add(taskStatus);
+                Task taskStatus = Task.Factory.StartNew(() => UpdateStatusFile(fileName, userConfiguration, statusCancellationToken));
             }
 
             try
@@ -778,9 +779,11 @@ namespace Relay.BulkSenderService.Processors
                     Thread.Sleep(WAITING_CONSUMERS_TIME);
                 }
 
-                tokenSource.Cancel();
+                consumerCancellationTokenSource.Cancel();
 
                 Task.WaitAll(tasks.ToArray());
+
+                statusCancellationTokenSource.Cancel();
             }
         }
 

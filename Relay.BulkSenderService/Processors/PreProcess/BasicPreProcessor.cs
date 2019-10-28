@@ -84,6 +84,11 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
         protected void GetAttachmentFile(string attachmentFile, string originalFile, IUserConfiguration userConfiguration)
         {
+            if (string.IsNullOrEmpty(attachmentFile))
+            {
+                return;
+            }
+
             var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
 
             string subFolder = Path.GetFileNameWithoutExtension(originalFile);

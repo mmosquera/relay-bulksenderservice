@@ -3,7 +3,6 @@ using Relay.BulkSenderService.Configuration;
 using Relay.BulkSenderService.Queues;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -20,7 +19,7 @@ namespace Relay.BulkSenderService.Processors
             _configuration = configuration;
         }
 
-        public void GetMessages(IUserConfiguration userConfiguration, IBulkQueue queue, string localFileName, CancellationToken cancellationToken)
+        public void GetMessages(IUserConfiguration userConfiguration, IBulkQueue queue, List<ProcessError> errors, List<NewProcessResult> results, string localFileName, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(localFileName))
             {
@@ -106,7 +105,7 @@ namespace Relay.BulkSenderService.Processors
 
                     if (!recipient.HasError)
                     {
-                        EnqueueRecipient(recipient, queue);
+                        EnqueueRecipient(recipient, queue, errors, results);
                     }
                     else
                     {
@@ -125,11 +124,11 @@ namespace Relay.BulkSenderService.Processors
                 }
 
                 //TODO: mejorar esto que se usa solo para key iterator.
-                ForceEnqueue(queue);
+                ForceEnqueue(queue, errors, results);
             }
         }
 
-        protected virtual void ForceEnqueue(IBulkQueue queue)
+        protected virtual void ForceEnqueue(IBulkQueue queue, List<ProcessError> errors, List<NewProcessResult> results)
         {
 
         }
@@ -275,9 +274,12 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected virtual void EnqueueRecipient(ApiRecipient recipient, IBulkQueue queue)
+        protected virtual void EnqueueRecipient(ApiRecipient recipient, IBulkQueue queue, List<ProcessError> errors, List<NewProcessResult> results)
         {
-            queue.SendMessage(recipient);
+            if (!errors.Exists(x => x.LineNumber == recipient.LineNumber) && !results.Exists(x => x.LineNumber == recipient.LineNumber))
+            {
+                queue.SendMessage(recipient);
+            }
         }
 
         protected virtual void CustomRecipientValidations(ApiRecipient recipient, string[] recipientArray, string line, char fielSeparator)

@@ -35,9 +35,12 @@ namespace Relay.BulkSenderService.Processors
             return customHeaders;
         }
 
-        protected override void EnqueueRecipient(ApiRecipient recipient, IBulkQueue queue)
+        protected override void EnqueueRecipient(ApiRecipient recipient, IBulkQueue queue, List<ProcessError> errors, List<NewProcessResult> results)
         {
-            if (_lastRecipient != null && !_lastRecipient.Key.Equals(recipient.Key, StringComparison.InvariantCulture))
+            if (_lastRecipient != null &&
+                !_lastRecipient.Key.Equals(recipient.Key, StringComparison.InvariantCulture) &&
+                !errors.Exists(x => x.LineNumber == _lastRecipient.LineNumber) &&
+                !results.Exists(x => x.LineNumber == _lastRecipient.LineNumber))
             {
                 queue.SendMessage(_lastRecipient);
             }
@@ -110,9 +113,11 @@ namespace Relay.BulkSenderService.Processors
             return new ApiRecipient();
         }
 
-        protected override void ForceEnqueue(IBulkQueue queue)
+        protected override void ForceEnqueue(IBulkQueue queue, List<ProcessError> errors, List<NewProcessResult> results)
         {
-            if (_lastRecipient != null)
+            if (_lastRecipient != null &&
+                !errors.Exists(x => x.LineNumber == _lastRecipient.LineNumber) &&
+                !results.Exists(x => x.LineNumber == _lastRecipient.LineNumber))
             {
                 queue.SendMessage(_lastRecipient);
             }
