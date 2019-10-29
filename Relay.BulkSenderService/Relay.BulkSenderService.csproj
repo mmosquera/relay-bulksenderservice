@@ -288,6 +288,11 @@
     <Compile Include="Processors\ApiProcessorKeyIteratorProducer.cs" />
     <Compile Include="Processors\ApiProcessorProducer.cs" />
     <Compile Include="Processors\ApiProcessorProvincia.cs" />
+    <Compile Include="Processors\Errors\DownloadError.cs" />
+    <Compile Include="Processors\Errors\Error.cs" />
+    <Compile Include="Processors\Errors\IError.cs" />
+    <Compile Include="Processors\Errors\LoginError.cs" />
+    <Compile Include="Processors\Errors\ProcessError.cs" />
     <Compile Include="Processors\PreProcess\BasicPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\GirePreProcessor.cs" />
     <Compile Include="Processors\PreProcess\HipotecarioPreProcessor.cs" />
