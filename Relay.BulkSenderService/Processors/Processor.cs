@@ -1,7 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
-using Relay.BulkSenderService.Configuration.Alerts;
+using Relay.BulkSenderService.Processors.Errors;
 using Relay.BulkSenderService.Queues;
 using RestSharp;
 using System;
@@ -20,8 +20,6 @@ namespace Relay.BulkSenderService.Processors
     {
         protected readonly ILog _logger;
         protected readonly IConfiguration _configuration;
-        protected bool _stop;
-        protected object _lockStop;
         protected int _lineNumber;
         private DateTime _lastStatusDate;
         private const int STATUS_MINUTES = 5;
@@ -35,13 +33,12 @@ namespace Relay.BulkSenderService.Processors
         private int _total;
         private int _processed;
         private object _lockProcessed;
+        private int _errors;
 
         public Processor(ILog logger, IConfiguration configuration)
         {
             _logger = logger;
             _configuration = configuration;
-            _stop = false;
-            _lockStop = new object();
             _lineNumber = 0;
             _lastStatusDate = DateTime.MinValue;
             _total = 0;
@@ -55,10 +52,6 @@ namespace Relay.BulkSenderService.Processors
 
             IUserConfiguration user = ((ThreadStateInfo)stateInfo).User;
             string fileName = ((ThreadStateInfo)stateInfo).FileName;
-            var result = new ProcessResult()
-            {
-                FileName = Path.GetFileNameWithoutExtension(fileName)
-            };
 
             try
             {
@@ -67,8 +60,10 @@ namespace Relay.BulkSenderService.Processors
                 if (!ValidateCredentials(user.Credentials))
                 {
                     _logger.Error($"Error to authenticate user:{user.Name}");
+
+                    new LoginError(_configuration).SendErrorEmail(fileName, user.Alerts);
+
                     return;
-                    //result.AddLoginError();                    
                 }
 
                 SendStartProcessEmail(fileName, user);
@@ -86,7 +81,7 @@ namespace Relay.BulkSenderService.Processors
 
                 var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
-                UploadErrosToFTP(result.ErrorFileName, user, ftpHelper);
+                UploadErrosToFTP(errorFileName, user, ftpHelper);
 
                 UploadResultsToFTP(resultFileName, user, ftpHelper);
 
@@ -94,10 +89,8 @@ namespace Relay.BulkSenderService.Processors
                 {
                     File.Move(fileName, fileName.Replace(".processing", ".processed"));
 
-                    SendEndProcessEmail(fileName, user, result);
+                    SendEndProcessEmail(fileName, user);
                 }
-
-                SendErrorEmail(fileName, user.Alerts, result);
 
                 AddReportForFile(resultFileName, user);
 
@@ -180,7 +173,7 @@ namespace Relay.BulkSenderService.Processors
 
                     string resultLine = string.Empty;
 
-                    NewProcessResult processResult = results.FirstOrDefault(x => x.LineNumber == lineNumber);
+                    ProcessResult processResult = results.FirstOrDefault(x => x.LineNumber == lineNumber);
 
                     if (processResult != null)
                     {
@@ -312,9 +305,9 @@ namespace Relay.BulkSenderService.Processors
             return errors;
         }
 
-        private List<NewProcessResult> GetResultsFromFile(IUserConfiguration userConfiguration, string fileName)
+        private List<ProcessResult> GetResultsFromFile(IUserConfiguration userConfiguration, string fileName)
         {
-            var results = new List<NewProcessResult>();
+            var results = new List<ProcessResult>();
 
             var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
             string resultQueue = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.result.tmp";
@@ -331,7 +324,7 @@ namespace Relay.BulkSenderService.Processors
                 {
                     string line = streamReader.ReadLine();
 
-                    NewProcessResult processResult = JsonConvert.DeserializeObject<NewProcessResult>(line);
+                    ProcessResult processResult = JsonConvert.DeserializeObject<ProcessResult>(line);
 
                     results.Add(processResult);
                 }
@@ -390,8 +383,6 @@ namespace Relay.BulkSenderService.Processors
                 }
             }
         }
-
-        //protected abstract string Process(IUserConfiguration user, string file, ProcessResult result);
 
         protected virtual void OnProcessFinished(ThreadEventArgs args)
         {
@@ -515,7 +506,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        private void SendEndProcessEmail(string file, IUserConfiguration user, ProcessResult result)
+        private void SendEndProcessEmail(string file, IUserConfiguration user)
         {
             if (user.Alerts != null && user.Alerts.GetEndAlert() != null && user.Alerts.Emails.Count > 0)
             {
@@ -531,7 +522,7 @@ namespace Relay.BulkSenderService.Processors
                     mailMessage.To.Add(email);
                 }
 
-                mailMessage.Body = GetBody(file, user, result);
+                mailMessage.Body = GetBody(file, user, _processed, _errors);
                 mailMessage.IsBodyHtml = true;
 
                 List<string> attachments = GetAttachments(file, user.Name);
@@ -576,66 +567,9 @@ namespace Relay.BulkSenderService.Processors
 
         protected abstract List<string> GetAttachments(string file, string userName);
 
-        protected abstract string GetBody(string file, IUserConfiguration user, ProcessResult result);
+        protected abstract string GetBody(string file, IUserConfiguration user, int processedCount, int errorsCount);
 
-        private void SendErrorEmail(string file, AlertConfiguration alerts, ProcessResult result)
-        {
-            if (result.Errors.Any(x => x.Type != ErrorType.PROCESS)
-                && alerts != null
-                && alerts.GetErrorAlert() != null
-                && alerts.Emails.Count > 0)
-            {
-                var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
-                smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
-
-                var mailMessage = new MailMessage()
-                {
-                    Subject = alerts.GetErrorAlert().Subject,
-                    From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support")
-                };
-                foreach (string email in alerts.Emails)
-                {
-                    mailMessage.To.Add(email);
-                }
-
-                string body = null;
-
-                ProcessError error = result.Errors.FirstOrDefault(x => x.Type != ErrorType.PROCESS);
-
-                switch (error.Type)
-                {
-                    case ErrorType.DOWNLOAD:
-                        body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorDownload.es.html");
-                        break;
-                    case ErrorType.LOGIN:
-                        body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorLogin.es.html");
-                        break;
-                    case ErrorType.UNZIP:
-                        body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorUnzip.es.html");
-                        break;
-                    case ErrorType.REPEATED:
-                        body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorRepeated.es.html");
-                        break;
-                }
-
-                if (string.IsNullOrEmpty(body))
-                {
-                    body = "Error processing file {{filename}}.";
-                }
-
-                mailMessage.Body = body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file));
-                mailMessage.IsBodyHtml = true;
-
-                try
-                {
-                    smtpClient.Send(mailMessage);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"Error trying to send error process email -- {e}");
-                }
-            }
-        }
+        //body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorUnzip.es.html");        
 
         private void UploadErrosToFTP(string fileName, IUserConfiguration user, IFtpHelper ftpHelper)
         {
@@ -671,7 +605,7 @@ namespace Relay.BulkSenderService.Processors
             return errorsFilePath;
         }
 
-        protected int GetTotalLines(IUserConfiguration userConfiguration, string fileName)
+        private int GetTotalLines(IUserConfiguration userConfiguration, string fileName)
         {
             if (!File.Exists(fileName))
             {
@@ -708,14 +642,6 @@ namespace Relay.BulkSenderService.Processors
             return totalLines;
         }
 
-        protected bool MustStop()
-        {
-            lock (_lockStop)
-            {
-                return _stop;
-            }
-        }
-
         private void ProcessFile(IUserConfiguration userConfiguration, string fileName)
         {
             outboundQueue = new MemoryBulkQueue();
@@ -731,7 +657,7 @@ namespace Relay.BulkSenderService.Processors
             //get for retries.
             //TODO: capaz que hay que hacer algo especial para los retries.
             List<ProcessError> errorList = GetErrorsFromFile(userConfiguration, fileName);
-            List<NewProcessResult> resultList = GetResultsFromFile(userConfiguration, fileName);
+            List<ProcessResult> resultList = GetResultsFromFile(userConfiguration, fileName);
 
             IQueueProducer producer = GetProducer();
 
@@ -809,12 +735,13 @@ namespace Relay.BulkSenderService.Processors
             lock (_lockProcessed)
             {
                 _processed++;
+                _errors++;
             }
         }
 
         protected void Processor_ResultEvent(object sender, QueueResultEventArgs e)
         {
-            var processResult = new NewProcessResult()
+            var processResult = new ProcessResult()
             {
                 LineNumber = e.LineNumber,
                 ResourceId = e.ResourceId,
@@ -835,7 +762,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        public bool ValidateCredentials(CredentialsConfiguration credentials)
+        private bool ValidateCredentials(CredentialsConfiguration credentials)
         {
             var restClient = new RestClient(_configuration.BaseUrl);
 

@@ -34,6 +34,7 @@ namespace Relay.BulkSenderService.Processors
 
                     foreach (IUserConfiguration user in _users)
                     {
+                        //TODO: ver si todavia se usa
                         CleanStatusFile(user);
 
                         var filePathHelper = new FilePathHelper(_configuration, user.Name);
@@ -177,7 +178,7 @@ namespace Relay.BulkSenderService.Processors
                 FileName = destFileName,
                 User = user,
                 Handler = new EventHandler<ThreadEventArgs>(ProcessFinishedHandler),
-                StatusEventHandler = new EventHandler<StatusEventArgs>(StatusEventHandler)
+                //StatusEventHandler = new EventHandler<StatusEventArgs>(StatusEventHandler)
             };
 
             IncrementUserThreadCount(user.Name);
@@ -194,101 +195,6 @@ namespace Relay.BulkSenderService.Processors
             _logger.Debug($"Finish to process ThreadId:{Thread.CurrentThread.ManagedThreadId} for user:{args.Name}");
 
             DecrementUserThreadCount(args.Name);
-        }
-
-        private void StatusEventHandler(object sender, StatusEventArgs args)
-        {
-            try
-            {
-
-                object locker;
-                lock (_lockFileObj)
-                {
-                    if (_lockFiles.ContainsKey(args.UserName))
-                    {
-                        locker = _lockFiles[args.UserName];
-                    }
-                    else
-                    {
-                        locker = new object();
-                        _lockFiles.Add(args.UserName, locker);
-                    }
-                }
-
-                lock (locker)
-                {
-                    string userFolder = new FilePathHelper(_configuration, args.UserName).GetUserFolder();
-                    string file = $"status.{args.UserName}.json";
-
-                    string fileName = $@"{userFolder}\{file}";
-
-                    UserFilesStatus userFilesStatus;
-                    string jsonContent;
-
-                    if (File.Exists(fileName))
-                    {
-                        using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                        using (var streamReader = new StreamReader(fileStream))
-                        {
-                            jsonContent = streamReader.ReadToEnd();
-                        }
-
-                        userFilesStatus = JsonConvert.DeserializeObject<UserFilesStatus>(jsonContent);
-
-                        FileStatus fileStatus = userFilesStatus.Files.FirstOrDefault(x => x.FileName == args.Status.FileName);
-
-                        if (fileStatus != null)
-                        {
-                            fileStatus.Processed = args.Status.GetProcessedCount();
-                            fileStatus.Finished = args.Status.Finished;
-                            fileStatus.LastUpdate = DateTime.UtcNow;
-                        }
-                        else
-                        {
-                            userFilesStatus.Files.Add(new FileStatus()
-                            {
-                                FileName = args.Status.FileName,
-                                Total = args.Status.GetTotalCount(),
-                                Processed = args.Status.GetProcessedCount(),
-                                Finished = args.Status.Finished,
-                                LastUpdate = DateTime.UtcNow
-                            });
-                        }
-                    }
-                    else
-                    {
-                        userFilesStatus = new UserFilesStatus()
-                        {
-                            UserName = args.UserName,
-                            Files = new List<FileStatus>() {
-                            new FileStatus()
-                            {
-                                FileName = args.Status.FileName,
-                                Total = args.Status.GetTotalCount(),
-                                Processed = args.Status.GetProcessedCount(),
-                                Finished = args.Status.Finished,
-                                LastUpdate = DateTime.UtcNow
-                            }
-                        }
-                        };
-                    }
-
-                    jsonContent = JsonConvert.SerializeObject(userFilesStatus);
-
-                    using (var fileStream = new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
-                    {
-                        fileStream.SetLength(0);
-                        using (var streamWriter = new StreamWriter(fileStream))
-                        {
-                            streamWriter.WriteLine(jsonContent);
-                        }
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                _logger.Error($"Problems to update processor status:{e}");
-            }
         }
 
         private void IncrementUserThreadCount(string user)
@@ -338,18 +244,11 @@ namespace Relay.BulkSenderService.Processors
         public IUserConfiguration User { get; set; }
         public string FileName { get; set; }
         public EventHandler<ThreadEventArgs> Handler { get; set; }
-        public EventHandler<StatusEventArgs> StatusEventHandler { get; set; }
     }
 
     public class ThreadEventArgs : EventArgs
     {
         public string Name { get; set; }
-    }
-
-    public class StatusEventArgs : EventArgs
-    {
-        public string UserName { get; set; }
-        public ProcessResult Status { get; set; }
     }
 
     public class UserFilesStatus

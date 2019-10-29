@@ -1,4 +1,4 @@
-﻿using Relay.BulkSenderService.Classes;
+﻿using Relay.BulkSenderService.Processors.Errors;
 using System;
 
 namespace Relay.BulkSenderService.Queues

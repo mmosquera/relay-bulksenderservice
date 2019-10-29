@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using Relay.BulkSenderService.Processors.Errors;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,16 +13,12 @@ namespace Relay.BulkSenderService.Processors
     {
         private const int MINUTES_TO_WRITE = 5;
         private Dictionary<string, DateTime> _nextRun;
-        private List<string> _pausedUsers;
-        private object _lockObject;
 
         //TODO: Add methods to start or stop paused for user;
 
         public FtpMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _nextRun = new Dictionary<string, DateTime>();
-            _pausedUsers = new List<string>();
-            _lockObject = new object();
         }
 
         public void ReadFtpFiles()
@@ -34,12 +31,6 @@ namespace Relay.BulkSenderService.Processors
 
                     foreach (IUserConfiguration user in _users)
                     {
-                        if (IsProcessPaused(user.Name))
-                        {
-                            _logger.Info($"The process is temporally paused for user {user.Name}");
-                            continue;
-                        }
-
                         if (!IsValidInterval(user.Name))
                         {
                             continue;
@@ -65,15 +56,6 @@ namespace Relay.BulkSenderService.Processors
                 }
 
                 Thread.Sleep(_configuration.FtpListInterval);
-            }
-        }
-
-        private bool IsProcessPaused(string user)
-        {
-            string key = user.ToUpper();
-            lock (_lockObject)
-            {
-                return _pausedUsers.Contains(key);
             }
         }
 
@@ -106,17 +88,12 @@ namespace Relay.BulkSenderService.Processors
                         continue;
                     }
 
-                    var result = new ProcessResult();
-                    result.ErrorFileName = GetErrorsFileName(file, user);
-
                     string ftpFileName = $"{folder}/{file}";
 
-                    if (GetFileFromFTP(ftpFileName, user, ftpHelper, result))
+                    if (GetFileFromFTP(ftpFileName, user, ftpHelper))
                     {
                         RemoveFileFromFtp(ftpFileName, user, ftpHelper);
                     }
-
-                    //TODO: add upload error process
                 }
             }));
             threadDownload.Start();
@@ -188,7 +165,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        private bool GetFileFromFTP(string file, IUserConfiguration user, IFtpHelper ftpHelper, ProcessResult result)
+        private bool GetFileFromFTP(string file, IUserConfiguration user, IFtpHelper ftpHelper)
         {
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
@@ -198,7 +175,7 @@ namespace Relay.BulkSenderService.Processors
 
             string localFileName;
 
-            if (!ValidateFile(file, filePathHelper, result, allowDuplicates, out localFileName))
+            if (!ValidateFile(file, filePathHelper, allowDuplicates, out localFileName))
             {
                 return false;
             }
@@ -214,7 +191,7 @@ namespace Relay.BulkSenderService.Processors
             }
             else
             {
-                result.AddDownloadError($"Problems to download the file {file}.");
+                new DownloadError(_configuration).SendErrorEmail(file, user.Alerts);
 
                 _logger.Error($"Download problems with file {file}.");
 
@@ -224,7 +201,7 @@ namespace Relay.BulkSenderService.Processors
             return true;
         }
 
-        private bool ValidateFile(string file, FilePathHelper filePathHelper, ProcessResult result, bool allowDuplicates, out string localFileName)
+        private bool ValidateFile(string file, FilePathHelper filePathHelper, bool allowDuplicates, out string localFileName)
         {
             string fileName = Path.GetFileName(file);
             string name = Path.GetFileNameWithoutExtension(fileName);
@@ -269,7 +246,10 @@ namespace Relay.BulkSenderService.Processors
             if (File.Exists($@"{processedPath}\{name}.processed"))
             {
                 _logger.Error($"The file {fileName} is already processed.");
-                result.AddRepeatedError($"The file {Path.GetFileName(fileName)} is already processed.");
+
+                //TODO: pasar usuario como parametro
+                new FileRepeatedError(_configuration).SendErrorEmail(fileName, null);
+
                 return false;
             }
 
@@ -284,22 +264,6 @@ namespace Relay.BulkSenderService.Processors
 
                 ftpHelper.DeleteFile(file);
             }
-        }
-
-        private string GetErrorsFileName(string file, IUserConfiguration user)
-        {
-            string errorsFilePath = null;
-
-            if (user.Errors != null)
-            {
-                var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
-                string errorsPath = filePathHelper.GetResultsFilesFolder();
-
-                errorsFilePath = $@"{errorsPath}\{user.Errors.Name.GetReportName(file, errorsPath)}";
-            }
-
-            return errorsFilePath;
-        }
+        }        
     }
 }
