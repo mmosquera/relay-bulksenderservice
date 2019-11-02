@@ -157,9 +157,17 @@ namespace Relay.BulkSenderService.Reports
 
             if (File.Exists(fileName))
             {
-                using (FileStream fileStream = File.OpenRead(fileName))
+                try
                 {
-                    return new BinaryFormatter().Deserialize(fileStream) as Dictionary<int, DBStatusDto>;
+                    using (FileStream fileStream = File.OpenRead(fileName))
+                    {
+                        return new BinaryFormatter().Deserialize(fileStream) as Dictionary<int, DBStatusDto>;
+                    }
+                }
+                catch (Exception e)
+                {
+                    //si esta dañado lo borro y se genera de nuevo.
+                    File.Delete(fileName);
                 }
             }
 
