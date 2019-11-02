@@ -1,5 +1,4 @@
-﻿using Newtonsoft.Json;
-using Relay.BulkSenderService.Classes;
+﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
 using System;
 using System.Collections.Generic;
@@ -13,15 +12,11 @@ namespace Relay.BulkSenderService.Processors
     {
         private Dictionary<string, int> _threadsCount;
         private object _lockObj;
-        private Dictionary<string, object> _lockFiles;
-        private object _lockFileObj;
 
         public LocalMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _threadsCount = new Dictionary<string, int>();
             _lockObj = new object();
-            _lockFiles = new Dictionary<string, object>();
-            _lockFileObj = new object();
         }
 
         public void ReadLocalFiles()
@@ -34,9 +29,6 @@ namespace Relay.BulkSenderService.Processors
 
                     foreach (IUserConfiguration user in _users)
                     {
-                        //TODO: ver si todavia se usa
-                        CleanStatusFile(user);
-
                         var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
                         List<string> retryFiles = Directory.GetFiles(filePathHelper.GetRetriesFilesFolder(), "*.retry").ToList();
@@ -66,75 +58,6 @@ namespace Relay.BulkSenderService.Processors
                 }
 
                 Thread.Sleep(_configuration.LocalFilesInterval);
-            }
-        }
-
-        private void CleanStatusFile(IUserConfiguration user)
-        {
-            if (user.Status == null)
-            {
-                return;
-            }
-
-            object locker;
-            lock (_lockFileObj)
-            {
-                if (_lockFiles.ContainsKey(user.Name))
-                {
-                    locker = _lockFiles[user.Name];
-                }
-                else
-                {
-                    locker = new object();
-                    _lockFiles.Add(user.Name, locker);
-                }
-            }
-
-            lock (locker)
-            {
-                string userFolder = new FilePathHelper(_configuration, user.Name).GetUserFolder();
-                string file = $"status.{user.Name}.json";
-
-                string fileName = $@"{userFolder}\{file}";
-
-                UserFilesStatus userFilesStatus;
-                string jsonContent;
-
-                if (File.Exists(fileName))
-                {
-                    using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
-                    using (var streamReader = new StreamReader(fileStream))
-                    {
-                        jsonContent = streamReader.ReadToEnd();
-                    }
-
-                    userFilesStatus = JsonConvert.DeserializeObject<UserFilesStatus>(jsonContent);
-
-                    int count = userFilesStatus.Files.Count;
-
-                    if (count == 0)
-                    {
-                        return;
-                    }
-
-                    userFilesStatus.Files.RemoveAll(x => x.Finished && DateTime.UtcNow.Subtract(x.LastUpdate).TotalHours > user.Status.LastViewingHours);
-
-                    if (count == userFilesStatus.Files.Count)
-                    {
-                        return;
-                    }
-
-                    jsonContent = JsonConvert.SerializeObject(userFilesStatus);
-
-                    using (var fileStream = new FileStream(fileName, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read))
-                    {
-                        fileStream.SetLength(0);
-                        using (var streamWriter = new StreamWriter(fileStream))
-                        {
-                            streamWriter.WriteLine(jsonContent);
-                        }
-                    }
-                }
             }
         }
 
@@ -177,8 +100,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 FileName = destFileName,
                 User = user,
-                Handler = new EventHandler<ThreadEventArgs>(ProcessFinishedHandler),
-                //StatusEventHandler = new EventHandler<StatusEventArgs>(StatusEventHandler)
+                Handler = new EventHandler<ThreadEventArgs>(ProcessFinishedHandler)
             };
 
             IncrementUserThreadCount(user.Name);
@@ -249,12 +171,6 @@ namespace Relay.BulkSenderService.Processors
     public class ThreadEventArgs : EventArgs
     {
         public string Name { get; set; }
-    }
-
-    public class UserFilesStatus
-    {
-        public string UserName { get; set; }
-        public List<FileStatus> Files { get; set; }
     }
 
     public class FileStatus
