@@ -10,10 +10,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 {
     public class PreProcessWorker : BaseWorker
     {
-        public PreProcessWorker(ILog logger, IConfiguration configuration) : base(logger, configuration)
-        {
-
-        }
+        public PreProcessWorker(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
         public void Process()
         {

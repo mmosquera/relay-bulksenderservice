@@ -34,7 +34,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             }
         }
 
-        private void DownloadAttachments(string fileName, IUserConfiguration userConfiguration)
+        protected virtual void DownloadAttachments(string fileName, IUserConfiguration userConfiguration)
         {
             ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(fileName);
 

@@ -8,9 +8,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 {
     public class GirePreProcessor : PreProcessor
     {
-        public GirePreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration)
-        {
-        }
+        public GirePreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
         public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
         {

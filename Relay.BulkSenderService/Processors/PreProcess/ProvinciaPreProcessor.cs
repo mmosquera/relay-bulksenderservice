@@ -1,6 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
@@ -8,14 +9,14 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 {
     public class ProvinciaPreProcessor : PreProcessor
     {
-        private const int LINESXFILE = 50000;
-        private const string SPLIT = "split"; //TODO: get from user configuration for split processor.
+        private readonly Dictionary<string, string> _hostedFiles;
 
         public ProvinciaPreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
+            _hostedFiles = new Dictionary<string, string>();
         }
 
-        public void ProcessFile(string fileName, string userName)
+        public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
         {
             if (!File.Exists(fileName) || !Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
             {
@@ -24,8 +25,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
             try
             {
-
-                var filePathHelper = new FilePathHelper(_configuration, userName);
+                var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
 
                 string name = Path.GetFileNameWithoutExtension(fileName);
 
@@ -41,37 +41,27 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 File.Delete(fileName);
 
                 string baproFile = $@"{unzipFolder}\EnviosControl.txt";
+
                 if (File.Exists(baproFile))
                 {
-                    int totalLines = 0;
-                    int index = 1;
-                    string processingFile = $@"{downloadFolder}\{Path.GetFileNameWithoutExtension(fileName)}.{SPLIT}{index.ToString("00")}.processing";
+                    string processingFile = $@"{downloadFolder}\{Path.GetFileNameWithoutExtension(fileName)}.processing";
 
                     var stringBuilder = new StringBuilder();
+
+                    ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(fileName);
 
                     using (var streamReader = new StreamReader(baproFile))
                     {
                         string line;
                         while ((line = streamReader.ReadLine()) != null)
                         {
+                            string[] lineArray = line.Split(templateConfiguration.FieldSeparator);
+
+                            lineArray[5] = GetHostedFilePath(fileName, lineArray[5], unzipFolder);
+
+                            line = string.Join(templateConfiguration.FieldSeparator.ToString(), lineArray);
+
                             stringBuilder.AppendLine(line);
-
-                            totalLines++;
-
-                            if (totalLines >= LINESXFILE)
-                            {
-                                totalLines = 0;
-                                index++;
-
-                                using (var streamWriter = new StreamWriter(processingFile))
-                                {
-                                    streamWriter.Write(stringBuilder.ToString());
-                                }
-
-                                processingFile = $@"{downloadFolder}\{Path.GetFileNameWithoutExtension(fileName)}.{SPLIT}{index.ToString("00")}.processing";
-
-                                stringBuilder.Clear();
-                            }
                         }
                     }
 
@@ -79,20 +69,49 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                     {
                         using (var streamWriter = new StreamWriter(processingFile))
                         {
-                            streamWriter.Write(stringBuilder.ToString());
+                            streamWriter.Write(stringBuilder);
                         }
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 _logger.Error($"ERROR PROVINCIA PRE PROCESSOR: {e}");
             }
         }
 
-        public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
+        private string GetHostedFilePath(string fileName, string imageFileName, string imageFileFolder)
         {
-            throw new NotImplementedException();
+            string publicPath = string.Empty;
+
+            if (string.IsNullOrEmpty(imageFileName))
+            {
+                imageFileName = "pieza.jpg";
+            }
+
+            if (_hostedFiles.ContainsKey(imageFileName))
+            {
+                publicPath = _hostedFiles[imageFileName];
+            }
+            else
+            {
+                string imageFilePath = $@"{imageFileFolder}\{imageFileName}";
+
+                if (File.Exists(imageFilePath))
+                {
+                    string hostedFileName = $"{Path.GetFileNameWithoutExtension(fileName)}.{imageFileName}_{DateTime.Now.Ticks}{Path.GetExtension(imageFileName)}";
+
+                    string privatePath = $@"{_configuration.UserFiles}\{hostedFileName}";
+
+                    File.Copy(imageFilePath, privatePath);
+
+                    publicPath = $"{_configuration.PublicUserFiles}/{hostedFileName}";
+
+                    _hostedFiles.Add(imageFileName, publicPath);
+                }
+            }
+
+            return publicPath;
         }
     }
 }

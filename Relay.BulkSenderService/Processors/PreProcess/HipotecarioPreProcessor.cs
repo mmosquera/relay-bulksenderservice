@@ -8,9 +8,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 {
     public class HipotecarioPreProcessor : PreProcessor
     {
-        public HipotecarioPreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration)
-        {
-        }
+        public HipotecarioPreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
         public void ProcessFile(string fileName, string userName)
         {
