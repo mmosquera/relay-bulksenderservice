@@ -1,22 +1,21 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
-using System.Linq;
+using Relay.BulkSenderService.Queues;
 
 namespace Relay.BulkSenderService.Processors
 {
-    public class APIProcessorCustomHeaderBancor : APIProcessorCustomHeader
+    public class APIProcessorCustomHeaderBancor : APIProcessor
     {
         public APIProcessorCustomHeaderBancor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
         }
 
-        protected override string[] GetDataLine(string line, ITemplateConfiguration templateConfiguration)
+        protected override IQueueProducer GetProducer()
         {
-            string[] lineArray = line.Split(templateConfiguration.FieldSeparator);
+            IQueueProducer producer = new ApiProcessorCustomHeaderBancorProducer(_configuration);
+            producer.ErrorEvent += Processor_ErrorEvent;
 
-            var charsToTrim = new char[] { '"' };
-
-            return lineArray.Select(x => x.Trim().Trim(charsToTrim)).ToArray();
+            return producer;
         }
     }
 }

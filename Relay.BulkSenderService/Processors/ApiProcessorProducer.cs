@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using Relay.BulkSenderService.Processors.Errors;
 using Relay.BulkSenderService.Queues;
 using System;
 using System.Collections.Generic;
@@ -19,7 +20,7 @@ namespace Relay.BulkSenderService.Processors
             _configuration = configuration;
         }
 
-        public void GetMessages(IUserConfiguration userConfiguration, IBulkQueue queue, List<ProcessError> errors, List<NewProcessResult> results, string localFileName, CancellationToken cancellationToken)
+        public void GetMessages(IUserConfiguration userConfiguration, IBulkQueue queue, List<ProcessError> errors, List<ProcessResult> results, string localFileName, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(localFileName))
             {
@@ -128,7 +129,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected virtual void ForceEnqueue(IBulkQueue queue, List<ProcessError> errors, List<NewProcessResult> results)
+        protected virtual void ForceEnqueue(IBulkQueue queue, List<ProcessError> errors, List<ProcessResult> results)
         {
 
         }
@@ -254,7 +255,6 @@ namespace Relay.BulkSenderService.Processors
                 {
                     string localAttachement = $@"{attachmentsFolder}\{attachName}";
 
-
                     if (!string.IsNullOrEmpty(localAttachement))
                     {
                         attachmentsList.Add(localAttachement);
@@ -274,7 +274,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected virtual void EnqueueRecipient(ApiRecipient recipient, IBulkQueue queue, List<ProcessError> errors, List<NewProcessResult> results)
+        protected virtual void EnqueueRecipient(ApiRecipient recipient, IBulkQueue queue, List<ProcessError> errors, List<ProcessResult> results)
         {
             if (!errors.Exists(x => x.LineNumber == recipient.LineNumber) && !results.Exists(x => x.LineNumber == recipient.LineNumber))
             {

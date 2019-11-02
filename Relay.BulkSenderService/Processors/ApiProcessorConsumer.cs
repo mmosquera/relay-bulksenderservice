@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using Relay.BulkSenderService.Processors.Errors;
 using Relay.BulkSenderService.Queues;
 using RestSharp;
 using System;

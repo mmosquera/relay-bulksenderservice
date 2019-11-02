@@ -17,185 +17,183 @@ namespace Relay.BulkSenderService.Processors
     {
         public APIProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
-        protected string Process(IUserConfiguration user, string localFileName, ProcessResult result)
-        {
-            string resultsFileName = string.Empty;
+        //protected string Process(IUserConfiguration user, string localFileName)
+        //{
+        //    string resultsFileName = string.Empty;
 
-            if (string.IsNullOrEmpty(localFileName))
-            {
-                return null;
-            }
+        //    if (string.IsNullOrEmpty(localFileName))
+        //    {
+        //        return null;
+        //    }
 
-            try
-            {
-                if (!ValidateCredentials(user.Credentials))
-                {
-                    result.AddLoginError();
-                    return null;
-                }
+        //    try
+        //    {
+        //        if (!ValidateCredentials(user.Credentials))
+        //        {
+        //            //result.AddLoginError();
+        //            return null;
+        //        }
 
-                string fileName = Path.GetFileName(localFileName);
+        //        string fileName = Path.GetFileName(localFileName);
 
-                resultsFileName = GetResultsFileName(fileName, (UserApiConfiguration)user);
+        //        resultsFileName = GetResultsFileName(fileName, (UserApiConfiguration)user);
 
-                ITemplateConfiguration templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(fileName);
+        //        ITemplateConfiguration templateConfiguration = ((UserApiConfiguration)user).GetTemplateConfiguration(fileName);
 
-                if (templateConfiguration == null)
-                {
-                    result.AddProcessError(_lineNumber, "There is not template configuration.");
-                    return resultsFileName;
-                }
+        //        if (templateConfiguration == null)
+        //        {
+        //            //result.AddProcessError(_lineNumber, "There is not template configuration.");
+        //            return resultsFileName;
+        //        }
 
-                //int totalLines = templateConfiguration.HasHeaders ? GetTotalLines(localFileName) - 1 : GetTotalLines(localFileName);
-                int totalLines = 0;
-                result.SetTotalCount(totalLines);
+        //        //int totalLines = templateConfiguration.HasHeaders ? GetTotalLines(localFileName) - 1 : GetTotalLines(localFileName);
+        //        int totalLines = 0;
+        //        //result.SetTotalCount(totalLines);
 
-                CustomProcessForFile(localFileName, user.Name, templateConfiguration);
+        //        CustomProcessForFile(localFileName, user.Name, templateConfiguration);
 
-                _logger.Debug($"Start to read file {localFileName}");
+        //        _logger.Debug($"Start to read file {localFileName}");
 
-                using (StreamReader reader = new StreamReader(localFileName))
-                {
-                    string line = null;
+        //        using (StreamReader reader = new StreamReader(localFileName))
+        //        {
+        //            string line = null;
 
-                    if (templateConfiguration.HasHeaders)
-                    {
-                        line = reader.ReadLine();
-                        _lineNumber++;
-                    }
+        //            if (templateConfiguration.HasHeaders)
+        //            {
+        //                line = reader.ReadLine();
+        //                _lineNumber++;
+        //            }
 
-                    string headers = GetHeaderLine(line, templateConfiguration);
+        //            string headers = GetHeaderLine(line, templateConfiguration);
 
-                    if (string.IsNullOrEmpty(headers))
-                    {
-                        result.AddProcessError(_lineNumber, "The file has not headers.");
-                        return resultsFileName;
-                    }
+        //            if (string.IsNullOrEmpty(headers))
+        //            {
+        //                //result.AddProcessError(_lineNumber, "The file has not headers.");
+        //                return resultsFileName;
+        //            }
 
-                    AddExtraHeaders(resultsFileName, headers, templateConfiguration.FieldSeparator);
+        //            AddExtraHeaders(resultsFileName, headers, templateConfiguration.FieldSeparator);
 
-                    string[] headersArray = headers.Split(templateConfiguration.FieldSeparator);
+        //            string[] headersArray = headers.Split(templateConfiguration.FieldSeparator);
 
-                    List<CustomHeader> customHeaders = GetHeaderList(headersArray);
+        //            List<CustomHeader> customHeaders = GetHeaderList(headersArray);
 
-                    string templateId = templateConfiguration != null ? templateConfiguration.TemplateId : null;
+        //            string templateId = templateConfiguration != null ? templateConfiguration.TemplateId : null;
 
-                    var recipients = new List<ApiRecipient>();
+        //            var recipients = new List<ApiRecipient>();
 
-                    _logger.Debug($"Start process {fileName}");
+        //            _logger.Debug($"Start process {fileName}");
 
-                    while (!reader.EndOfStream)
-                    {
-                        if (MustStop())
-                        {
-                            _logger.Debug($"Stop send process file:{fileName} for user:{user.Name}");
-                            // TODO: add generate retry file
+        //            while (!reader.EndOfStream)
+        //            {
+        //                if (MustStop())
+        //                {
+        //                    _logger.Debug($"Stop send process file:{fileName} for user:{user.Name}");
+        //                    // TODO: add generate retry file
 
-                            return null;
-                        }
+        //                    return null;
+        //                }
 
-                        line = reader.ReadLine();
+        //                line = reader.ReadLine();
 
-                        if (string.IsNullOrEmpty(line))
-                        {
-                            _lineNumber++;
-                            continue;
-                        }
+        //                if (string.IsNullOrEmpty(line))
+        //                {
+        //                    _lineNumber++;
+        //                    continue;
+        //                }
 
-                        string[] recipientArray = GetDataLine(line, templateConfiguration);
+        //                string[] recipientArray = GetDataLine(line, templateConfiguration);
 
-                        ApiRecipient recipient = GetRecipient(recipients, recipientArray, templateConfiguration);
-                        recipient.LineNumber = _lineNumber;
+        //                ApiRecipient recipient = GetRecipient(recipients, recipientArray, templateConfiguration);
+        //                recipient.LineNumber = _lineNumber;
 
-                        result.AddProcessed();
+        //                //result.AddProcessed();
 
-                        if (recipientArray.Length == headersArray.Length)
-                        {
-                            FillRecipientBasics(recipient, recipientArray, templateConfiguration.Fields, templateId);
-                            FillRecipientCustoms(recipient, recipientArray, customHeaders, templateConfiguration.Fields);
-                            //TODO : move to consumer
-                            FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, (UserApiConfiguration)user, result);
-                            HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user, result);
+        //                if (recipientArray.Length == headersArray.Length)
+        //                {
+        //                    FillRecipientBasics(recipient, recipientArray, templateConfiguration.Fields, templateId);
+        //                    FillRecipientCustoms(recipient, recipientArray, customHeaders, templateConfiguration.Fields);
+        //                    //TODO : move to consumer
+        //                    FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, (UserApiConfiguration)user);
+        //                    HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user);
 
-                            if (!recipient.HasError && !string.IsNullOrEmpty(recipient.TemplateId) && !string.IsNullOrEmpty(recipient.ToEmail))
-                            {
-                                recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{Constants.PROCESS_RESULT_OK}";
-                            }
-                            else if (string.IsNullOrEmpty(recipient.TemplateId))
-                            {
-                                string message = "Has not template to send.";
-                                recipient.HasError = true;
-                                recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
-                                _logger.Error(message);
-                                result.AddProcessError(_lineNumber, message);
-                            }
-                            else if (string.IsNullOrEmpty(recipient.ToEmail))
-                            {
-                                string message = "Has not email to send.";
-                                recipient.HasError = true;
-                                recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
-                                _logger.Error(message);
-                                result.AddProcessError(_lineNumber, message);
-                            }
-                        }
-                        else
-                        {
-                            string message = "The fields number is different to headers number.";
-                            recipient.HasError = true;
+        //                    if (!recipient.HasError && !string.IsNullOrEmpty(recipient.TemplateId) && !string.IsNullOrEmpty(recipient.ToEmail))
+        //                    {
+        //                        recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{Constants.PROCESS_RESULT_OK}";
+        //                    }
+        //                    else if (string.IsNullOrEmpty(recipient.TemplateId))
+        //                    {
+        //                        string message = "Has not template to send.";
+        //                        recipient.HasError = true;
+        //                        recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
+        //                        _logger.Error(message);
+        //                        //result.AddProcessError(_lineNumber, message);
+        //                    }
+        //                    else if (string.IsNullOrEmpty(recipient.ToEmail))
+        //                    {
+        //                        string message = "Has not email to send.";
+        //                        recipient.HasError = true;
+        //                        recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
+        //                        _logger.Error(message);
+        //                        //result.AddProcessError(_lineNumber, message);
+        //                    }
+        //                }
+        //                else
+        //                {
+        //                    string message = "The fields number is different to headers number.";
+        //                    recipient.HasError = true;
 
-                            string newLine = "";
-                            for (int i = 0; i < headersArray.Length; i++)
-                            {
-                                if (recipientArray.Length > i)
-                                {
-                                    newLine += $"{recipientArray[i]}{templateConfiguration.FieldSeparator}";
-                                }
-                                else
-                                {
-                                    newLine += $"{templateConfiguration.FieldSeparator}";
-                                }
-                            }
+        //                    string newLine = "";
+        //                    for (int i = 0; i < headersArray.Length; i++)
+        //                    {
+        //                        if (recipientArray.Length > i)
+        //                        {
+        //                            newLine += $"{recipientArray[i]}{templateConfiguration.FieldSeparator}";
+        //                        }
+        //                        else
+        //                        {
+        //                            newLine += $"{templateConfiguration.FieldSeparator}";
+        //                        }
+        //                    }
 
-                            recipient.ResultLine = $"{newLine}{message}";
+        //                    recipient.ResultLine = $"{newLine}{message}";
 
-                            _logger.Error(message);
-                            result.AddProcessError(_lineNumber, message);
-                        }
+        //                    _logger.Error(message);
+        //                    //result.AddProcessError(_lineNumber, message);
+        //                }
 
-                        CustomRecipientValidations(recipient, recipientArray, line, templateConfiguration.FieldSeparator, result);
+        //                CustomRecipientValidations(recipient, recipientArray, line, templateConfiguration.FieldSeparator);
 
-                        //TODO: replace for add to queue
-                        AddRecipient(recipients, recipient);
+        //                //TODO: replace for add to queue
+        //                AddRecipient(recipients, recipient);
 
-                        if (recipients.Count() == _configuration.BulkEmailCount)
-                        {
-                            SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, result, user.Credentials, user.DeliveryDelay);
-                        }
+        //                if (recipients.Count() == _configuration.BulkEmailCount)
+        //                {
+        //                    SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, user.Credentials, user.DeliveryDelay);
+        //                }
 
-                        _lineNumber++;
-                    }
+        //                _lineNumber++;
+        //            }
 
-                    SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, result, user.Credentials, user.DeliveryDelay);
+        //            SendRecipientsList(recipients, resultsFileName, templateConfiguration.FieldSeparator, user.Credentials, user.DeliveryDelay);
 
-                    result.Finished = true;
-                }
-            }
-            catch (Exception e)
-            {
-                // TODO check if needed return null.                
-                result.AddUnexpectedError(_lineNumber);
-                _logger.Error($"ERROR on process file {localFileName} -- {e}");
-            }
+        //            //result.Finished = true;
+        //        }
+        //    }
+        //    catch (Exception e)
+        //    {
+        //        // TODO check if needed return null.                
+        //        //result.AddUnexpectedError(_lineNumber);
+        //        _logger.Error($"ERROR on process file {localFileName} -- {e}");
+        //    }
 
-            return resultsFileName;
-        }
+        //    return resultsFileName;
+        //}
 
-        protected virtual void HostFile(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string line, string originalFileName, IUserConfiguration user, ProcessResult result)
-        {
+        //protected virtual void HostFile(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string line, string originalFileName, IUserConfiguration user, ProcessResult result)
 
-        }
-
-        protected virtual void CustomRecipientValidations(ApiRecipient recipient, string[] recipientArray, string line, char fielSeparator, ProcessResult result)
+        //protected virtual void CustomRecipientValidations(ApiRecipient recipient, string[] recipientArray, string line, char fielSeparator, ProcessResult result)
+        protected virtual void CustomRecipientValidations(ApiRecipient recipient, string[] recipientArray, string line, char fielSeparator)
         {
 
         }
@@ -204,38 +202,6 @@ namespace Relay.BulkSenderService.Processors
         {
 
         }
-
-        //public bool ValidateCredentials(CredentialsConfiguration credentials)
-        //{
-        //    var restClient = new RestClient(_configuration.BaseUrl);
-
-        //    string resource = _configuration.AccountUrl.Replace("{AccountId}", credentials.AccountId.ToString());
-        //    var request = new RestRequest(resource, Method.GET);
-
-        //    string value = $"token {credentials.ApiKey}";
-        //    request.AddHeader("Authorization", value);
-
-        //    try
-        //    {
-        //        IRestResponse response = restClient.Execute(request);
-
-        //        if (response.StatusCode == HttpStatusCode.OK)
-        //        {
-        //            return true;
-        //        }
-        //        else
-        //        {
-        //            string result = response.Content;
-        //            _logger.Info($"Validate credentials fail:{result}");
-        //            return false;
-        //        }
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        _logger.Error($"Validate credentials error -- {e}");
-        //        return false;
-        //    }
-        //}
 
         protected virtual void AddRecipient(List<ApiRecipient> recipients, ApiRecipient recipient)
         {
@@ -259,17 +225,17 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected void SendEmailWithRetries(string apiKey, int accountId, ApiRecipient recipient, char separator, ProcessResult result)
+        protected void SendEmailWithRetries(string apiKey, int accountId, ApiRecipient recipient, char separator)
         {
             int count = 0;
 
-            while (count < _configuration.DeliveryRetryCount && !SendEmail(apiKey, accountId, recipient, separator, result))
+            while (count < _configuration.DeliveryRetryCount && !SendEmail(apiKey, accountId, recipient, separator))
             {
                 count++;
 
                 if (count == _configuration.DeliveryRetryCount)
                 {
-                    result.AddUnexpectedError(recipient.LineNumber);
+                    //result.AddUnexpectedError(recipient.LineNumber);
                 }
                 else
                 {
@@ -278,7 +244,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected bool SendEmail(string apiKey, int accountId, ApiRecipient recipient, char separator, ProcessResult result)
+        protected bool SendEmail(string apiKey, int accountId, ApiRecipient recipient, char separator)
         {
             var restClient = new RestClient(_configuration.BaseUrl);
 
@@ -330,7 +296,7 @@ namespace Relay.BulkSenderService.Processors
 
                     _logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
 
-                    result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());
+                    //result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());
 
                     recipient.AddSentResult(separator, $"Send Fail ({jsonResult.title})");
                 }
@@ -353,7 +319,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected virtual void SendRecipientsList(List<ApiRecipient> recipients, string resultsFileName, char separator, ProcessResult result, CredentialsConfiguration credentials, int deliveryDelay)
+        protected virtual void SendRecipientsList(List<ApiRecipient> recipients, string resultsFileName, char separator, CredentialsConfiguration credentials, int deliveryDelay)
         {
             using (StreamWriter sw = new StreamWriter(resultsFileName, true))
             {
@@ -361,7 +327,7 @@ namespace Relay.BulkSenderService.Processors
                 {
                     if (!recipient.HasError)
                     {
-                        SendEmailWithRetries(credentials.ApiKey, credentials.AccountId, recipient, separator, result);
+                        SendEmailWithRetries(credentials.ApiKey, credentials.AccountId, recipient, separator);
 
                         Thread.Sleep(deliveryDelay);
                     }
@@ -474,7 +440,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        protected virtual void FillRecipientAttachments(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, UserApiConfiguration user, ProcessResult result)
+        protected virtual void FillRecipientAttachments(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, UserApiConfiguration user)
         {
             var attachmentsList = new List<string>();
 
@@ -496,7 +462,7 @@ namespace Relay.BulkSenderService.Processors
                         recipient.HasError = true;
                         recipient.ResultLine = $"{line}{templateConfiguration.FieldSeparator}{message}";
                         _logger.Error(message);
-                        result.AddProcessError(_lineNumber, message);
+                        //result.AddProcessError(_lineNumber, message);
                     }
                 }
             }
@@ -512,14 +478,14 @@ namespace Relay.BulkSenderService.Processors
             return new ApiRecipient();
         }
 
-        protected override string GetBody(string file, IUserConfiguration user, ProcessResult result)
+        protected override string GetBody(string file, IUserConfiguration user, int processedCount, int errorsCount)
         {
             string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\FinishProcess.es.html");
 
             return body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file))
                 .Replace("{{time}}", user.GetUserDateTime().DateTime.ToString())
-                .Replace("{{processed}}", result.GetProcessedCount().ToString())
-                .Replace("{{errors}}", result.GetErrorsCount().ToString());
+                .Replace("{{processed}}", processedCount.ToString())
+                .Replace("{{errors}}", errorsCount.ToString());
         }
 
         protected override List<string> GetAttachments(string file, string usarName)
