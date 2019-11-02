@@ -15,7 +15,8 @@ namespace Relay.BulkSenderService.Processors
     {
         public SMTPProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
-        protected virtual string Process(IUserConfiguration user, string localFileName, ProcessResult result)
+        //protected virtual string Process(IUserConfiguration user, string localFileName, ProcessResult result)
+        protected virtual string Process(IUserConfiguration user, string localFileName)
         {
             if (string.IsNullOrEmpty(localFileName))
             {
@@ -56,10 +57,10 @@ namespace Relay.BulkSenderService.Processors
                         string[] recipientArray = line.Split(templateConfiguration.FieldSeparator);
 
                         //result.ProcessedCount++;
-                        result.AddProcessed();
+                        //result.AddProcessed();
 
                         SMTPRecipient recipient = CreateRecipientFromString(recipientArray, line, ((UserSMTPConfiguration)user).TemplateFilePath, ((UserSMTPConfiguration)user).AttachmentsFolder, templateConfiguration.FieldSeparator);
-                        FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, user, result);
+                        FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, user);
 
                         recipients.Add(recipient);
 
@@ -191,7 +192,8 @@ namespace Relay.BulkSenderService.Processors
             return recipient;
         }
 
-        protected virtual void FillRecipientAttachments(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, IUserConfiguration user, ProcessResult result)
+        //protected virtual void FillRecipientAttachments(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, IUserConfiguration user, ProcessResult result)
+        protected virtual void FillRecipientAttachments(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, IUserConfiguration user)
         {
             recipient.Attachments = new List<string>();
 
@@ -216,7 +218,7 @@ namespace Relay.BulkSenderService.Processors
                         //string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
                         //result.WriteError(errorMessage);
                         //result.ErrorsCount++;
-                        result.AddProcessError(_lineNumber, message);
+                        //result.AddProcessError(_lineNumber, message);
                     }
                 }
             }
@@ -239,14 +241,14 @@ namespace Relay.BulkSenderService.Processors
             return new List<string>();
         }
 
-        protected override string GetBody(string file, IUserConfiguration user, ProcessResult result)
+        protected override string GetBody(string file, IUserConfiguration user, int processedCount, int errorsCount)
         {
             string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\FinishProcess.es.html");
 
             return body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file))
                 .Replace("{{time}}", user.GetUserDateTime().DateTime.ToString())
-                .Replace("{{processed}}", result.GetProcessedCount().ToString())
-                .Replace("{{errors}}", result.GetErrorsCount().ToString());
+                .Replace("{{processed}}", processedCount.ToString())
+                .Replace("{{errors}}", errorsCount.ToString());
         }
 
         protected override IQueueProducer GetProducer()

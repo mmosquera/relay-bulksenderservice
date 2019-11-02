@@ -16,7 +16,8 @@ namespace Relay.BulkSenderService.Processors
             _hostedFiles = new Dictionary<string, string>();
         }
 
-        protected override string Process(IUserConfiguration user, string localFileName, ProcessResult result)
+        //protected override string Process(IUserConfiguration user, string localFileName, ProcessResult result)
+        protected override string Process(IUserConfiguration user, string localFileName)
         {
             if (string.IsNullOrEmpty(localFileName))
             {
@@ -56,13 +57,13 @@ namespace Relay.BulkSenderService.Processors
 
                         string[] recipientArray = line.Split(templateConfiguration.FieldSeparator);
 
-                        result.AddProcessed();
+                        //result.AddProcessed();
 
                         SMTPRecipient recipient = CreateRecipientFromString(recipientArray, line, ((UserSMTPConfiguration)user).TemplateFilePath, ((UserSMTPConfiguration)user).AttachmentsFolder, templateConfiguration.FieldSeparator);
 
-                        FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, user, result);
+                        FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, user);
 
-                        HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user, result);
+                        HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user);
 
                         recipients.Add(recipient);
 
@@ -85,7 +86,8 @@ namespace Relay.BulkSenderService.Processors
             return resultsFileName;
         }
 
-        private string HostFile(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string line, string originalFileName, IUserConfiguration user, ProcessResult result)
+        //private string HostFile(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string line, string originalFileName, IUserConfiguration user, ProcessResult result)
+        private string HostFile(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string line, string originalFileName, IUserConfiguration user)
         {
             string hostedFile = recipientArray[5];
 
@@ -130,14 +132,15 @@ namespace Relay.BulkSenderService.Processors
                     //string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
                     //result.WriteError(errorMessage);
                     //result.ErrorsCount++;
-                    result.AddProcessError(_lineNumber, message);
+                    //result.AddProcessError(_lineNumber, message);
                 }
             }
 
             return publicPath;
         }
 
-        protected override void FillRecipientAttachments(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, IUserConfiguration user, ProcessResult result)
+        //protected override void FillRecipientAttachments(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, IUserConfiguration user, ProcessResult result)
+        protected override void FillRecipientAttachments(SMTPRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string fileName, string line, IUserConfiguration user)
         {
             recipient.Attachments = new List<string>();
 
@@ -167,7 +170,7 @@ namespace Relay.BulkSenderService.Processors
                         //string errorMessage = $"{DateTime.UtcNow}:{message} proccesing line {line}";
                         //result.WriteError(errorMessage);
                         //result.ErrorsCount++;
-                        result.AddProcessError(_lineNumber, message);
+                        //result.AddProcessError(_lineNumber, message);
                     }
                 }
             }
