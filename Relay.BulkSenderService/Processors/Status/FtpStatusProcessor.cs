@@ -26,6 +26,8 @@ namespace Relay.BulkSenderService.Processors.Status
             {
                 _logger.Debug($"Start to process status file for user {userConfiguration.Name}");
 
+                var filesToDelete = new List<string>();
+
                 string jsonContent;
                 var stringBuilder = new StringBuilder();
 
@@ -53,6 +55,11 @@ namespace Relay.BulkSenderService.Processors.Status
                     string line = $"{fileStatus.FileName}|{fileStatus.Total}|{fileStatus.Processed}|{datatime}";
 
                     stringBuilder.AppendLine(line);
+
+                    if (fileStatus.Finished)
+                    {
+                        filesToDelete.Add(fileName);
+                    }
                 }
 
                 var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
@@ -69,6 +76,11 @@ namespace Relay.BulkSenderService.Processors.Status
                 var ftpHelper = userConfiguration.Ftp.GetFtpHelper(_logger);
 
                 ftpHelper.UploadFile(resultsFilePath, ftpFileName);
+
+                foreach (string fileToDelete in filesToDelete)
+                {
+                    File.Delete(fileToDelete);
+                }
             }
             catch (Exception e)
             {
