@@ -255,7 +255,7 @@ namespace Relay.BulkSenderService.Processors
                 {
                     string localAttachement = $@"{attachmentsFolder}\{attachName}";
 
-                    if (!string.IsNullOrEmpty(localAttachement))
+                    if (File.Exists(localAttachement))
                     {
                         attachmentsList.Add(localAttachement);
                     }

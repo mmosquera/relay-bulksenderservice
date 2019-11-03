@@ -1,6 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
 using System.Collections.Generic;
+using System.IO;
 
 namespace Relay.BulkSenderService.Processors
 {
@@ -24,7 +25,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 string localAttachement = $@"{attachmentsFolder}\{attachName}";
 
-                if (!string.IsNullOrEmpty(localAttachement))
+                if (File.Exists(localAttachement))
                 {
                     attachmentsList.Add(localAttachement);
                 }
