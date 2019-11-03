@@ -552,16 +552,7 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return line;
-        }
-
-        protected string GetResultsFileName(string fileName, IUserConfiguration user)
-        {
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
-            string resultsFileName = $@"{filePathHelper.GetResultsFilesFolder()}\{fileName.Replace(".processing", ".sent")}";
-
-            return resultsFileName;
-        }
+        }        
 
         protected abstract List<string> GetAttachments(string file, string userName);
 

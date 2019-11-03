@@ -28,7 +28,7 @@ namespace Relay.BulkSenderService.Processors
             string fileName = Path.GetFileName(localFileName);
 
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
-            string resultsFileName = GetResultsFileName(fileName, user);
+            string resultsFileName = string.Empty;
 
             try
             {
