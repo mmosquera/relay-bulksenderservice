@@ -40,7 +40,9 @@ namespace Relay.BulkSenderService.Processors
 
                         var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
-                        foreach (string folder in user.DownloadFolders)
+                        List<string> downloadFolders = user.Templates.SelectMany(x => x.DownloadFolders).Distinct().ToList();
+
+                        foreach (string folder in downloadFolders)
                         {
                             List<string> files = ftpHelper.GetFileList(folder, extensions);
 
@@ -264,6 +266,6 @@ namespace Relay.BulkSenderService.Processors
 
                 ftpHelper.DeleteFile(file);
             }
-        }        
+        }
     }
 }

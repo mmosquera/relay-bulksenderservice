@@ -1,12 +1,13 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Processors;
-using System;
 using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
 {
     public abstract class BaseTemplateConfiguration : ITemplateConfiguration
     {
+        public List<string> DownloadFolders { get; set; }
+        public string AttachmentsFolder { get; set; }
         public char FileNamePartSeparator { get; set; }
         public char FieldSeparator { get; set; }
         public string TemplateId { get; set; }

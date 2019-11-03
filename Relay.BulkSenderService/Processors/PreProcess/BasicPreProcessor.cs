@@ -9,9 +9,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 {
     public class BasicPreProcessor : PreProcessor
     {
-        public BasicPreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration)
-        {
-        }
+        public BasicPreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
         public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
         {
@@ -69,14 +67,12 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                     foreach (int index in indexes)
                     {
-                        if (fields.Length < index)
+                        if (index < fields.Length)
                         {
-                            continue;
+                            string attachmentFile = fields[index];
+
+                            GetAttachmentFile(attachmentFile, fileName, userConfiguration);
                         }
-
-                        string attachmentFile = fields[index];
-
-                        GetAttachmentFile(attachmentFile, fileName, userConfiguration);
                     }
                 }
             }
@@ -108,8 +104,10 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 return;
             }
 
+            ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(originalFile);
+
             //get from ftp
-            string ftpAttachmentFile = $@"{userConfiguration.AttachmentsFolder}/{attachmentFile}";
+            string ftpAttachmentFile = $@"{templateConfiguration.AttachmentsFolder}/{attachmentFile}";
 
             var ftpHelper = userConfiguration.Ftp.GetFtpHelper(_logger);
             ftpHelper.DownloadFile(ftpAttachmentFile, localAttachmentFile);
@@ -121,7 +119,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             }
 
             //get from zip file
-            string zipAttachments = $@"{userConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}.zip";
+            string zipAttachments = $@"{templateConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}.zip";
             string localZipFile = $@"{filePathHelper.GetAttachmentsFilesFolder()}\{Path.GetFileNameWithoutExtension(originalFile)}.zip";
 
             // TODO: add retries.

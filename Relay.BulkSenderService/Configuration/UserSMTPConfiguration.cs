@@ -20,11 +20,9 @@ namespace Relay.BulkSenderService.Configuration
         public string TemplateFilePath { get; set; }
         public int UserGMT { get; set; }
         public bool HasHeaders { get; set; }
-        public string AttachmentsFolder { get; set; }
         public ErrorConfiguration Errors { get; set; }
         public IResultConfiguration Results { get; set; }
         public AdminEmailConfiguration AdminEmail { get; set; }
-        public List<string> DownloadFolders { get; set; }
         public List<string> FileExtensions { get; set; }
         public AckConfiguration Ack { get; set; }
         public CredentialsConfiguration Credentials { get; set; }

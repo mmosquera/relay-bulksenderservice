@@ -412,8 +412,10 @@ namespace Relay.BulkSenderService.Processors
                 return localAttachmentSubFile;
             }
 
+            ITemplateConfiguration templateConfiguration = user.GetTemplateConfiguration(originalFile);
+
             //3- donwload from ftp
-            string ftpAttachmentFile = $@"{user.AttachmentsFolder}/{attachmentFile}";
+            string ftpAttachmentFile = $@"{templateConfiguration.AttachmentsFolder}/{attachmentFile}";
 
             var ftpHelper = user.Ftp.GetFtpHelper(_logger);
             ftpHelper.DownloadFile(ftpAttachmentFile, localAttachmentFile);
@@ -425,7 +427,7 @@ namespace Relay.BulkSenderService.Processors
             }
 
             //4- zip file 
-            string zipAttachments = $@"{user.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}.zip";
+            string zipAttachments = $@"{templateConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}.zip";
             string localZipAttachments = $@"{localAttachmentFolder}\{Path.GetFileNameWithoutExtension(originalFile)}.zip";
 
             // TODO: add retries.

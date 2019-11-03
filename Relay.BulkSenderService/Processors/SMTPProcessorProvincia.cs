@@ -59,7 +59,7 @@ namespace Relay.BulkSenderService.Processors
 
                         //result.AddProcessed();
 
-                        SMTPRecipient recipient = CreateRecipientFromString(recipientArray, line, ((UserSMTPConfiguration)user).TemplateFilePath, ((UserSMTPConfiguration)user).AttachmentsFolder, templateConfiguration.FieldSeparator);
+                        SMTPRecipient recipient = CreateRecipientFromString(recipientArray, line, ((UserSMTPConfiguration)user).TemplateFilePath, templateConfiguration.AttachmentsFolder, templateConfiguration.FieldSeparator);
 
                         FillRecipientAttachments(recipient, templateConfiguration, recipientArray, fileName, line, user);
 

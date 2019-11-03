@@ -16,11 +16,9 @@ namespace Relay.BulkSenderService.Configuration
         public bool HasDeleteFtp { get; set; }
         public string Name { get; set; }
         public int UserGMT { get; set; }
-        public string AttachmentsFolder { get; set; }
         public AckConfiguration Ack { get; set; }
         public ErrorConfiguration Errors { get; set; }
         public IResultConfiguration Results { get; set; }
-        public List<string> DownloadFolders { get; set; }
         public List<string> FileExtensions { get; set; }
         public List<ITemplateConfiguration> Templates { get; set; }
         public CredentialsConfiguration Credentials { get; set; }

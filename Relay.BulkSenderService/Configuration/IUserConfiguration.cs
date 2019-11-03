@@ -11,8 +11,6 @@ namespace Relay.BulkSenderService.Configuration
     public interface IUserConfiguration
     {
         string Name { get; set; }
-        List<string> DownloadFolders { get; set; }
-        string AttachmentsFolder { get; set; }
         int FtpInterval { get; set; }
         List<string> FileExtensions { get; set; }
         ErrorConfiguration Errors { get; set; }
@@ -24,6 +22,7 @@ namespace Relay.BulkSenderService.Configuration
         int MaxThreadsNumber { get; set; }
         AckConfiguration Ack { get; set; }
         CredentialsConfiguration Credentials { get; set; }
+        List<ITemplateConfiguration> Templates { get; set; }
         IFtpConfiguration Ftp { get; set; }
         ReportConfiguration Reports { get; set; }
         AlertConfiguration Alerts { get; set; }
