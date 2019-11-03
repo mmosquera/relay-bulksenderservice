@@ -288,6 +288,7 @@
     <Compile Include="Processors\ApiProcessorConsumer.cs" />
     <Compile Include="Processors\ApiProcessorCustomHeaderBancorProducer.cs" />
     <Compile Include="Processors\ApiProcessorCustomHeaderProducer.cs" />
+    <Compile Include="Processors\ApiProcessorGireProducer.cs" />
     <Compile Include="Processors\ApiProcessorKeyIteratorProducer.cs" />
     <Compile Include="Processors\ApiProcessorProducer.cs" />
     <Compile Include="Processors\ApiProcessorProvincia.cs" />

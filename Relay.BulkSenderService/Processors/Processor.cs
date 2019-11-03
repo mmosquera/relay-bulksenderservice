@@ -70,12 +70,8 @@ namespace Relay.BulkSenderService.Processors
 
                 _total = GetTotalLines(user, fileName);
 
-                //TODO: estos custom los paso al preprocess para el que corresponda.
-                //CustomProcessForFile(localFileName, user.Name, templateConfiguration);                                 
-
                 ProcessFile(user, fileName);
 
-                //string resultFileName = Process(user, fileName, result);  
                 string resultFileName = GenerateResultFile(fileName, user);
                 string errorFileName = GenerateErrorFile(fileName, user);
 
