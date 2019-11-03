@@ -15,6 +15,7 @@ namespace Relay.BulkSenderService.Processors
     {
         private readonly IConfiguration _configuration;
         private readonly ILog _logger;
+        private const int WAIT_PRODUCER_TIME = 1000;
         public event EventHandler<QueueResultEventArgs> ResultEvent;
         public event EventHandler<QueueErrorEventArgs> ErrorEvent;
 
@@ -40,10 +41,12 @@ namespace Relay.BulkSenderService.Processors
                 if (bulkQueueMessage != null)
                 {
                     SendEmailWithRetries(_configuration, userConfiguration, (ApiRecipient)bulkQueueMessage);
+
+                    Thread.Sleep(userConfiguration.DeliveryDelay);
                 }
                 else
                 {
-                    Thread.Sleep(1000);
+                    Thread.Sleep(WAIT_PRODUCER_TIME);
                 }
             }
         }
