@@ -29,8 +29,6 @@ namespace Relay.BulkSenderService.Processors
 
         protected override void FillRecipientAttachments(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string attachmentsFolder)
         {
-            var attachmentsList = new List<string>();
-
             foreach (FieldConfiguration field in templateConfiguration.Fields.Where(x => x.IsAttachment))
             {
                 string[] attachments = recipientArray[field.Position].Split(';');
@@ -46,7 +44,7 @@ namespace Relay.BulkSenderService.Processors
 
                     if (File.Exists(localAttachement))
                     {
-                        attachmentsList.Add(localAttachement);
+                        recipient.Attachments.Add(localAttachement);
                     }
                     else
                     {
@@ -54,11 +52,6 @@ namespace Relay.BulkSenderService.Processors
                         recipient.ResultLine = $"The attachment file {attachName} doesn't exists.";
                     }
                 }
-            }
-
-            if (attachmentsList.Count > 0)
-            {
-                recipient.FillAttachments(attachmentsList);
             }
         }
     }

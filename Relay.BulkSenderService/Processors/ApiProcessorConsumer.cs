@@ -7,6 +7,7 @@ using RestSharp;
 using System;
 using System.Collections.Generic;
 using System.Dynamic;
+using System.IO;
 using System.Threading;
 
 namespace Relay.BulkSenderService.Processors
@@ -66,7 +67,7 @@ namespace Relay.BulkSenderService.Processors
                         LineNumber = apiRecipient.LineNumber,
                         Type = ErrorType.DELIVERY,
                         Date = DateTime.UtcNow,
-                        Message = "Unexpected error.Contact support for more information."
+                        Message = "Unexpected error. Contact support for more information."
                     };
                     ErrorEvent?.Invoke(this, errorEventArgs);
                 }
@@ -79,6 +80,7 @@ namespace Relay.BulkSenderService.Processors
 
         /// <summary>
         /// To test emails without API
+        /// User invalid emails to generate errors
         /// </summary>        
         protected bool SendEmailTest(string baseUrl, string templateUrl, string apiKey, int accountId, ApiRecipient apiRecipient)
         {
@@ -100,17 +102,17 @@ namespace Relay.BulkSenderService.Processors
                     name = apiRecipient.ReplyToName
                 } : null,
                 model = dinObject,
-                attachments = apiRecipient.Attachments
+                attachments = GetRecipientAttachments(apiRecipient.Attachments)
             };
 
             string resourceId = "20191022-1932-0811-afb5-3e64c86f3245";
-            string linkResult = "/accounts/27/deliveries/20191022-1932-055f-aa29-c288e933a58a";
+            string linkResult = "/accounts/111/deliveries/20191022-1932-055f-aa29-c288e933a58a";
 
             System.Text.RegularExpressions.Regex regex = new System.Text.RegularExpressions.Regex(@"\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*");
             bool mailValid = regex.IsMatch(apiRecipient.ToEmail);
 
             Random r = new Random();
-            int ms = r.Next(10, 90);
+            int ms = r.Next(50, 200);
             Thread.Sleep(ms);
 
             if (mailValid)
@@ -132,9 +134,6 @@ namespace Relay.BulkSenderService.Processors
                 string content = "{\"title\":\"Validation error\",\"message\":\"Validationerror\"}";
 
                 dynamic jsonResult = JsonConvert.DeserializeObject(content);
-
-                //_logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
-                //result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());                    
 
                 var errorEventArgs = new QueueErrorEventArgs()
                 {
@@ -165,30 +164,30 @@ namespace Relay.BulkSenderService.Processors
 
             dynamic dinObject = DictionaryToObject(apiRecipient.Fields);
 
-            object body = new
+            try
             {
-                from_name = apiRecipient.FromName,
-                from_email = apiRecipient.FromEmail,
-                recipients = new[] { new
+                object body = new
+                {
+                    from_name = apiRecipient.FromName,
+                    from_email = apiRecipient.FromEmail,
+                    recipients = new[] { new
                 {
                     email = apiRecipient.ToEmail,
                     name = apiRecipient.ToName,
                     type = "to"
                 }},
-                reply_to = !string.IsNullOrEmpty(apiRecipient.ReplyToEmail) ? new
-                {
-                    email = apiRecipient.ReplyToEmail,
-                    name = apiRecipient.ReplyToName
-                } : null,
-                model = dinObject,
-                attachments = apiRecipient.Attachments
-            };
+                    reply_to = !string.IsNullOrEmpty(apiRecipient.ReplyToEmail) ? new
+                    {
+                        email = apiRecipient.ReplyToEmail,
+                        name = apiRecipient.ReplyToName
+                    } : null,
+                    model = dinObject,
+                    attachments = GetRecipientAttachments(apiRecipient.Attachments)
+                };
 
-            request.RequestFormat = DataFormat.Json;
-            request.AddJsonBody(body);
+                request.RequestFormat = DataFormat.Json;
+                request.AddJsonBody(body);
 
-            try
-            {
                 IRestResponse response = restClient.Execute(request);
 
                 if (response.IsSuccessful)
@@ -213,9 +212,6 @@ namespace Relay.BulkSenderService.Processors
                 else
                 {
                     dynamic jsonResult = JsonConvert.DeserializeObject(response.Content);
-
-                    //_logger.Info($"{response.StatusCode} -- Send fail to {recipient.ToEmail} -- {jsonResult}");
-                    //result.AddDeliveryError(recipient.LineNumber, response.StatusCode.ToString());                    
 
                     var errorEventArgs = new QueueErrorEventArgs()
                     {
@@ -259,6 +255,48 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return expandedObject;
+        }
+
+        private List<RecipientAttachment> GetRecipientAttachments(List<string> files)
+        {
+            List<RecipientAttachment> attachments = null;
+
+            if (files.Count > 0)
+            {
+                attachments = new List<RecipientAttachment>();
+
+                foreach (string fileName in files)
+                {
+                    byte[] bytesArray = File.ReadAllBytes(fileName);
+
+                    attachments.Add(new RecipientAttachment()
+                    {
+                        base64_content = Convert.ToBase64String(bytesArray),
+                        filename = Path.GetFileName(fileName),
+                        type = GetContentTypeByExtension(fileName),
+                    });
+                }
+            }
+
+            return attachments;
+        }
+
+        private string GetContentTypeByExtension(string filename)
+        {
+            switch (Path.GetExtension(filename))
+            {
+                case ".zip": return "application/x-zip-compressed";
+                case ".mp3": return "audio/mp3";
+                case ".gif": return "image/gif";
+                case ".jpg": return "image/jpeg";
+                case ".png": return "image/png";
+                case ".htm": return "text/html";
+                case ".html": return "text/html";
+                case ".txt": return "text/plain";
+                case ".xml": return "text/xml";
+                case ".pdf": return "application/pdf";
+                default: return "application/octet-stream";
+            }
         }
     }
 }

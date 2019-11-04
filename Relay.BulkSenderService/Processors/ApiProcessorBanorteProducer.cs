@@ -1,6 +1,5 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
-using System.Collections.Generic;
 using System.IO;
 
 namespace Relay.BulkSenderService.Processors
@@ -13,7 +12,6 @@ namespace Relay.BulkSenderService.Processors
 
         protected override void FillRecipientAttachments(ApiRecipient recipient, ITemplateConfiguration templateConfiguration, string[] recipientArray, string attachmentsFolder)
         {
-            var attachmentsList = new List<string>();
             string attachName = null;
 
             if (recipientArray.Length >= 4)
@@ -27,18 +25,13 @@ namespace Relay.BulkSenderService.Processors
 
                 if (File.Exists(localAttachement))
                 {
-                    attachmentsList.Add(localAttachement);
+                    recipient.Attachments.Add(localAttachement);
                 }
                 else
                 {
                     recipient.HasError = true;
                     recipient.ResultLine = $"The attachment file {attachName} doesn't exists.";
                 }
-            }
-
-            if (attachmentsList.Count > 0)
-            {
-                recipient.FillAttachments(attachmentsList);
             }
 
             base.FillRecipientAttachments(recipient, templateConfiguration, recipientArray, attachmentsFolder);

@@ -23,7 +23,7 @@ namespace Relay.BulkSenderService.Processors
         protected int _lineNumber;
         private DateTime _lastStatusDate;
         private const int STATUS_MINUTES = 5;
-        private const int WAITING_CONSUMERS_TIME = 1000;
+        private const int WAITING_CONSUMERS_TIME = 5000;
         private IBulkQueue outboundQueue;
         private FileWriter resultFileWriter;
         private FileWriter errorFileWriter;
@@ -552,7 +552,7 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return line;
-        }        
+        }
 
         protected abstract List<string> GetAttachments(string file, string userName);
 
@@ -650,7 +650,6 @@ namespace Relay.BulkSenderService.Processors
 
             IQueueProducer producer = GetProducer();
 
-            //TODO sacar threads count from userConfiguration.
             List<IQueueConsumer> consumers = GetConsumers(userConfiguration.MaxThreadsNumber);
 
             var consumerCancellationTokenSource = new CancellationTokenSource();
@@ -688,6 +687,7 @@ namespace Relay.BulkSenderService.Processors
             }
             finally
             {
+                //TODO: mejorar esta espera de productor consumidor
                 //espero que se vacie la lista y aviso con el cancel token a los consumidores.
                 while (outboundQueue.GetCount() > 0)
                 {
