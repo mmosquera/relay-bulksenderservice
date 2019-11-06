@@ -48,14 +48,7 @@ namespace Relay.BulkSenderService.Processors
                     lineNumber++;
                 }
 
-                string headers = GetHeaderLine(line, templateConfiguration);
-
-                if (string.IsNullOrEmpty(headers))
-                {
-                    throw new Exception("The file has not headers.");
-                }
-
-                string[] headersArray = headers.Split(templateConfiguration.FieldSeparator);
+                string[] headersArray = GetHeaderLine(line, templateConfiguration);
 
                 List<CustomHeader> customHeaders = GetHeaderList(headersArray);
 
@@ -83,8 +76,6 @@ namespace Relay.BulkSenderService.Processors
                         FillRecipientCustoms(recipient, recipientArray, customHeaders, templateConfiguration.Fields);
                         FillRecipientAttachments(recipient, templateConfiguration, recipientArray, attachmentsFolder);
 
-                        //TODO: meterlo solo en el processor del provincia ver como si pasar ese parametro al productor o algo asi
-                        //HostFile(recipient, templateConfiguration, recipientArray, line, fileName, user, result);                                                
                         if (string.IsNullOrEmpty(recipient.TemplateId))
                         {
                             recipient.HasError = true;
@@ -134,14 +125,25 @@ namespace Relay.BulkSenderService.Processors
 
         }
 
-        protected virtual string GetHeaderLine(string line, ITemplateConfiguration templateConfiguration)
+        private string[] GetHeaderLine(string line, ITemplateConfiguration templateConfiguration)
         {
-            if (templateConfiguration != null && !templateConfiguration.HasHeaders)
+            string[] headersArray = { };
+
+            if (templateConfiguration.HasHeaders)
             {
-                return string.Join(templateConfiguration.FieldSeparator.ToString(), templateConfiguration.Fields.Select(x => x.Name));
+                headersArray = line.Split(templateConfiguration.FieldSeparator);
+            }
+            else
+            {
+                headersArray = templateConfiguration.Fields.Select(x => x.Name).ToArray();
             }
 
-            return line;
+            if (templateConfiguration.Fields.Max(x => x.Position) >= headersArray.Length)
+            {
+                throw new Exception("There are missing headers.");
+            }
+
+            return headersArray;
         }
 
         protected virtual List<CustomHeader> GetHeaderList(string[] headersArray)
