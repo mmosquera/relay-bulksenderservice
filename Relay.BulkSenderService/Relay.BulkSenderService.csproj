@@ -299,6 +299,7 @@
     <Compile Include="Processors\Errors\FileRepeatedError.cs" />
     <Compile Include="Processors\Errors\LoginError.cs" />
     <Compile Include="Processors\Errors\ProcessError.cs" />
+    <Compile Include="Processors\Errors\UnexpectedError.cs" />
     <Compile Include="Processors\PreProcess\BanortePreProcessor.cs" />
     <Compile Include="Processors\PreProcess\BasicPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\DuplicatesPreProcessor.cs" />

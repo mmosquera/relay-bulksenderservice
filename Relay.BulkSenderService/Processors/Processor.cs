@@ -558,8 +558,6 @@ namespace Relay.BulkSenderService.Processors
 
         protected abstract string GetBody(string file, IUserConfiguration user, int processedCount, int errorsCount);
 
-        //body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorUnzip.es.html");        
-
         private void UploadErrosToFTP(string fileName, IUserConfiguration user, IFtpHelper ftpHelper)
         {
             if (user.Errors != null && File.Exists(fileName))
@@ -658,12 +656,12 @@ namespace Relay.BulkSenderService.Processors
             var statusCancellationTokenSource = new CancellationTokenSource();
             CancellationToken statusCancellationToken = statusCancellationTokenSource.Token;
 
+            var tasks = new List<Task>();
+
             Task taskProducer = Task.Factory.StartNew(() => producer.GetMessages(userConfiguration, outboundQueue, errorList, resultList, fileName, consumerCancellationToken));
 
             //descomentar para probar el productor
             //taskProducer.Wait();
-
-            var tasks = new List<Task>();
 
             foreach (IQueueConsumer queueConsumer in consumers)
             {
@@ -684,6 +682,8 @@ namespace Relay.BulkSenderService.Processors
             catch (Exception e)
             {
                 _logger.Error($"PROCESS FILE ERROR: {e}");
+
+                new UnexpectedError(_configuration).SendErrorEmail(fileName, userConfiguration.Alerts);
             }
             finally
             {
