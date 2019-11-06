@@ -92,6 +92,8 @@ namespace Relay.BulkSenderService.Processors
 
                 RemoveQueues(fileName, user);
 
+                RemoveAttachments(fileName, user);
+
                 _logger.Debug($"Finish processing {fileName} for User:{user.Name} in Thread:{Thread.CurrentThread.ManagedThreadId} at:{DateTime.UtcNow}");
             }
             catch (Exception e)
@@ -105,6 +107,25 @@ namespace Relay.BulkSenderService.Processors
                     Name = user.Name
                 };
                 OnProcessFinished(args);
+            }
+        }
+
+        private void RemoveAttachments(string fileName, IUserConfiguration user)
+        {
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+            string attachmentsDirectory = filePathHelper.GetAttachmentsFilesFolder(Path.GetFileNameWithoutExtension(fileName));
+
+            if (Directory.Exists(attachmentsDirectory))
+            {
+                try
+                {
+                    Directory.Delete(attachmentsDirectory, true);
+                }
+                catch (Exception e)
+                {
+                    _logger.Error($"Error trying to delete attachments -- {e}");
+                }
             }
         }
 
