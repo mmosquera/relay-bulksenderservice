@@ -101,6 +101,16 @@ namespace Relay.BulkSenderService.Classes
 
                 return true;
             }
+            catch (WebException we)
+            {
+                FtpWebResponse response = (FtpWebResponse)we.Response;
+                if (response.StatusCode != FtpStatusCode.ActionNotTakenFileUnavailable)
+                {
+                    _logger.Error($"Error download file -- {we}");
+                }
+
+                return false;
+            }
             catch (Exception e)
             {
                 _logger.Error($"Error download file -- {e}");
@@ -156,6 +166,16 @@ namespace Relay.BulkSenderService.Classes
                 }
 
                 return true;
+            }
+            catch (WebException we)
+            {
+                FtpWebResponse response = (FtpWebResponse)we.Response;
+                if (response.StatusCode != FtpStatusCode.ActionNotTakenFileUnavailable)
+                {
+                    _logger.Error($"Error download file with resume -- {we}");
+                }
+
+                return false;
             }
             catch (Exception e)
             {
