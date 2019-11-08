@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -18,6 +19,8 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 return;
             }
 
+            List<int> indexes = templateConfiguration.Fields.Where(x => x.IsAttachment).Select(x => x.Position).ToList();
+
             using (var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read))
             using (var reader = new StreamReader(fileStream))
             {
@@ -28,7 +31,6 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                 string line;
                 string[] fields;
-                string attachentName;
 
                 while (!reader.EndOfStream)
                 {
@@ -43,9 +45,19 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                     if (fields.Length >= 4)
                     {
-                        attachentName = $@"{fields[0]}-{fields[1]}-{fields[2]}-{fields[3]}.pdf";
+                        string customAttachmentFile = $@"{fields[0]}-{fields[1]}-{fields[2]}-{fields[3]}.pdf";
 
-                        GetAttachmentFile(attachentName, fileName, userConfiguration);
+                        GetAttachmentFile(customAttachmentFile, fileName, userConfiguration);
+                    }
+
+                    foreach (int index in indexes)
+                    {
+                        if (index < fields.Length)
+                        {
+                            string attachmentFile = fields[index];
+
+                            GetAttachmentFile(attachmentFile, fileName, userConfiguration);
+                        }
                     }
                 }
             }

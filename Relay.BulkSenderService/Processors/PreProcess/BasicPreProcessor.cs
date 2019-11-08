@@ -18,12 +18,12 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 return;
             }
 
-            DownloadAttachments(fileName, userConfiguration);
-
-            string newFileName = fileName.Replace(Path.GetExtension(fileName), ".processing");
-
             try
             {
+                DownloadAttachments(fileName, userConfiguration);
+
+                string newFileName = fileName.Replace(Path.GetExtension(fileName), ".processing");
+
                 File.Move(fileName, newFileName);
             }
             catch (Exception e)
