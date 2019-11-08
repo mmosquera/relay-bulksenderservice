@@ -114,7 +114,7 @@ namespace Relay.BulkSenderService.Processors
             return new ApiRecipient();
         }
 
-        protected override void ForceEnqueue(IBulkQueue queue, List<ProcessError> errors, List<ProcessResult> results)
+        protected override void FinishProducerProcess(IBulkQueue queue, List<ProcessError> errors, List<ProcessResult> results)
         {
             if (_lastRecipient != null &&
                 !errors.Exists(x => x.LineNumber == _lastRecipient.LineNumber) &&

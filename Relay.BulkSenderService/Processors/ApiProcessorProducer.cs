@@ -93,8 +93,6 @@ namespace Relay.BulkSenderService.Processors
                         recipient.ResultLine = "The fields number is different to headers number.";
                     }
 
-                    CustomRecipientValidations(recipient, recipientArray, line, templateConfiguration.FieldSeparator);
-
                     if (!recipient.HasError)
                     {
                         EnqueueRecipient(recipient, queue, errors, results);
@@ -115,12 +113,11 @@ namespace Relay.BulkSenderService.Processors
                     lineNumber++;
                 }
 
-                //TODO: mejorar esto que se usa solo para key iterator.
-                ForceEnqueue(queue, errors, results);
+                FinishProducerProcess(queue, errors, results);
             }
         }
 
-        protected virtual void ForceEnqueue(IBulkQueue queue, List<ProcessError> errors, List<ProcessResult> results)
+        protected virtual void FinishProducerProcess(IBulkQueue queue, List<ProcessError> errors, List<ProcessResult> results)
         {
 
         }
@@ -274,11 +271,6 @@ namespace Relay.BulkSenderService.Processors
             {
                 queue.SendMessage(recipient);
             }
-        }
-
-        protected virtual void CustomRecipientValidations(ApiRecipient recipient, string[] recipientArray, string line, char fielSeparator)
-        {
-
         }
     }
 }
