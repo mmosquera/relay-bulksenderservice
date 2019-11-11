@@ -10,13 +10,15 @@ namespace Relay.BulkSenderService.Processors
 {
     public class LocalMonitor : BaseWorker
     {
-        private Dictionary<string, int> _threadsCount;
-        private object _lockObj;
+        private const int MINUTES_TO_CHECK = 60;
+        private const int MINUTES_TO_RETRY = 5;
+        private Dictionary<string, List<ProcessingFile>> _processingFiles;
+        private object _lockProcessingFiles;
 
         public LocalMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
-            _threadsCount = new Dictionary<string, int>();
-            _lockObj = new object();
+            _processingFiles = new Dictionary<string, List<ProcessingFile>>();
+            _lockProcessingFiles = new object();
         }
 
         public void ReadLocalFiles()
@@ -30,6 +32,8 @@ namespace Relay.BulkSenderService.Processors
                     foreach (IUserConfiguration user in _users)
                     {
                         var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+                        ReprocessFailedFiles(user);
 
                         List<string> retryFiles = Directory.GetFiles(filePathHelper.GetRetriesFilesFolder(), "*.retry").ToList();
 
@@ -61,9 +65,89 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
+        private void ReprocessFailedFiles(IUserConfiguration user)
+        {
+            UpdateProcessingFiles(user);
+
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+            List<string> retryFiles = Directory.GetFiles(filePathHelper.GetRetriesFilesFolder(), "*.processing").ToList();
+
+            foreach (string file in retryFiles)
+            {
+                if (!IsFileProcessing(user.Name, file))
+                {
+                    string newRetryFile = $@"{filePathHelper.GetRetriesFilesFolder()}\{Path.GetFileNameWithoutExtension(file)}.retry";
+
+                    File.Move(file, newRetryFile);
+                }
+            }
+
+            List<string> processFiles = Directory.GetFiles(filePathHelper.GetProcessedFilesFolder(), "*.processing").ToList();
+
+            foreach (string file in processFiles)
+            {
+                if (!IsFileProcessing(user.Name, file))
+                {
+                    string newRetryFile = $@"{filePathHelper.GetRetriesFilesFolder()}\{Path.GetFileNameWithoutExtension(file)}.retry";
+
+                    File.Move(file, newRetryFile);
+                }
+            }
+        }
+
+        private void UpdateProcessingFiles(IUserConfiguration user)
+        {
+            List<string> processingFiles = null;
+
+            lock (_lockProcessingFiles)
+            {
+                if (_processingFiles.ContainsKey(user.Name))
+                {
+                    processingFiles = _processingFiles[user.Name].Where(x => DateTime.UtcNow.Subtract(x.LastUpdate).TotalMinutes > MINUTES_TO_CHECK).Select(x => x.FileName).ToList();
+                }
+            }
+
+            if (processingFiles == null || processingFiles.Count == 0)
+            {
+                return;
+            }
+
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+            var queueDirectory = new DirectoryInfo(filePathHelper.GetQueueFilesFolder());
+
+            foreach (string file in processingFiles)
+            {
+                List<FileInfo> queueFiles = queueDirectory.GetFiles($"{file}.*").ToList();
+
+                if (queueFiles.Any(x => DateTime.UtcNow.Subtract(x.LastWriteTimeUtc).TotalMinutes < MINUTES_TO_RETRY))
+                {
+                    lock (_lockProcessingFiles)
+                    {
+                        _processingFiles[user.Name].FirstOrDefault(x => x.FileName == file).LastUpdate = DateTime.UtcNow;
+                    }
+                }
+                else
+                {
+                    //TODO enviar alerta
+                    //aca llego porque se rompio un archivo pero no deberia pasar nunca.
+                    string processedFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}.processing";
+
+                    if (File.Exists(processedFile))
+                    {
+                        string corruptedFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}.corrupted";
+                        File.Move(processedFile, corruptedFile);
+                    }
+
+                    RemoveProcessingFile(user.Name, file);
+                }
+            }
+        }
+
         private bool ProcessFile(string fileName, IUserConfiguration user, FilePathHelper filePathHelper)
         {
-            int threadsUserCount = GetThreadCount(user.Name);
+            int threadsUserCount = GetProcessorsCount(user.Name);
 
             int parallelProcessors = user.MaxParallelProcessors != 0 ? user.MaxParallelProcessors : _configuration.MaxNumberOfThreads;
 
@@ -103,7 +187,8 @@ namespace Relay.BulkSenderService.Processors
                 Handler = new EventHandler<ThreadEventArgs>(ProcessFinishedHandler)
             };
 
-            IncrementUserThreadCount(user.Name);
+            AddProcessingFile(user.Name, destFileName);
+
             ThreadPool.QueueUserWorkItem(new WaitCallback(processor.DoWork), threadState);
 
             // To mode debug.
@@ -116,48 +201,64 @@ namespace Relay.BulkSenderService.Processors
         {
             _logger.Debug($"Finish to process ThreadId:{Thread.CurrentThread.ManagedThreadId} for user:{args.Name}");
 
-            DecrementUserThreadCount(args.Name);
+            RemoveProcessingFile(args.Name, args.FileName);
         }
 
-        private void IncrementUserThreadCount(string user)
+        private int GetProcessorsCount(string userName)
         {
-            string key = user.ToUpper();
-            lock (_lockObj)
+            lock (_lockProcessingFiles)
             {
-                if (_threadsCount.ContainsKey(key))
+                if (_processingFiles.ContainsKey(userName))
                 {
-                    _threadsCount[key]++;
+                    return _processingFiles[userName].Count;
                 }
-                else
+
+                return 0;
+            }
+        }
+
+        private void AddProcessingFile(string userName, string fileName)
+        {
+            lock (_lockProcessingFiles)
+            {
+                if (!_processingFiles.ContainsKey(userName))
                 {
-                    _threadsCount.Add(key, 1);
+                    var list = new List<ProcessingFile>();
+                    _processingFiles.Add(userName, list);
+                }
+
+                var processingFile = new ProcessingFile()
+                {
+                    FileName = Path.GetFileNameWithoutExtension(fileName),
+                    LastUpdate = DateTime.UtcNow
+                };
+
+                _processingFiles[userName].Add(processingFile);
+            }
+        }
+
+        private void RemoveProcessingFile(string userName, string fileName)
+        {
+            lock (_processingFiles)
+            {
+                if (_processingFiles.ContainsKey(userName))
+                {
+                    _processingFiles[userName].RemoveAll(x => x.FileName == Path.GetFileNameWithoutExtension(fileName));
                 }
             }
         }
 
-        private void DecrementUserThreadCount(string user)
+        private bool IsFileProcessing(string userName, string fileName)
         {
-            string key = user.ToUpper();
-            lock (_lockObj)
+            lock (_processingFiles)
             {
-                if (_threadsCount.ContainsKey(key))
+                if (_processingFiles.ContainsKey(userName))
                 {
-                    _threadsCount[key]--;
+                    return _processingFiles[userName].Any(x => x.FileName == Path.GetFileNameWithoutExtension(fileName));
                 }
-            }
-        }
 
-        private int GetThreadCount(string user)
-        {
-            string key = user.ToUpper();
-            lock (_lockObj)
-            {
-                if (_threadsCount.ContainsKey(key))
-                {
-                    return _threadsCount[key];
-                }
+                return false;
             }
-            return 0;
         }
     }
 
@@ -171,6 +272,7 @@ namespace Relay.BulkSenderService.Processors
     public class ThreadEventArgs : EventArgs
     {
         public string Name { get; set; }
+        public string FileName { get; set; }
     }
 
     public class FileStatus

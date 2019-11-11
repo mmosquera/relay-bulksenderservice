@@ -66,9 +66,8 @@ namespace Relay.BulkSenderService.Processors
                     return;
                 }
 
+                //TODO: identificar si es retry y no mandar el start
                 SendStartProcessEmail(fileName, user);
-
-                _total = GetTotalLines(user, fileName);
 
                 ProcessFile(user, fileName);
 
@@ -83,7 +82,11 @@ namespace Relay.BulkSenderService.Processors
 
                 if (!string.IsNullOrEmpty(resultFileName))
                 {
-                    File.Move(fileName, fileName.Replace(".processing", ".processed"));
+                    var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+                    string processedFileName = $@"{filePathHelper.GetProcessedFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.processed";
+
+                    File.Move(fileName, processedFileName);
 
                     SendEndProcessEmail(fileName, user);
                 }
@@ -104,7 +107,8 @@ namespace Relay.BulkSenderService.Processors
             {
                 var args = new ThreadEventArgs()
                 {
-                    Name = user.Name
+                    Name = user.Name,
+                    FileName = Path.GetFileNameWithoutExtension(fileName)
                 };
                 OnProcessFinished(args);
             }
@@ -662,10 +666,14 @@ namespace Relay.BulkSenderService.Processors
             string resultFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.result.tmp";
             resultFileWriter = new FileWriter(resultFileName);
 
-            //get for retries.
-            //TODO: capaz que hay que hacer algo especial para los retries.
+            //get values for status and retries
+            _total = GetTotalLines(userConfiguration, fileName);
+
             List<ProcessError> errorList = GetErrorsFromFile(userConfiguration, fileName);
+            _errors = errorList.Count;
+
             List<ProcessResult> resultList = GetResultsFromFile(userConfiguration, fileName);
+            _processed = resultList.Count + _errors;
 
             IQueueProducer producer = GetProducer();
 

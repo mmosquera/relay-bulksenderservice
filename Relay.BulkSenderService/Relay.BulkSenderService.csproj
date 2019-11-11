@@ -237,6 +237,7 @@
     <Compile Include="Configuration\BaseTemplateConfiguration.cs" />
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\FilePathHelper.cs" />
+    <Compile Include="Configuration\BanortePreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GirePreProcessorConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\ProvinciaPreProcessorConfiguration.cs" />
@@ -308,6 +309,7 @@
     <Compile Include="Processors\PreProcess\PreProcessor.cs" />
     <Compile Include="Processors\PreProcess\ProvinciaPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessWorker.cs" />
+    <Compile Include="Classes\ProcessingFile.cs" />
     <Compile Include="Processors\SMTPProcessorProvincia.cs" />
     <Compile Include="Processors\APIProcessorDuplicates.cs" />
     <Compile Include="Processors\APIProcessorBanorte.cs" />
