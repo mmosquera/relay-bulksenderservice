@@ -40,7 +40,6 @@ namespace Relay.BulkSenderService.Configuration
 
         public Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName)
         {
-            // TODO: validate null value.
             return GetTemplateConfiguration(fileName)?.GetProcessor(logger, configuration);
         }
 

@@ -111,7 +111,6 @@ namespace Relay.BulkSenderService.Processors
                 {
                     string hostedFileName = $"{Path.GetFileNameWithoutExtension(hostedFile)}_{DateTime.Now.Ticks}{Path.GetExtension(hostedFile)}";
 
-                    //TODO: aca va el nombre del archivo nuevo
                     string privatePath = $@"{_configuration.UserFiles}\{hostedFileName}";
 
                     publicPath = $"http://files.bancoprovinciamail.com.ar/relay/{hostedFileName}";

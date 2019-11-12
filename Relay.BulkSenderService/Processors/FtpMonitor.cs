@@ -14,8 +14,6 @@ namespace Relay.BulkSenderService.Processors
         private const int MINUTES_TO_WRITE = 5;
         private Dictionary<string, DateTime> _nextRun;
 
-        //TODO: Add methods to start or stop paused for user;
-
         public FtpMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _nextRun = new Dictionary<string, DateTime>();
@@ -83,7 +81,7 @@ namespace Relay.BulkSenderService.Processors
                         break;
                     }
 
-                    // TODO: remove from here!
+                    // TODO: remove from here! its only for GIRE. Maybe to preprocess
                     if (user.Ack != null && IsAckFile(file, user.Ack))
                     {
                         ProcessAckFile(folder, file, user, ftpHelper);

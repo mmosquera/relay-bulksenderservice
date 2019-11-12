@@ -29,7 +29,7 @@ namespace Relay.BulkSenderService.Configuration
         IPreProcessorConfiguration PreProcessor { get; set; }
         IStatusConfiguration Status { get; set; }
 
-        Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName); // TODO get from container.
+        Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName);
 
         ITemplateConfiguration GetTemplateConfiguration(string fileName);
 

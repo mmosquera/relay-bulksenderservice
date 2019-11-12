@@ -170,7 +170,7 @@ namespace Relay.BulkSenderService.Reports
             }
         }
 
-        // TODO: internationalize messages.
+        // TODO: internationalize messages with user configuration.
         private void GetStatusAndDescription(DBStatusDto item, out string status, out string description)
         {
             description = string.Empty;
