@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Processors;
+using Relay.BulkSenderService.Processors.PreProcess;
 using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration
@@ -16,6 +17,7 @@ namespace Relay.BulkSenderService.Configuration
         bool AllowDuplicates { get; set; }
         List<string> FileNameParts { get; set; }
         List<FieldConfiguration> Fields { get; set; }
+        IPreProcessorConfiguration PreProcessor { get; set; }
 
         Processor GetProcessor(ILog logger, IConfiguration configuration);
     }

@@ -16,6 +16,7 @@ namespace Relay.BulkSenderService.Configuration
         public List<string> FileNameParts { get; set; }
         public List<FieldConfiguration> Fields { get; set; }
         public bool AllowDuplicates { get; set; }
+        public IPreProcessorConfiguration PreProcessor { get; set; }
 
         public abstract Processor GetProcessor(ILog logger, IConfiguration configuration);
     }

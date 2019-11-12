@@ -111,12 +111,12 @@ namespace Relay.BulkSenderService.Processors
 
                 if (templateConfiguration.DownloadFolders == null || templateConfiguration.DownloadFolders.Count == 0)
                 {
-                    templateConfiguration.DownloadFolders = new List<string>();
+                    templateConfiguration.DownloadFolders = userConfiguration.DownloadFolders;
+                }
 
-                    foreach (string folder in userConfiguration.DownloadFolders)
-                    {
-                        templateConfiguration.DownloadFolders.Add(folder);
-                    }
+                if (templateConfiguration.PreProcessor == null)
+                {
+                    templateConfiguration.PreProcessor = userConfiguration.PreProcessor;
                 }
             }
         }

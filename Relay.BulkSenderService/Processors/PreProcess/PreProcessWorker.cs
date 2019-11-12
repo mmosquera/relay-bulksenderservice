@@ -12,7 +12,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
     public class PreProcessWorker : BaseWorker
     {
         private readonly Dictionary<string, Task> preProcessors;
-        private readonly object lockPreProcessors;
+
         public PreProcessWorker(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             preProcessors = new Dictionary<string, Task>();
@@ -34,7 +34,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                         string[] extensions = user.FileExtensions != null ? user.FileExtensions.ToArray() : new string[] { ".csv" };
 
-                        List<string> filterFiles = downloadFiles.Where(x => extensions.Any(y => x.EndsWith(y, StringComparison.OrdinalIgnoreCase))).ToList();
+                        List<string> filterFiles = downloadFiles.Where(x => extensions.Any(y => Path.GetExtension(x).Equals(y, StringComparison.OrdinalIgnoreCase))).ToList();
 
                         if (filterFiles.Count > 0 && !UserIsProcessing(user.Name))
                         {
@@ -55,10 +55,10 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
         private void PreProcessorWork(IUserConfiguration user, List<string> files)
         {
-            PreProcessor preProcessor = user.GetPreProcessor(_logger, _configuration);
-
             foreach (string file in files)
             {
+                PreProcessor preProcessor = user.GetPreProcessor(_logger, _configuration, file);
+
                 preProcessor.ProcessFile(file, user);
             }
         }

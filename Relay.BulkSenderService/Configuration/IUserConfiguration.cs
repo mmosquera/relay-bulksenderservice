@@ -37,7 +37,7 @@ namespace Relay.BulkSenderService.Configuration
 
         DateTimeOffset GetUserDateTime();
 
-        PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration);
+        PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration, string fileName);
 
         StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration);
     }

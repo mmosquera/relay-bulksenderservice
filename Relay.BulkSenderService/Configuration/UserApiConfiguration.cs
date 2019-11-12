@@ -61,9 +61,9 @@ namespace Relay.BulkSenderService.Configuration
             return Templates.Where(x => x.FileNameParts.Contains("*")).FirstOrDefault();
         }
 
-        public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration)
+        public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration, string fileName)
         {
-            return PreProcessor.GetPreProcessor(logger, configuration);
+            return GetTemplateConfiguration(fileName)?.PreProcessor?.GetPreProcessor(logger, configuration);
         }
 
         public StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration)
