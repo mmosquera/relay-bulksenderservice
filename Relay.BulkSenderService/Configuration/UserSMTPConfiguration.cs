@@ -24,6 +24,8 @@ namespace Relay.BulkSenderService.Configuration
         public IResultConfiguration Results { get; set; }
         public AdminEmailConfiguration AdminEmail { get; set; }
         public List<string> FileExtensions { get; set; }
+        public List<string> DownloadFolders { get; set; }
+        public string AttachmentsFolder { get; set; }
         public AckConfiguration Ack { get; set; }
         public CredentialsConfiguration Credentials { get; set; }
         public IFtpConfiguration Ftp { get; set; }

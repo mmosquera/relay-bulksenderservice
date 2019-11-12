@@ -76,6 +76,8 @@ namespace Relay.BulkSenderService.Processors
 
                         new FilePathHelper(_configuration, userConfiguration.Name).CreateUserFolders();
 
+                        UpdateDefaultConfigurations(userConfiguration);
+
                         userList.Add(userConfiguration);
                     }
                     catch (Exception e)
@@ -88,6 +90,35 @@ namespace Relay.BulkSenderService.Processors
             _lastConfigLoad = DateTime.UtcNow;
 
             return userList;
+        }
+
+        /// <summary>
+        /// Use defuault configuration values for
+        /// - Download folders
+        /// - Attachment folders
+        /// - Pre Processors
+        /// If there are not defined values for some template.
+        /// </summary>
+        /// <param name="userConfiguration"></param>
+        private void UpdateDefaultConfigurations(IUserConfiguration userConfiguration)
+        {
+            foreach (ITemplateConfiguration templateConfiguration in userConfiguration.Templates)
+            {
+                if (string.IsNullOrEmpty(templateConfiguration.AttachmentsFolder))
+                {
+                    templateConfiguration.AttachmentsFolder = userConfiguration.AttachmentsFolder;
+                }
+
+                if (templateConfiguration.DownloadFolders == null || templateConfiguration.DownloadFolders.Count == 0)
+                {
+                    templateConfiguration.DownloadFolders = new List<string>();
+
+                    foreach (string folder in userConfiguration.DownloadFolders)
+                    {
+                        templateConfiguration.DownloadFolders.Add(folder);
+                    }
+                }
+            }
         }
     }
 }
