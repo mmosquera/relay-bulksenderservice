@@ -22,8 +22,9 @@ namespace Relay.BulkSenderService.Reports
 
 			DateTime start = reportExecution.LastRun.AddHours(-_reportTypeConfiguration.OffsetHour);
 			DateTime end = reportExecution.NextRun.AddHours(-_reportTypeConfiguration.OffsetHour);
+            string searchPattern = $"*{Constants.EXTENSION_SENT}";
 
-			var fileInfoList = directoryInfo.GetFiles("*.sent")
+			var fileInfoList = directoryInfo.GetFiles(searchPattern)
 				.Where(f => f.LastWriteTimeUtc >= start && f.LastWriteTimeUtc < end)
 				.OrderBy(f => f.CreationTimeUtc);
 

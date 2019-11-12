@@ -31,25 +31,23 @@ namespace Relay.BulkSenderService.Processors
 
                     foreach (IUserConfiguration user in _users)
                     {
-                        var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
                         ReprocessFailedFiles(user);
 
-                        List<string> retryFiles = Directory.GetFiles(filePathHelper.GetRetriesFilesFolder(), "*.retry").ToList();
+                        var filesToProcess = new List<string>();
 
-                        foreach (string retryFile in retryFiles)
+                        var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+                        string searchPattern = $"*{Constants.EXTENSION_RETRY}";
+
+                        filesToProcess.AddRange(Directory.GetFiles(filePathHelper.GetRetriesFilesFolder(), searchPattern));
+
+                        searchPattern = $"*{Constants.EXTENSION_PROCESSING}";
+
+                        filesToProcess.AddRange(Directory.GetFiles(filePathHelper.GetDownloadsFolder(), searchPattern));
+
+                        foreach (string file in filesToProcess)
                         {
-                            if (!ProcessFile(retryFile, user, filePathHelper))
-                            {
-                                break;
-                            }
-                        }
-
-                        List<string> downloadFiles = Directory.GetFiles(filePathHelper.GetDownloadsFolder(), "*.processing").ToList();
-
-                        foreach (string downloadFile in downloadFiles)
-                        {
-                            if (!ProcessFile(downloadFile, user, filePathHelper))
+                            if (!ProcessFile(file, user, filePathHelper))
                             {
                                 break;
                             }
@@ -71,25 +69,27 @@ namespace Relay.BulkSenderService.Processors
 
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            List<string> retryFiles = Directory.GetFiles(filePathHelper.GetRetriesFilesFolder(), "*.processing").ToList();
+            string searchPattern = $"*{Constants.EXTENSION_PROCESSING}";
+
+            List<string> retryFiles = Directory.GetFiles(filePathHelper.GetRetriesFilesFolder(), searchPattern).ToList();
 
             foreach (string file in retryFiles)
             {
                 if (!IsFileProcessing(user.Name, file))
                 {
-                    string newRetryFile = $@"{filePathHelper.GetRetriesFilesFolder()}\{Path.GetFileNameWithoutExtension(file)}.retry";
+                    string newRetryFile = $@"{filePathHelper.GetRetriesFilesFolder()}\{Path.GetFileNameWithoutExtension(file)}{Constants.EXTENSION_RETRY}";
 
                     File.Move(file, newRetryFile);
                 }
             }
 
-            List<string> processFiles = Directory.GetFiles(filePathHelper.GetProcessedFilesFolder(), "*.processing").ToList();
+            List<string> processFiles = Directory.GetFiles(filePathHelper.GetProcessedFilesFolder(), searchPattern).ToList();
 
             foreach (string file in processFiles)
             {
                 if (!IsFileProcessing(user.Name, file))
                 {
-                    string newRetryFile = $@"{filePathHelper.GetRetriesFilesFolder()}\{Path.GetFileNameWithoutExtension(file)}.retry";
+                    string newRetryFile = $@"{filePathHelper.GetRetriesFilesFolder()}\{Path.GetFileNameWithoutExtension(file)}{Constants.EXTENSION_RETRY}";
 
                     File.Move(file, newRetryFile);
                 }
@@ -132,11 +132,11 @@ namespace Relay.BulkSenderService.Processors
                 {
                     //TODO enviar alerta
                     //aca llego porque se rompio un archivo pero no deberia pasar nunca.
-                    string processedFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}.processing";
+                    string processedFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}{Constants.EXTENSION_PROCESSING}";
 
                     if (File.Exists(processedFile))
                     {
-                        string corruptedFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}.corrupted";
+                        string corruptedFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}{Constants.EXTENSION_CORRUPTED}";
                         File.Move(processedFile, corruptedFile);
                     }
 
@@ -165,18 +165,11 @@ namespace Relay.BulkSenderService.Processors
                 return true;
             }
 
-            string destFileName;
+            string destFileName = Path.GetExtension(fileName) != Constants.EXTENSION_RETRY ?
+                $@"{filePathHelper.GetProcessedFilesFolder()}\{Path.GetFileName(fileName)}" :
+                $@"{filePathHelper.GetRetriesFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}{Constants.EXTENSION_PROCESSING}";
 
-            if (!fileName.EndsWith(".retry"))
-            {
-                destFileName = $@"{filePathHelper.GetProcessedFilesFolder()}\{Path.GetFileName(fileName)}";
-                File.Move(fileName, destFileName);
-            }
-            else
-            {
-                destFileName = fileName.Replace(".retry", ".processing");
-                File.Move(fileName, destFileName);
-            }
+            File.Move(fileName, destFileName);
 
             _logger.Debug($"New thread for user:{user.Name}. Thread count:{threadsUserCount + 1}");
 
@@ -191,7 +184,7 @@ namespace Relay.BulkSenderService.Processors
 
             ThreadPool.QueueUserWorkItem(new WaitCallback(processor.DoWork), threadState);
 
-            // To mode debug.
+            //To mode debug.
             //processor.DoWork(threadState);
 
             return true;

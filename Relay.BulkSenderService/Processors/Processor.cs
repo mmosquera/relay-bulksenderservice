@@ -66,7 +66,6 @@ namespace Relay.BulkSenderService.Processors
                     return;
                 }
 
-                //TODO: identificar si es retry y no mandar el start
                 SendStartProcessEmail(fileName, user);
 
                 ProcessFile(user, fileName);
@@ -84,7 +83,7 @@ namespace Relay.BulkSenderService.Processors
                 {
                     var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-                    string processedFileName = $@"{filePathHelper.GetProcessedFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.processed";
+                    string processedFileName = $@"{filePathHelper.GetProcessedFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}{Constants.EXTENSION_PROCESSED}";
 
                     File.Move(fileName, processedFileName);
 
@@ -220,7 +219,7 @@ namespace Relay.BulkSenderService.Processors
 
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
 
-            string resultFileName = $@"{filePathHelper.GetResultsFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.sent";
+            string resultFileName = $@"{filePathHelper.GetResultsFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}{Constants.EXTENSION_SENT}";
 
             using (var streamWriter = new StreamWriter(resultFileName))
             {
@@ -448,8 +447,8 @@ namespace Relay.BulkSenderService.Processors
             }
 
             //4- zip file 
-            string zipAttachments = $@"{templateConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}.zip";
-            string localZipAttachments = $@"{localAttachmentFolder}\{Path.GetFileNameWithoutExtension(originalFile)}.zip";
+            string zipAttachments = $@"{templateConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}{Constants.EXTENSION_ZIP}";
+            string localZipAttachments = $@"{localAttachmentFolder}\{Path.GetFileNameWithoutExtension(originalFile)}{Constants.EXTENSION_ZIP}";
 
             // TODO: add retries.
             ftpHelper.DownloadFile(zipAttachments, localZipAttachments);
@@ -499,7 +498,10 @@ namespace Relay.BulkSenderService.Processors
 
         private void SendStartProcessEmail(string file, IUserConfiguration user)
         {
-            if (user.Alerts != null && user.Alerts.GetStartAlert() != null && user.Alerts.Emails.Count > 0)
+            if (user.Alerts != null
+                && user.Alerts.GetStartAlert() != null
+                && user.Alerts.Emails.Count > 0
+                && new FileInfo(file).Directory.Name != Constants.FOLDER_RETRIES)
             {
                 var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
                 smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);

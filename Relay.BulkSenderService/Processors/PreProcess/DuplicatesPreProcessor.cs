@@ -88,7 +88,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 }
             }
 
-            string newFileName = $"{ Path.GetFileNameWithoutExtension(fileName)}.processing";
+            string newFileName = $"{Path.GetFileNameWithoutExtension(fileName)}{Constants.EXTENSION_PROCESSING}";
 
             using (var streamWriter = new StreamWriter(newFileName))
             {

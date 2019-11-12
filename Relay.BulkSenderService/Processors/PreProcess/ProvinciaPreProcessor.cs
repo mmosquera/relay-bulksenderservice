@@ -18,7 +18,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
         public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
         {
-            if (!File.Exists(fileName) || !Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+            if (!File.Exists(fileName) || !Path.GetExtension(fileName).Equals(Constants.EXTENSION_ZIP, StringComparison.OrdinalIgnoreCase))
             {
                 return;
             }
@@ -44,7 +44,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                 if (File.Exists(baproFile))
                 {
-                    string processingFile = $@"{downloadFolder}\{Path.GetFileNameWithoutExtension(fileName)}.processing";
+                    string processingFile = $@"{downloadFolder}\{Path.GetFileNameWithoutExtension(fileName)}{Constants.EXTENSION_PROCESSING}";
 
                     var stringBuilder = new StringBuilder();
 

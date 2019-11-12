@@ -15,7 +15,7 @@ namespace Relay.BulkSenderService.Reports
         {
             _reportFileName = $@"{ReportPath}\{ReportName}";
 
-            if (Path.GetExtension(_reportFileName).Equals(".zip", StringComparison.InvariantCultureIgnoreCase))
+            if (Path.GetExtension(_reportFileName).Equals(Constants.EXTENSION_ZIP, StringComparison.InvariantCultureIgnoreCase))
             {
                 // TODO: Improve entry file name. Using type for extension.
                 string tempCsv = _reportFileName.Replace(".ZIP", ".TXT");

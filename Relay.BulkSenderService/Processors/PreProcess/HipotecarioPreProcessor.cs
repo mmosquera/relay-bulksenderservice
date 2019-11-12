@@ -19,7 +19,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
             try
             {
-                if (Path.GetExtension(fileName).Equals(".zip", StringComparison.OrdinalIgnoreCase))
+                if (Path.GetExtension(fileName).Equals(Constants.EXTENSION_ZIP, StringComparison.OrdinalIgnoreCase))
                 {
                     var filePathHelper = new FilePathHelper(_configuration, userName);
 
@@ -42,7 +42,8 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                     {
                         string name = Path.GetFileNameWithoutExtension(zipEntry);
 
-                        if (File.Exists($@"{downloadPath}\{name}.processing") || File.Exists($@"{processedPath}\{name}.processing"))
+                        if (File.Exists($@"{downloadPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
+                            File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSING}"))
                         {
                             _logger.Info($"The file {zipEntry} is processing.");
 
@@ -51,7 +52,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                             continue;
                         }
 
-                        if (File.Exists($@"{processedPath}\{name}.processed"))
+                        if (File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSED}"))
                         {
                             _logger.Error($"The file {zipEntry} is already processed.");
 
@@ -60,14 +61,14 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                             continue;
                         }
 
-                        string newFileName = zipEntry.Replace(Path.GetExtension(zipEntry), ".processing");
+                        string newFileName = zipEntry.Replace(Path.GetExtension(zipEntry), Constants.EXTENSION_PROCESSING);
 
                         File.Move(zipEntry, newFileName);
                     }
                 }
                 else
                 {
-                    string newFileName = fileName.Replace(Path.GetExtension(fileName), ".processing");
+                    string newFileName = fileName.Replace(Path.GetExtension(fileName), Constants.EXTENSION_PROCESSING);
 
                     File.Move(fileName, newFileName);
                 }

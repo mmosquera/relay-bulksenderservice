@@ -22,7 +22,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             {
                 DownloadAttachments(fileName, userConfiguration);
 
-                string newFileName = fileName.Replace(Path.GetExtension(fileName), ".processing");
+                string newFileName = fileName.Replace(Path.GetExtension(fileName), Constants.EXTENSION_PROCESSING);
 
                 File.Move(fileName, newFileName);
             }
@@ -119,8 +119,8 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             }
 
             //get from zip file
-            string zipAttachments = $@"{templateConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}.zip";
-            string localZipFile = $@"{filePathHelper.GetAttachmentsFilesFolder()}\{Path.GetFileNameWithoutExtension(originalFile)}.zip";
+            string zipAttachments = $@"{templateConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}{Constants.EXTENSION_ZIP}";
+            string localZipFile = $@"{filePathHelper.GetAttachmentsFilesFolder()}\{Path.GetFileNameWithoutExtension(originalFile)}{Constants.EXTENSION_ZIP}";
 
             // TODO: add retries.
             ftpHelper.DownloadFile(zipAttachments, localZipFile);

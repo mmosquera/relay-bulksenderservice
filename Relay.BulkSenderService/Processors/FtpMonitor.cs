@@ -188,7 +188,7 @@ namespace Relay.BulkSenderService.Processors
 
             if (downloadResult && File.Exists(localFileName))
             {
-                string newFileName = localFileName.Replace(".downloading", Path.GetExtension(file));
+                string newFileName = localFileName.Replace(Constants.EXTENSION_DOWNLOADING, Path.GetExtension(file));
                 File.Move(localFileName, newFileName);
             }
             else
@@ -224,11 +224,11 @@ namespace Relay.BulkSenderService.Processors
                     auxName = $@"{name}_{count.ToString("000")}";
                 }
 
-                localFileName = $@"{downloadPath}\{name}_{count.ToString("000")}.downloading";
+                localFileName = $@"{downloadPath}\{name}_{count.ToString("000")}{Constants.EXTENSION_DOWNLOADING}";
             }
             else
             {
-                localFileName = $@"{downloadPath}\{name}.downloading";
+                localFileName = $@"{downloadPath}\{name}{Constants.EXTENSION_DOWNLOADING}";
             }
 
             var fileInfo = new FileInfo(localFileName);
@@ -239,13 +239,14 @@ namespace Relay.BulkSenderService.Processors
                 return false;
             }
 
-            if (File.Exists($@"{downloadPath}\{name}.processing") || File.Exists($@"{processedPath}\{name}.processing"))
+            if (File.Exists($@"{downloadPath}\{name}{Constants.EXTENSION_PROCESSING}")
+                || File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSING}"))
             {
                 _logger.Info($"The file {fileName} is processing.");
                 return false;
             }
 
-            if (File.Exists($@"{processedPath}\{name}.processed"))
+            if (File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSED}"))
             {
                 _logger.Error($"The file {fileName} is already processed.");
 
