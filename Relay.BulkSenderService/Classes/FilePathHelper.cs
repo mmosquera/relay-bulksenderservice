@@ -21,22 +21,22 @@ namespace Relay.BulkSenderService.Classes
 
         public string GetProcessedFilesFolder()
         {
-            return $@"{GetUserFolder()}\Processed";
+            return $@"{GetUserFolder()}\{Constants.FOLDER_PROCESSED}";
         }
 
         public string GetReportsFilesFolder()
         {
-            return $@"{GetUserFolder()}\Reports";
+            return $@"{GetUserFolder()}\{Constants.FOLDER_REPORTS}";
         }
 
         public string GetResultsFilesFolder()
         {
-            return $@"{GetUserFolder()}\Results";
+            return $@"{GetUserFolder()}\{Constants.FOLDER_RESULTS}";
         }
 
         public string GetAttachmentsFilesFolder(string subFolder = null)
         {
-            string folder = $@"{GetUserFolder()}\Attachments";
+            string folder = $@"{GetUserFolder()}\{Constants.FOLDER_ATTACHMENTS}";
 
             if (!string.IsNullOrEmpty(subFolder))
             {
@@ -48,17 +48,17 @@ namespace Relay.BulkSenderService.Classes
 
         public string GetRetriesFilesFolder()
         {
-            return $@"{GetUserFolder()}\Retries";
+            return $@"{GetUserFolder()}\{Constants.FOLDER_RETRIES}";
         }
 
         public string GetDownloadsFolder()
         {
-            return $@"{GetUserFolder()}\Downloads";
+            return $@"{GetUserFolder()}\{Constants.FOLDER_DOWNLOADS}";
         }
 
         public string GetQueueFilesFolder()
         {
-            return $@"{GetUserFolder()}\Queues";
+            return $@"{GetUserFolder()}\{Constants.FOLDER_QUEUES}";
         }
 
         public void CreateUserFolders()
