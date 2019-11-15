@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Relay.BulkSenderService.Processors
 {
@@ -44,7 +45,7 @@ namespace Relay.BulkSenderService.Processors
                         {
                             List<string> files = ftpHelper.GetFileList(folder, extensions);
 
-                            DownloadUserFiles(folder, files, user, ftpHelper);
+                            Task.Factory.StartNew(() => DownloadUserFiles(folder, files, user));
                         }
 
                         SetNextRun(user.Name, user.FtpInterval);
@@ -59,7 +60,7 @@ namespace Relay.BulkSenderService.Processors
             }
         }
 
-        private void DownloadUserFiles(string folder, List<string> files, IUserConfiguration user, IFtpHelper ftpHelper)
+        private void DownloadUserFiles(string folder, List<string> files, IUserConfiguration user)
         {
             if (files.Count == 0)
             {
@@ -70,26 +71,22 @@ namespace Relay.BulkSenderService.Processors
 
             int totalFiles = parallelProcessors * 2;
 
-            Thread threadDownload = new Thread(new ThreadStart(() =>
+            string downloadFolder = new FilePathHelper(_configuration, user.Name).GetDownloadsFolder();
+
+            foreach (string file in files)
             {
-                string downloadFolder = new FilePathHelper(_configuration, user.Name).GetDownloadsFolder();
-
-                foreach (string file in files)
+                if (Directory.GetFiles(downloadFolder).Length >= totalFiles)
                 {
-                    if (Directory.GetFiles(downloadFolder).Length >= totalFiles)
-                    {
-                        break;
-                    }
-
-                    string ftpFileName = $"{folder}/{file}";
-
-                    if (GetFileFromFTP(ftpFileName, user, ftpHelper))
-                    {
-                        RemoveFileFromFtp(ftpFileName, user, ftpHelper);
-                    }
+                    break;
                 }
-            }));
-            threadDownload.Start();
+
+                string ftpFileName = $"{folder}/{file}";
+
+                if (GetFileFromFTP(ftpFileName, user))
+                {
+                    RemoveFileFromFtp(ftpFileName, user);
+                }
+            }
         }
 
         private void SetNextRun(string name, int ftpInterval)
@@ -124,22 +121,18 @@ namespace Relay.BulkSenderService.Processors
             return true;
         }
 
-        private bool GetFileFromFTP(string file, IUserConfiguration user, IFtpHelper ftpHelper)
+        private bool GetFileFromFTP(string file, IUserConfiguration user)
         {
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
-            ITemplateConfiguration templateConfiguration = user.GetTemplateConfiguration(file);
-
-            bool allowDuplicates = templateConfiguration != null && templateConfiguration.AllowDuplicates ? true : false;
-
             string localFileName;
 
-            if (!ValidateFile(file, filePathHelper, allowDuplicates, out localFileName))
+            if (!ValidateFile(file, user, out localFileName))
             {
                 return false;
             }
 
             _logger.Debug($"Start to download {file} for user {user.Name}");
+
+            IFtpHelper ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
             bool downloadResult = ftpHelper.DownloadFileWithResume(file, localFileName);
 
@@ -160,13 +153,19 @@ namespace Relay.BulkSenderService.Processors
             return true;
         }
 
-        private bool ValidateFile(string file, FilePathHelper filePathHelper, bool allowDuplicates, out string localFileName)
+        private bool ValidateFile(string file, IUserConfiguration userConfiguration, out string localFileName)
         {
             string fileName = Path.GetFileName(file);
             string name = Path.GetFileNameWithoutExtension(fileName);
 
+            var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+
             string downloadPath = filePathHelper.GetDownloadsFolder();
             string processedPath = filePathHelper.GetProcessedFilesFolder();
+
+            ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(file);
+
+            bool allowDuplicates = templateConfiguration != null && templateConfiguration.AllowDuplicates ? true : false;
 
             if (allowDuplicates)
             {
@@ -196,19 +195,15 @@ namespace Relay.BulkSenderService.Processors
                 return false;
             }
 
-            if (File.Exists($@"{downloadPath}\{name}{Constants.EXTENSION_PROCESSING}")
-                || File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSING}"))
-            {
-                _logger.Info($"The file {fileName} is processing.");
-                return false;
-            }
-
-            if (File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSED}"))
+            if (File.Exists($@"{downloadPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
+                File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
+                File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSED}"))
             {
                 _logger.Error($"The file {fileName} is already processed.");
 
-                //TODO: pasar usuario como parametro
-                new FileRepeatedError(_configuration).SendErrorEmail(fileName, null);
+                new FileRepeatedError(_configuration).SendErrorEmail(fileName, userConfiguration.Alerts);
+
+                RemoveFileFromFtp(file, userConfiguration);
 
                 return false;
             }
@@ -216,11 +211,13 @@ namespace Relay.BulkSenderService.Processors
             return true;
         }
 
-        private void RemoveFileFromFtp(string file, IUserConfiguration user, IFtpHelper ftpHelper)
+        private void RemoveFileFromFtp(string file, IUserConfiguration user)
         {
             if (user.HasDeleteFtp)
             {
                 _logger.Debug($"Remove file {file} from FTP ");
+
+                IFtpHelper ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
                 ftpHelper.DeleteFile(file);
             }
