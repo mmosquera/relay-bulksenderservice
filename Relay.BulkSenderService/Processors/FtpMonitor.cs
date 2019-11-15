@@ -81,13 +81,6 @@ namespace Relay.BulkSenderService.Processors
                         break;
                     }
 
-                    // TODO: remove from here! its only for GIRE. Maybe to preprocess
-                    if (user.Ack != null && IsAckFile(file, user.Ack))
-                    {
-                        ProcessAckFile(folder, file, user, ftpHelper);
-                        continue;
-                    }
-
                     string ftpFileName = $"{folder}/{file}";
 
                     if (GetFileFromFTP(ftpFileName, user, ftpHelper))
@@ -129,40 +122,6 @@ namespace Relay.BulkSenderService.Processors
             }
 
             return true;
-        }
-
-        private bool IsAckFile(string fileName, AckConfiguration ackConfiguration)
-        {
-            return ackConfiguration.FileExtensions.Exists(x => x.Equals(Path.GetExtension(fileName)));
-        }
-
-        private void ProcessAckFile(string folderName, string fileName, IUserConfiguration user, IFtpHelper ftpHelper)
-        {
-            string ftpFileName = $@"{folderName}/{fileName}";
-            string localFileName = $@"{new FilePathHelper(_configuration, user.Name).GetReportsFilesFolder()}\{fileName}";
-
-            _logger.Debug($"Process ack file {ftpFileName}");
-
-            ftpHelper.DownloadFile(ftpFileName, localFileName);
-
-            if (File.Exists(localFileName))
-            {
-                if (user.HasDeleteFtp)
-                {
-                    ftpHelper.DeleteFile(ftpFileName);
-                }
-
-                try
-                {
-                    _logger.Debug($"Delete local file {fileName}");
-
-                    File.Delete(localFileName);
-                }
-                catch (Exception e)
-                {
-                    _logger.Error($"Error trying to delete file {localFileName} -- {e}");
-                }
-            }
         }
 
         private bool GetFileFromFTP(string file, IUserConfiguration user, IFtpHelper ftpHelper)

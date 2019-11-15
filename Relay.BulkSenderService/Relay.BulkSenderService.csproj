@@ -225,7 +225,6 @@
     <Compile Include="Classes\SqlHelper.cs" />
     <Compile Include="Classes\TemplateGenerator.cs" />
     <Compile Include="Classes\ZipHelper.cs" />
-    <Compile Include="Configuration\AckConfiguration.cs" />
     <Compile Include="Configuration\AdminEmailConfiguration.cs" />
     <Compile Include="Configuration\Alerts\AlertConfiguration.cs" />
     <Compile Include="Configuration\Alerts\EndAlertTypeConfiguration.cs" />
