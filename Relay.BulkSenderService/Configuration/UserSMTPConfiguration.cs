@@ -1,6 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration.Alerts;
 using Relay.BulkSenderService.Processors;
+using Relay.BulkSenderService.Processors.Acknowledgement;
 using Relay.BulkSenderService.Processors.PreProcess;
 using Relay.BulkSenderService.Processors.Status;
 using System;
@@ -36,6 +37,7 @@ namespace Relay.BulkSenderService.Configuration
         public int DeliveryDelay { get; set; }
         public int MaxThreadsNumber { get; set; }
         public IStatusConfiguration Status { get; set; }
+        public IAckConfiguration Ack { get; set; }
 
         public Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName)
         {
@@ -73,6 +75,11 @@ namespace Relay.BulkSenderService.Configuration
         public StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration)
         {
             return Status.GetStatusProcessor(logger, configuration);
+        }
+
+        public IAckProcessor GetAckProcessor(ILog logger, IConfiguration configuration)
+        {
+            return Ack.GetAckProcessor(logger, configuration);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration.Alerts;
 using Relay.BulkSenderService.Processors;
+using Relay.BulkSenderService.Processors.Acknowledgement;
 using Relay.BulkSenderService.Processors.PreProcess;
 using Relay.BulkSenderService.Processors.Status;
 using System;
@@ -29,6 +30,7 @@ namespace Relay.BulkSenderService.Configuration
         AlertConfiguration Alerts { get; set; }
         IPreProcessorConfiguration PreProcessor { get; set; }
         IStatusConfiguration Status { get; set; }
+        IAckConfiguration Ack { get; set; }
 
         Processor GetProcessor(ILog logger, IConfiguration configuration, string fileName);
 
@@ -39,5 +41,7 @@ namespace Relay.BulkSenderService.Configuration
         PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration, string fileName);
 
         StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration);
+
+        IAckProcessor GetAckProcessor(ILog logger, IConfiguration configuration);
     }
 }

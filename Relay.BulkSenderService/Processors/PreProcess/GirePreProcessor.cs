@@ -65,10 +65,6 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                         File.Move(zipEntry, newFileName);
                     }
                 }
-                else if (Path.GetExtension(fileName).Equals(".Ok", StringComparison.OrdinalIgnoreCase))
-                {
-                    File.Delete(fileName);
-                }
                 else
                 {
                     string newFileName = fileName.Replace(Path.GetExtension(fileName), Constants.EXTENSION_PROCESSING);

@@ -239,6 +239,8 @@
     <Compile Include="Configuration\BanortePreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GirePreProcessorConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioPreProcessorConfiguration.cs" />
+    <Compile Include="Configuration\GireAckConfiguration.cs" />
+    <Compile Include="Configuration\IAckConfiguration.cs" />
     <Compile Include="Configuration\ProvinciaPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\CredentialsConfiguration.cs" />
     <Compile Include="Configuration\CsvFileReportTypeConfiguration.cs" />
@@ -284,6 +286,9 @@
     <Compile Include="Configuration\UserApiConfiguration.cs" />
     <Compile Include="Configuration\UserSMTPConfiguration.cs" />
     <Compile Include="Classes\FTPHelper.cs" />
+    <Compile Include="Processors\Acknowledgement\AckProcessor.cs" />
+    <Compile Include="Processors\Acknowledgement\GireAckProcessor.cs" />
+    <Compile Include="Processors\Acknowledgement\IAckProcessor.cs" />
     <Compile Include="Processors\ApiProcessorBanorteProducer.cs" />
     <Compile Include="Processors\ApiProcessorConsumer.cs" />
     <Compile Include="Processors\ApiProcessorCustomHeaderBancorProducer.cs" />

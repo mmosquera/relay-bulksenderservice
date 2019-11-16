@@ -1,5 +1,6 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Configuration;
+using Relay.BulkSenderService.Processors.Acknowledgement;
 using Relay.BulkSenderService.Processors.Errors;
 using System;
 using System.Collections.Generic;
@@ -35,11 +36,13 @@ namespace Relay.BulkSenderService.Processors
                             continue;
                         }
 
-                        string[] extensions = user.FileExtensions != null ? user.FileExtensions.ToArray() : new string[] { ".csv" };
+                        List<string> downloadFolders = user.Templates.SelectMany(x => x.DownloadFolders).Distinct().ToList();
+
+                        ProcessAckFiles(user, downloadFolders);
+
+                        IEnumerable<string> extensions = user.FileExtensions != null ? user.FileExtensions : new List<string> { ".csv" };
 
                         var ftpHelper = user.Ftp.GetFtpHelper(_logger);
-
-                        List<string> downloadFolders = user.Templates.SelectMany(x => x.DownloadFolders).Distinct().ToList();
 
                         foreach (string folder in downloadFolders)
                         {
@@ -57,6 +60,36 @@ namespace Relay.BulkSenderService.Processors
                 }
 
                 Thread.Sleep(_configuration.FtpListInterval);
+            }
+        }
+
+        private void ProcessAckFiles(IUserConfiguration userConfiguration, List<string> folders)
+        {
+            if (userConfiguration.Ack == null)
+            {
+                return;
+            }
+
+            var ftpHelper = userConfiguration.Ftp.GetFtpHelper(_logger);
+
+            IAckProcessor ackProcessor = userConfiguration.GetAckProcessor(_logger, _configuration);
+
+            foreach (string folder in folders)
+            {
+                List<string> ackFiles = ftpHelper.GetFileList(folder, userConfiguration.Ack.Extensions);
+
+                foreach (string ackFile in ackFiles)
+                {
+                    string ftpFileName = $"{folder}/{ackFile}";
+                    string localFileName = $@"{new FilePathHelper(_configuration, userConfiguration.Name).GetDownloadsFolder()}\{ackFile}";
+
+                    if (ftpHelper.DownloadFileWithResume(ftpFileName, localFileName))
+                    {
+                        ackProcessor.ProcessAckFile(localFileName);
+
+                        RemoveFileFromFtp(ftpFileName, userConfiguration);
+                    }
+                }
             }
         }
 
@@ -138,7 +171,8 @@ namespace Relay.BulkSenderService.Processors
 
             if (downloadResult && File.Exists(localFileName))
             {
-                string newFileName = localFileName.Replace(Constants.EXTENSION_DOWNLOADING, Path.GetExtension(file));
+                string newFileName = $@"{new FilePathHelper(_configuration, user.Name).GetDownloadsFolder()}\{Path.GetFileName(file)}";
+
                 File.Move(localFileName, newFileName);
             }
             else
@@ -162,30 +196,13 @@ namespace Relay.BulkSenderService.Processors
 
             string downloadPath = filePathHelper.GetDownloadsFolder();
             string processedPath = filePathHelper.GetProcessedFilesFolder();
+            string retryPath = filePathHelper.GetRetriesFilesFolder();
+
+            localFileName = $@"{downloadPath}\{name}{Constants.EXTENSION_DOWNLOADING}";
 
             ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(file);
 
             bool allowDuplicates = templateConfiguration != null && templateConfiguration.AllowDuplicates ? true : false;
-
-            if (allowDuplicates)
-            {
-                var directory = new DirectoryInfo(processedPath);
-                int count = 1;
-
-                string auxName = $@"{name}_{count.ToString("000")}";
-
-                while (directory.GetFiles().ToList().Any(x => x.Name.Contains(auxName)))
-                {
-                    count++;
-                    auxName = $@"{name}_{count.ToString("000")}";
-                }
-
-                localFileName = $@"{downloadPath}\{name}_{count.ToString("000")}{Constants.EXTENSION_DOWNLOADING}";
-            }
-            else
-            {
-                localFileName = $@"{downloadPath}\{name}{Constants.EXTENSION_DOWNLOADING}";
-            }
 
             var fileInfo = new FileInfo(localFileName);
 
@@ -195,9 +212,12 @@ namespace Relay.BulkSenderService.Processors
                 return false;
             }
 
-            if (File.Exists($@"{downloadPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
+            if (!allowDuplicates &&
+                (File.Exists($@"{downloadPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
                 File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
-                File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSED}"))
+                File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSED}") ||
+                File.Exists($@"{retryPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
+                File.Exists($@"{retryPath}\{name}{Constants.EXTENSION_RETRY}")))
             {
                 _logger.Error($"The file {fileName} is already processed.");
 
