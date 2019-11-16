@@ -1,20 +1,21 @@
-﻿using System.Collections.Generic;
+﻿using Relay.BulkSenderService.Classes;
+using Relay.BulkSenderService.Configuration;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Relay.BulkSenderService.Classes;
-using Relay.BulkSenderService.Configuration;
 
 namespace Relay.BulkSenderService.Processors.PreProcess
 {
     public class DuplicatesPreProcessor : PreProcessor
     {
-
         public DuplicatesPreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
         public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
         {
-            string processedFolder = new FilePathHelper(_configuration, userConfiguration.Name).GetProcessedFilesFolder();
+            var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+            string processedFolder = filePathHelper.GetProcessedFilesFolder();
+            string downloadFolder = filePathHelper.GetDownloadsFolder();
 
             var directory = new DirectoryInfo(processedFolder);
 
@@ -23,7 +24,6 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             List<int> indexes = templateConfiguration.Fields.Where(x => x.IsKey).Select(x => x.Position).ToList();
 
             string name = Path.GetFileNameWithoutExtension(fileName);
-            name = name.Remove(name.LastIndexOf('_'));
 
             IEnumerable<string> files = directory.GetFiles()
                 .Where(x => x.Name.Contains(name)
@@ -64,11 +64,16 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
             var stringBuilder = new StringBuilder();
 
-            using (var sr = new StreamReader(fileName))
+            using (var streamReader = new StreamReader(fileName))
             {
-                while (!sr.EndOfStream)
+                if (templateConfiguration.HasHeaders)
                 {
-                    string line = sr.ReadLine();
+                    streamReader.ReadLine();
+                }
+
+                while (!streamReader.EndOfStream)
+                {
+                    string line = streamReader.ReadLine();
 
                     if (string.IsNullOrEmpty(line))
                     {
@@ -88,7 +93,16 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 }
             }
 
-            string newFileName = $"{Path.GetFileNameWithoutExtension(fileName)}{Constants.EXTENSION_PROCESSING}";
+            int count = 1;
+            string auxName = $@"{name}_{count.ToString("000")}";
+
+            while (directory.GetFiles().ToList().Any(x => x.Name.Contains(auxName)))
+            {
+                count++;
+                auxName = $@"{name}_{count.ToString("000")}";
+            }
+
+            string newFileName = $@"{downloadFolder}\{name}_{count.ToString("000")}{Constants.EXTENSION_PROCESSING}";
 
             using (var streamWriter = new StreamWriter(newFileName))
             {

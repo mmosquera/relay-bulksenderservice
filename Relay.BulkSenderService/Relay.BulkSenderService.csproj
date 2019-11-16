@@ -237,6 +237,7 @@
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\FilePathHelper.cs" />
     <Compile Include="Configuration\BanortePreProcessorConfiguration.cs" />
+    <Compile Include="Configuration\DuplicatesPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GirePreProcessorConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GireAckConfiguration.cs" />
