@@ -13,12 +13,17 @@ namespace Relay.BulkSenderService.Processors
 {
     public class FtpMonitor : BaseWorker
     {
-        private const int MINUTES_TO_WRITE = 5;
+        private const int MINUTES_TO_WRITE_DOWNLOAD = 5;
+        private const int MINUTES_TO_DELETE_REPEATED = 60;
         private Dictionary<string, DateTime> _nextRun;
+        private Dictionary<string, List<RepeatedFile>> _repeatedFiles;
+        private readonly object _lockRepeatedFiles;
 
         public FtpMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _nextRun = new Dictionary<string, DateTime>();
+            _repeatedFiles = new Dictionary<string, List<RepeatedFile>>();
+            _lockRepeatedFiles = new object();
         }
 
         public void ReadFtpFiles()
@@ -50,6 +55,8 @@ namespace Relay.BulkSenderService.Processors
 
                             Task.Factory.StartNew(() => DownloadUserFiles(folder, files, user));
                         }
+
+                        RemoveRepeatedFiles(user);
 
                         SetNextRun(user.Name, user.FtpInterval);
                     }
@@ -206,7 +213,7 @@ namespace Relay.BulkSenderService.Processors
 
             var fileInfo = new FileInfo(localFileName);
 
-            if (fileInfo.Exists && DateTime.UtcNow.Subtract(fileInfo.LastWriteTimeUtc).TotalMinutes < MINUTES_TO_WRITE)
+            if (fileInfo.Exists && DateTime.UtcNow.Subtract(fileInfo.LastWriteTimeUtc).TotalMinutes < MINUTES_TO_WRITE_DOWNLOAD)
             {
                 _logger.Info($"The file {fileName} is downloading.");
                 return false;
@@ -221,14 +228,62 @@ namespace Relay.BulkSenderService.Processors
             {
                 _logger.Error($"The file {fileName} is already processed.");
 
-                new FileRepeatedError(_configuration).SendErrorEmail(fileName, userConfiguration.Alerts);
-
-                RemoveFileFromFtp(file, userConfiguration);
+                if (AddRepeatedFile(userConfiguration, file))
+                {
+                    new FileRepeatedError(_configuration).SendErrorEmail(fileName, userConfiguration.Alerts);
+                }
 
                 return false;
             }
 
             return true;
+        }
+
+        private bool AddRepeatedFile(IUserConfiguration userConfiguration, string fileName)
+        {
+            lock (_lockRepeatedFiles)
+            {
+                if (!_repeatedFiles.ContainsKey(userConfiguration.Name))
+                {
+                    _repeatedFiles.Add(userConfiguration.Name, new List<RepeatedFile>());
+                }
+
+                if (!_repeatedFiles[userConfiguration.Name].Any(x => x.Name.Equals(fileName, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    _repeatedFiles[userConfiguration.Name].Add(new RepeatedFile()
+                    {
+                        Name = fileName,
+                        RepeatedTime = DateTime.UtcNow
+                    });
+
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private void RemoveRepeatedFiles(IUserConfiguration userConfiguration)
+        {
+            lock (_lockRepeatedFiles)
+            {
+                if (_repeatedFiles.ContainsKey(userConfiguration.Name))
+                {
+                    IEnumerable<RepeatedFile> filesToDelete = _repeatedFiles[userConfiguration.Name].Where(x => DateTime.UtcNow.Subtract(x.RepeatedTime).TotalMinutes > MINUTES_TO_DELETE_REPEATED);
+
+                    foreach (RepeatedFile file in filesToDelete)
+                    {
+                        RemoveFileFromFtp(file.Name, userConfiguration);
+                    }
+
+                    _repeatedFiles[userConfiguration.Name].RemoveAll(x => DateTime.UtcNow.Subtract(x.RepeatedTime).TotalMinutes > MINUTES_TO_DELETE_REPEATED);
+
+                    if (_repeatedFiles[userConfiguration.Name].Count == 0)
+                    {
+                        _repeatedFiles.Remove(userConfiguration.Name);
+                    }
+                }
+            }
         }
 
         private void RemoveFileFromFtp(string file, IUserConfiguration user)

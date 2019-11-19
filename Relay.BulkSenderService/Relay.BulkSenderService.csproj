@@ -220,6 +220,7 @@
     <Compile Include="Classes\Recipient.cs" />
     <Compile Include="Classes\ProcessResult.cs" />
     <Compile Include="Classes\RecipientAttachment.cs" />
+    <Compile Include="Classes\RepeatedFile.cs" />
     <Compile Include="Classes\SftpHelper.cs" />
     <Compile Include="Classes\SMTPRecipient.cs" />
     <Compile Include="Classes\SqlHelper.cs" />
