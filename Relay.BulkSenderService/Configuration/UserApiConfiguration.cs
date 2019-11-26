@@ -64,7 +64,14 @@ namespace Relay.BulkSenderService.Configuration
 
         public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration, string fileName)
         {
-            return GetTemplateConfiguration(fileName)?.PreProcessor?.GetPreProcessor(logger, configuration);
+            PreProcessor preProcessor = GetTemplateConfiguration(fileName)?.PreProcessor?.GetPreProcessor(logger, configuration);
+
+            if (preProcessor == null)
+            {
+                preProcessor = PreProcessor.GetPreProcessor(logger, configuration);
+            }
+
+            return preProcessor;
         }
 
         public StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration)

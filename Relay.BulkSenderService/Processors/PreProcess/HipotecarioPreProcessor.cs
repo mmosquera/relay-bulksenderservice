@@ -10,7 +10,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
     {
         public HipotecarioPreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration) { }
 
-        public void ProcessFile(string fileName, string userName)
+        public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
         {
             if (!File.Exists(fileName))
             {
@@ -21,11 +21,10 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             {
                 if (Path.GetExtension(fileName).Equals(Constants.EXTENSION_ZIP, StringComparison.OrdinalIgnoreCase))
                 {
-                    var filePathHelper = new FilePathHelper(_configuration, userName);
+                    var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
 
                     string downloadPath = filePathHelper.GetDownloadsFolder();
                     string processedPath = filePathHelper.GetProcessedFilesFolder();
-
 
                     List<string> zipEntries = new ZipHelper().UnzipFile(fileName, downloadPath);
 
@@ -77,11 +76,6 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             {
                 _logger.Error($"ERROR HIPOTECARIO PRE PROCESSOR: {e}");
             }
-        }
-
-        public override void ProcessFile(string fileName, IUserConfiguration userConfiguration)
-        {
-            throw new NotImplementedException();
         }
     }
 }
