@@ -57,7 +57,11 @@ namespace Relay.BulkSenderService.Reports
 
         protected override void SendReportAlert(IUserConfiguration user, List<string> files)
         {
-            if (user.Alerts != null && user.Alerts.GetReportAlert() != null && user.Alerts.Emails.Count > 0)
+            if (user.Alerts != null
+                && user.Alerts.GetReportAlert() != null
+                && user.Alerts.Emails.Count > 0
+                && files != null
+                && files.Count > 0)
             {
                 SendSmtpEmail(user.Alerts.Emails, user.Alerts.GetReportAlert().Subject, File.ReadAllText(files[0]), new List<string>());
             }
