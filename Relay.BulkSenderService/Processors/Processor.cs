@@ -255,10 +255,12 @@ namespace Relay.BulkSenderService.Processors
             return errorFileName;
         }
 
+        //TODO: mejorar el tiempo de espera de 5 segundos y 5 minutos.
         private void UpdateStatusFile(string fileName, IUserConfiguration user, CancellationToken cancellationToken)
         {
             var filePathHelper = new FilePathHelper(_configuration, user.Name);
-            string statusFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.status.tmp";
+            string name = Path.GetFileNameWithoutExtension(fileName);
+            string statusFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{name}.status.tmp";
 
             var fileWriter = new FileWriter(statusFileName);
 
@@ -275,7 +277,7 @@ namespace Relay.BulkSenderService.Processors
                 {
                     var filesStatus = new FileStatus()
                     {
-                        FileName = fileName,
+                        FileName = name,
                         Finished = finished,
                         Total = _total,
                         LastUpdate = DateTime.UtcNow

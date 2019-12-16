@@ -106,7 +106,7 @@ namespace Relay.BulkSenderService.Processors
             };
 
             string resourceId = "20191022-1932-0811-afb5-3e64c86f3245";
-            string linkResult = "/accounts/111/deliveries/20191022-1932-055f-aa29-c288e933a58a";
+            string linkResult = $"sent successfully to:{apiRecipient.ToEmail}";
 
             System.Text.RegularExpressions.Regex regex = new System.Text.RegularExpressions.Regex(@"\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*");
             bool mailValid = regex.IsMatch(apiRecipient.ToEmail);

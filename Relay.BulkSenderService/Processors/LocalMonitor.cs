@@ -121,6 +121,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 List<FileInfo> queueFiles = queueDirectory.GetFiles($"{file}.*").ToList();
 
+                //TODO: ojo cuando tarda mucho el upload de los results puede disparar esto.
                 if (queueFiles.Any(x => DateTime.UtcNow.Subtract(x.LastWriteTimeUtc).TotalMinutes < MINUTES_TO_RETRY))
                 {
                     lock (_lockProcessingFiles)
