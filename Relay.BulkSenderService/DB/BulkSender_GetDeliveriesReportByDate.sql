@@ -4,8 +4,9 @@ CREATE PROCEDURE [dbo].[BulkSender_GetDeliveriesReportByDate] @UserId INT
 AS
 BEGIN
 	SELECT xx.Id
+		,xx.DeliveryGuid
 		,xx.CreatedAt
-		,xx.STATUS
+		,xx.Status
 		,xx.ClickEventsCount
 		,xx.OpenEventsCount
 		,isnull(xx.SentAt, xx.CreatedAt) AS SentAt
@@ -23,8 +24,9 @@ BEGIN
 		,isnull(MAX(xx.ClickDate), xx.CreatedAt) AS ClickDate
 	FROM (
 		SELECT d.Id
+			,d.Guid AS DeliveryGuid
 			,d.CreatedAt
-			,d.STATUS
+			,d.Status
 			,d.ClickEventsCount
 			,d.OpenEventsCount
 			,isnull(d.SentAt, d.CreatedAt) AS SentAt
@@ -54,8 +56,9 @@ BEGIN
 		UNION
 		
 		SELECT d.Id
+			,d.Guid AS DeliveryGuid
 			,d.CreatedAt
-			,d.STATUS
+			,d.Status
 			,d.ClickEventsCount
 			,d.OpenEventsCount
 			,isnull(d.SentAt, d.CreatedAt) AS SentAt
@@ -83,8 +86,9 @@ BEGIN
 		UNION
 		
 		SELECT d.Id
+			,d.Guid AS DeliveryGuid
 			,d.CreatedAt
-			,d.STATUS
+			,d.Status
 			,d.ClickEventsCount
 			,d.OpenEventsCount
 			,isnull(d.SentAt, d.CreatedAt) AS SentAt
@@ -112,8 +116,9 @@ BEGIN
 		UNION
 		
 		SELECT d.Id
+			,d.Guid AS DeliveryGuid
 			,d.CreatedAt
-			,d.STATUS
+			,d.Status
 			,d.ClickEventsCount
 			,d.OpenEventsCount
 			,isnull(d.SentAt, d.CreatedAt) AS SentAt
@@ -132,8 +137,9 @@ BEGIN
 	JOIN Message m ON xx.MessageId = m.Id
 	JOIN EmailAddress ea ON xx.RecipientId = ea.Id
 	GROUP BY xx.Id
+		,xx.DeliveryGuid
 		,xx.CreatedAt
-		,xx.STATUS
+		,xx.Status
 		,xx.ClickEventsCount
 		,xx.OpenEventsCount
 		,isnull(xx.SentAt, xx.CreatedAt)
@@ -148,3 +154,5 @@ BEGIN
 	OPTION (FORCE ORDER)
 END
 GO
+
+
