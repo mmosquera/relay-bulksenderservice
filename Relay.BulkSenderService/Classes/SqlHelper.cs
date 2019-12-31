@@ -141,6 +141,7 @@ namespace Relay.BulkSenderService.Classes
                         var item = new DBStatusDto()
                         {
                             DeliveryId = Convert.ToInt32(sqlDataReader["Id"]),
+                            DeliveryGuid = Convert.ToString(sqlDataReader["DeliveryGuid"]),
                             CreatedAt = Convert.ToDateTime(sqlDataReader["CreatedAt"]),
                             Status = Convert.ToInt32(sqlDataReader["Status"]),
                             ClickEventsCount = Convert.ToInt32(sqlDataReader["ClickEventsCount"]),
@@ -296,6 +297,7 @@ namespace Relay.BulkSenderService.Classes
     public class DBStatusDto
     {
         public int DeliveryId { get; set; }
+        public string DeliveryGuid { get; set; }
         public DateTime CreatedAt { get; set; }
         public int Status { get; set; }
         public int ClickEventsCount { get; set; }

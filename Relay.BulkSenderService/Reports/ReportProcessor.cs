@@ -416,6 +416,9 @@ namespace Relay.BulkSenderService.Reports
                     case "MessageGuid":
                         reportItem.AddValue(dbStatusDto.MessageGuid, reportField.Position);
                         break;
+                    case "DeliveryGuid":
+                        reportItem.AddValue(dbStatusDto.DeliveryGuid, reportField.Position);
+                        break;
                 }
             }
         }
