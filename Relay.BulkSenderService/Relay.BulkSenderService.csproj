@@ -238,6 +238,7 @@
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\FilePathHelper.cs" />
     <Compile Include="Configuration\BanortePreProcessorConfiguration.cs" />
+    <Compile Include="Configuration\FullDailyReportTypeConfiguration.cs" />
     <Compile Include="Configuration\DuplicatesPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GirePreProcessorConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioPreProcessorConfiguration.cs" />
@@ -361,6 +362,7 @@
     <Compile Include="Queues\QueueResultEventArgs.cs" />
     <Compile Include="Queues\WindowsBulkQueue.cs" />
     <Compile Include="Reports\BanorteResumeReportProcessor.cs" />
+    <Compile Include="Reports\FullDailyReportProcessor.cs" />
     <Compile Include="Reports\TemplateReport.cs" />
     <Compile Include="Reports\FileCsvReportProcessor.cs" />
     <Compile Include="Reports\StatusProgressReportProcessor.cs" />
