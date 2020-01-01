@@ -4,6 +4,7 @@ using Relay.BulkSenderService.Processors;
 using Relay.BulkSenderService.Processors.Acknowledgement;
 using Relay.BulkSenderService.Processors.PreProcess;
 using Relay.BulkSenderService.Processors.Status;
+using Relay.BulkSenderService.Reports;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -82,6 +83,13 @@ namespace Relay.BulkSenderService.Configuration
         public IAckProcessor GetAckProcessor(ILog logger, IConfiguration configuration)
         {
             return Ack.GetAckProcessor(logger, configuration);
+        }
+
+        public ReportProcessor GetReportProcessor(ILog logger, IConfiguration configuration, string reportId)
+        {
+            ReportTypeConfiguration reportTypeConfiguration = Reports.ReportsList.Where(x => x.ReportId == reportId).FirstOrDefault();
+
+            return reportTypeConfiguration.GetReportProcessor(configuration, logger);
         }
     }
 }

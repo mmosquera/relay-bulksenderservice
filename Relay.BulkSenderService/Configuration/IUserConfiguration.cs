@@ -4,6 +4,7 @@ using Relay.BulkSenderService.Processors;
 using Relay.BulkSenderService.Processors.Acknowledgement;
 using Relay.BulkSenderService.Processors.PreProcess;
 using Relay.BulkSenderService.Processors.Status;
+using Relay.BulkSenderService.Reports;
 using System;
 using System.Collections.Generic;
 
@@ -43,5 +44,7 @@ namespace Relay.BulkSenderService.Configuration
         StatusProcessor GetStatusProcessor(ILog logger, IConfiguration configuration);
 
         IAckProcessor GetAckProcessor(ILog logger, IConfiguration configuration);
+
+        ReportProcessor GetReportProcessor(ILog logger, IConfiguration configuration, string reportId);
     }
 }
