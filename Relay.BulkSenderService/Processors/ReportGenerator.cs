@@ -19,31 +19,34 @@ namespace Relay.BulkSenderService.Processors
 
         private void CreateReportsFile()
         {
-            string reportFileName = $@"{_configuration.ReportsFolder}\reports.{DateTime.UtcNow.ToString("yyyyMMdd")}.json";
-
-            if (File.Exists(reportFileName))
-            {
-                return;
-            }
-
-            string[] files = Directory.GetFiles($"{_configuration.ReportsFolder}", "*.json");
-
-            List<ReportExecution> allReports = new List<ReportExecution>();
-
-            foreach (string file in files)
-            {
-                string json = File.ReadAllText(file);
-
-                List<ReportExecution> executions = JsonConvert.DeserializeObject<List<ReportExecution>>(json);
-
-                allReports.AddRange(executions);
-            }
-
             List<IUserConfiguration> reportUsers = _users.Where(x => x.Reports != null).ToList();
-            List<ReportExecution> requests = new List<ReportExecution>();
 
             foreach (IUserConfiguration user in reportUsers)
             {
+                var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+                string reportFileName = $@"{filePathHelper.GetReportsFilesFolder()}\reports.{user.Name}.{DateTime.UtcNow.ToString("yyyyMMdd")}.json";
+
+                if (File.Exists(reportFileName))
+                {
+                    continue;
+                }
+
+                var requests = new List<ReportExecution>();
+
+                string[] files = Directory.GetFiles(filePathHelper.GetReportsFilesFolder(), "*.json");
+
+                List<ReportExecution> allReports = new List<ReportExecution>();
+
+                foreach (string file in files)
+                {
+                    string json = File.ReadAllText(file);
+
+                    List<ReportExecution> executions = JsonConvert.DeserializeObject<List<ReportExecution>>(json);
+
+                    allReports.AddRange(executions);
+                }
+
                 foreach (ReportTypeConfiguration reportType in user.Reports.ReportsList)
                 {
                     var lastExecution = allReports
@@ -54,14 +57,14 @@ namespace Relay.BulkSenderService.Processors
                     List<ReportExecution> executionLists = reportType.GetReportExecution(user, lastExecution);
                     requests.AddRange(executionLists);
                 }
-            }
 
-            if (requests.Count > 0)
-            {
-                string reports = JsonConvert.SerializeObject(requests);
-                using (var streamWriter = new StreamWriter(reportFileName, false))
+                if (requests.Count > 0)
                 {
-                    streamWriter.Write(reports);
+                    string reports = JsonConvert.SerializeObject(requests);
+                    using (var streamWriter = new StreamWriter(reportFileName, false))
+                    {
+                        streamWriter.Write(reports);
+                    }
                 }
             }
         }
@@ -74,44 +77,51 @@ namespace Relay.BulkSenderService.Processors
                 {
                     CheckConfigChanges();
 
+                    //TODO: en el proximo cambio sacar este metodo.
+                    MigrateReportsJsonFiles();
+
                     CreateReportsFile();
 
-                    string[] files = Directory.GetFiles($"{_configuration.ReportsFolder}", "*.json");
+                    List<IUserConfiguration> reportUsers = _users.Where(x => x.Reports != null).ToList();
 
-                    foreach (string file in files)
+                    foreach (IUserConfiguration userConfiguration in reportUsers)
                     {
-                        string json = File.ReadAllText(file);
+                        var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
 
-                        List<ReportExecution> reports = JsonConvert.DeserializeObject<List<ReportExecution>>(json);
+                        string[] files = Directory.GetFiles(filePathHelper.GetReportsFilesFolder(), "*.json");
 
-                        bool hasChanges = false;
-
-                        foreach (ReportExecution reportExecution in reports.Where(x => !x.Processed && x.RunDate < DateTime.UtcNow))
+                        foreach (string file in files)
                         {
-                            try
+                            string json = File.ReadAllText(file);
+
+                            List<ReportExecution> reports = JsonConvert.DeserializeObject<List<ReportExecution>>(json);
+
+                            bool hasChanges = false;
+
+                            foreach (ReportExecution reportExecution in reports.Where(x => !x.Processed && x.RunDate < DateTime.UtcNow))
                             {
-                                IUserConfiguration user = _users.Where(x => x.Name == reportExecution.UserName).FirstOrDefault();
+                                try
+                                {
+                                    ReportProcessor reportProcessor = userConfiguration.GetReportProcessor(_logger, _configuration, reportExecution.ReportId);
 
-                                ReportTypeConfiguration reportType = user.Reports.ReportsList.Where(x => x.ReportId == reportExecution.ReportId).FirstOrDefault();
+                                    //TODO: por ahi podemos procesar uno por usuario.
+                                    reportProcessor.Process(userConfiguration, reportExecution);
 
-                                ReportProcessor reportProcessor = reportType.GetReportProcessor(_configuration, _logger);
-
-                                reportProcessor.Process(user, reportExecution);
-
-                                hasChanges = true;
+                                    hasChanges = true;
+                                }
+                                catch (Exception e)
+                                {
+                                    _logger.Error($"Error to generate report:{reportExecution.ReportId} for user:{userConfiguration.Name} -- {e}");
+                                }
                             }
-                            catch (Exception e)
-                            {
-                                _logger.Error($"Error to generate report:{reportExecution.ReportId} for user:{reportExecution.UserName} -- {e}");
-                            }
-                        }
 
-                        if (hasChanges)
-                        {
-                            json = JsonConvert.SerializeObject(reports);
-                            using (var streamWriter = new StreamWriter(file, false))
+                            if (hasChanges)
                             {
-                                streamWriter.Write(json);
+                                json = JsonConvert.SerializeObject(reports);
+                                using (var streamWriter = new StreamWriter(file, false))
+                                {
+                                    streamWriter.Write(json);
+                                }
                             }
                         }
                     }
@@ -122,6 +132,16 @@ namespace Relay.BulkSenderService.Processors
                 }
 
                 Thread.Sleep(_configuration.ReportsInterval);
+            }
+        }
+
+        private void MigrateReportsJsonFiles()
+        {
+            IEnumerable<IUserConfiguration> reportUsers = _users.Where(x => x.Reports != null);
+
+            foreach(IUserConfiguration reportUser in reportUsers)
+            {
+
             }
         }
     }
