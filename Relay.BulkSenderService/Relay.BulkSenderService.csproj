@@ -217,6 +217,7 @@
     <Compile Include="Classes\ILog.cs" />
     <Compile Include="Classes\ILogManager.cs" />
     <Compile Include="Classes\LogManager.cs" />
+    <Compile Include="Classes\ReportExecution.cs" />
     <Compile Include="Classes\Recipient.cs" />
     <Compile Include="Classes\ProcessResult.cs" />
     <Compile Include="Classes\RecipientAttachment.cs" />
@@ -327,7 +328,7 @@
     <Compile Include="Processors\CleanProcessor.cs" />
     <Compile Include="Processors\FtpMonitor.cs" />
     <Compile Include="Processors\LocalMonitor.cs" />
-    <Compile Include="Classes\ReportExecution.cs" />
+    <Compile Include="Classes\OldReportExecution.cs" />
     <Compile Include="Processors\ReportGenerator.cs" />
     <Compile Include="Processors\SMTPProcessor.cs" />
     <Compile Include="Configuration\IConfiguration.cs" />

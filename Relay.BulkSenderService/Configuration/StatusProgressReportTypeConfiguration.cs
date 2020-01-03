@@ -30,7 +30,6 @@ namespace Relay.BulkSenderService.Configuration
 
             var execution = new ReportExecution()
             {
-                UserName = user.Name,
                 ReportId = this.ReportId,
                 NextRun = nextRun,
                 LastRun = lastRun,
@@ -48,7 +47,6 @@ namespace Relay.BulkSenderService.Configuration
 
                 execution = new ReportExecution()
                 {
-                    UserName = user.Name,
                     ReportId = this.ReportId,
                     NextRun = nextRun,
                     LastRun = lastRun,

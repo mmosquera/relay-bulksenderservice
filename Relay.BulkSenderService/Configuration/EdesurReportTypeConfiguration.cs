@@ -20,7 +20,6 @@ namespace Relay.BulkSenderService.Configuration
 
                 lastExecution = new ReportExecution()
                 {
-                    UserName = user.Name,
                     ReportId = this.ReportId,
                     NextRun = nextRun,
                     LastRun = nextRun.AddHours(-3),

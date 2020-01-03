@@ -22,7 +22,6 @@ namespace Relay.BulkSenderService.Configuration
 
             var reportExecution = new ReportExecution()
             {
-                UserName = user.Name,
                 ReportId = this.ReportId,
                 NextRun = nextRun,
                 LastRun = nextRun.AddDays(-1),

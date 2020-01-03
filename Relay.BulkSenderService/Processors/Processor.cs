@@ -362,7 +362,9 @@ namespace Relay.BulkSenderService.Processors
                 return;
             }
 
-            string reportFileName = $@"{_configuration.ReportsFolder}\reports.{DateTime.UtcNow.ToString("yyyyMMdd")}.json";
+            var filePathHelper = new FilePathHelper(_configuration, user.Name);
+
+            string reportFileName = $@"{filePathHelper.GetReportsFilesFolder()}\reports.{user.Name}.{DateTime.UtcNow.ToString("yyyyMMdd")}.json";
             List<ReportExecution> allReports = new List<ReportExecution>();
 
             if (File.Exists(reportFileName))
@@ -387,7 +389,6 @@ namespace Relay.BulkSenderService.Processors
                 {
                     var reportExecution = new ReportExecution()
                     {
-                        UserName = user.Name,
                         ReportId = reportType.ReportId,
                         FileName = Path.GetFileName(fileName),
                         CreatedAt = DateTime.UtcNow,
