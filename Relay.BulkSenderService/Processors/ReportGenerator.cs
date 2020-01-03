@@ -50,7 +50,7 @@ namespace Relay.BulkSenderService.Processors
                 foreach (ReportTypeConfiguration reportType in user.Reports.ReportsList)
                 {
                     var lastExecution = allReports
-                        .Where(x => x.UserName == user.Name && x.ReportId == reportType.ReportId)
+                        .Where(x => x.ReportId == reportType.ReportId)
                         .OrderByDescending(x => x.NextRun)
                         .FirstOrDefault();
 
@@ -137,11 +137,56 @@ namespace Relay.BulkSenderService.Processors
 
         private void MigrateReportsJsonFiles()
         {
+            string[] files = Directory.GetFiles($"{_configuration.ReportsFolder}", "*.json");
+
             IEnumerable<IUserConfiguration> reportUsers = _users.Where(x => x.Reports != null);
 
-            foreach(IUserConfiguration reportUser in reportUsers)
+            foreach (IUserConfiguration reportUser in reportUsers)
             {
+                var filePathHelper = new FilePathHelper(_configuration, reportUser.Name);
 
+                foreach (string file in files)
+                {
+                    string json = File.ReadAllText(file);
+
+                    //aca ponemos el old reportexecution
+                    List<OldReportExecution> executions = JsonConvert.DeserializeObject<List<OldReportExecution>>(json);
+
+                    //aca hay que generar el nuevo reportexecution
+                    List<ReportExecution> executionsByUser = executions
+                        .Where(x => x.UserName == reportUser.Name)
+                        .Select(x => new ReportExecution()
+                        {
+                            CreatedAt = x.CreatedAt,
+                            FileName = x.FileName,
+                            LastRun = x.LastRun,
+                            NextRun = x.NextRun,
+                            Processed = x.Processed,
+                            ProcessedDate = x.ProcessedDate,
+                            ReportFile = x.ReportFile,
+                            ReportId = x.ReportId,
+                            RunDate = x.RunDate
+                        })
+                        .ToList();
+
+                    string fileName = Path.GetFileName(file).Replace("reports", $"reports.{reportUser.Name}");
+
+                    string newFileName = $@"{filePathHelper.GetReportsFilesFolder()}\{fileName}";
+
+                    string fileContent = JsonConvert.SerializeObject(executionsByUser);
+
+                    using (var streamWriter = new StreamWriter(newFileName, false))
+                    {
+                        streamWriter.Write(fileContent);
+                    }
+                }
+            }
+
+            foreach (string file in files)
+            {
+                string newFileName = $"{file}.bak";
+
+                File.Move(file, newFileName);
             }
         }
     }
