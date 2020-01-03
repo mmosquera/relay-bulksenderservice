@@ -15,7 +15,7 @@ namespace Relay.BulkSenderService.Reports
 
         public StatusProgressReportProcessor(ILog logger, IConfiguration configuration, ReportTypeConfiguration reportTypeConfiguration) : base(logger, configuration, reportTypeConfiguration)
         {
-            tempReport = LoadTempReport();
+
         }
 
         protected override List<string> GetFilesToProcess(IUserConfiguration user, ReportExecution reportExecution)
@@ -40,7 +40,21 @@ namespace Relay.BulkSenderService.Reports
 
             report.AddHeaders(GetHeadersList(_reportTypeConfiguration.ReportFields));
 
-            List<ReportItem> items = GetReportItems("", ' ', user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat, reportExecution.LastRun, reportExecution.NextRun);
+            DateTime start = reportExecution.LastRun;
+
+            if (tempReport != null)
+            {
+                tempReport = LoadTempReport(user.Name);
+            }
+            else
+            {
+                start = reportExecution.NextRun.AddHours(-_reportTypeConfiguration.OffsetHour);
+                tempReport = new Dictionary<int, DBStatusDto>();
+            }
+
+            List<ReportItem> items = GetReportItems("", ' ', user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat, start, reportExecution.NextRun);
+
+            SaveTempReport(user.Name);
 
             report.AppendItems(items);
 
@@ -67,12 +81,6 @@ namespace Relay.BulkSenderService.Reports
 
             try
             {
-                if (tempReport == null)
-                {
-                    start = end.AddHours(-_reportTypeConfiguration.OffsetHour);
-                    tempReport = new Dictionary<int, DBStatusDto>();
-                }
-
                 GetDataFromDB(items, dateFormat, userId, reportGMT, start, end);
 
                 start = end.AddHours(-_reportTypeConfiguration.OffsetHour);
@@ -97,7 +105,6 @@ namespace Relay.BulkSenderService.Reports
                 }
 
                 ClearTempReport(keysToRemove);
-                SaveTempReport();
 
                 return items;
             }
@@ -151,9 +158,11 @@ namespace Relay.BulkSenderService.Reports
             }
         }
 
-        private Dictionary<int, DBStatusDto> LoadTempReport()
+        private Dictionary<int, DBStatusDto> LoadTempReport(string userName)
         {
-            string fileName = $@"{_configuration.ReportsFolder}\{_reportTypeConfiguration.ReportId}.tmp";
+            var filePathHelper = new FilePathHelper(_configuration, userName);
+
+            string fileName = $@"{filePathHelper.GetReportsFilesFolder()}\report.{_reportTypeConfiguration.ReportId}.tmp";
 
             if (File.Exists(fileName))
             {
@@ -174,9 +183,11 @@ namespace Relay.BulkSenderService.Reports
             return null;
         }
 
-        private void SaveTempReport()
+        private void SaveTempReport(string userName)
         {
-            string fileName = $@"{_configuration.ReportsFolder}\{_reportTypeConfiguration.ReportId}.tmp";
+            var filePathHelper = new FilePathHelper(_configuration, userName);
+
+            string fileName = $@"{filePathHelper.GetReportsFilesFolder()}\report.{_reportTypeConfiguration.ReportId}.tmp";
 
             using (var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write))
             {
