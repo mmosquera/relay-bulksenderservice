@@ -42,6 +42,11 @@ namespace Relay.BulkSenderService.Reports
 
             List<ReportItem> items = GetReportItems("", ' ', user.Credentials.AccountId, user.UserGMT, _reportTypeConfiguration.DateFormat, start, end);
 
+            if (items.Count == 0)
+            {
+                return null;
+            }
+
             report.AppendItems(items);
 
             string reportFileName = report.Generate();
