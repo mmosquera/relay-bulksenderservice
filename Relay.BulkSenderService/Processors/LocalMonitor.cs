@@ -235,7 +235,7 @@ namespace Relay.BulkSenderService.Processors
             {
                 if (_processingFiles.ContainsKey(userName))
                 {
-                    _processingFiles[userName].RemoveAll(x => x.FileName == Path.GetFileNameWithoutExtension(fileName));
+                    _processingFiles[userName].RemoveAll(x => x.FileName == fileName);
                 }
             }
         }
