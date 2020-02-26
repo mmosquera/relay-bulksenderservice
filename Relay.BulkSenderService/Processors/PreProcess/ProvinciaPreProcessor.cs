@@ -99,7 +99,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                 if (File.Exists(imageFilePath))
                 {
-                    string hostedFileName = $"{Path.GetFileNameWithoutExtension(fileName)}.{imageFileName}_{DateTime.Now.Ticks}{Path.GetExtension(imageFileName)}";
+                    string hostedFileName = $"{Path.GetFileNameWithoutExtension(fileName)}.{Path.GetFileNameWithoutExtension(imageFileName)}_{DateTime.Now.Ticks}{Path.GetExtension(imageFileName)}";
 
                     string privatePath = $@"{_configuration.UserFiles}\{hostedFileName}";
 
