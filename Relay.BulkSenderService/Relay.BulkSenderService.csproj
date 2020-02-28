@@ -314,6 +314,7 @@
     <Compile Include="Processors\PreProcess\GirePreProcessor.cs" />
     <Compile Include="Processors\PreProcess\CredicopPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\HipotecarioPreProcessor.cs" />
+    <Compile Include="Processors\PreProcess\JoinedFieldsPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessor.cs" />
     <Compile Include="Processors\PreProcess\ProvinciaPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessWorker.cs" />
