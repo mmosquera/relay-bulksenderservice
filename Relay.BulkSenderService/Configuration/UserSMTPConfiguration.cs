@@ -23,7 +23,6 @@ namespace Relay.BulkSenderService.Configuration
         public bool HasHeaders { get; set; }
         public ErrorConfiguration Errors { get; set; }
         public IResultConfiguration Results { get; set; }
-        public AdminEmailConfiguration AdminEmail { get; set; }
         public List<string> FileExtensions { get; set; }
         public List<string> DownloadFolders { get; set; }
         public string AttachmentsFolder { get; set; }
