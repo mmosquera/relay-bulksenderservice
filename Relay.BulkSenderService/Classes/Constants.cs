@@ -26,7 +26,6 @@
         public const string EXTENSION_PROCESSED = ".processed";
         public const string EXTENSION_RETRY = ".retry";
         public const string EXTENSION_SENT = ".sent";
-        public const string EXTENSION_CORRUPTED = ".corrupted";
         public const string EXTENSION_DOWNLOADING = ".downloading";
         public const string EXTENSION_ZIP = ".zip";
 

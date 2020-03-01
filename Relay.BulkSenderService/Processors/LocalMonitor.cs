@@ -11,7 +11,6 @@ namespace Relay.BulkSenderService.Processors
     public class LocalMonitor : BaseWorker
     {
         private const int MINUTES_TO_CHECK = 60;
-        private const int MINUTES_TO_RETRY = 5;
         private Dictionary<string, List<ProcessingFile>> _processingFiles;
         private object _lockProcessingFiles;
 
@@ -120,9 +119,8 @@ namespace Relay.BulkSenderService.Processors
             foreach (string file in processingFiles)
             {
                 List<FileInfo> queueFiles = queueDirectory.GetFiles($"{file}.*").ToList();
-
-                //TODO: ojo cuando tarda mucho el upload de los results puede disparar esto.
-                if (queueFiles.Any(x => DateTime.UtcNow.Subtract(x.LastWriteTimeUtc).TotalMinutes < MINUTES_TO_RETRY))
+                                
+                if (queueFiles.Any())
                 {
                     lock (_lockProcessingFiles)
                     {
@@ -130,18 +128,18 @@ namespace Relay.BulkSenderService.Processors
                     }
                 }
                 else
-                {
-                    //TODO enviar alerta
-                    //aca llego porque se rompio un archivo pero no deberia pasar nunca.
-                    string processedFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}{Constants.EXTENSION_PROCESSING}";
+                {                    
+                    string processingFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}{Constants.EXTENSION_PROCESSING}";
+                    string retryFile = $@"{filePathHelper.GetRetriesFilesFolder()}\{file}{Constants.EXTENSION_PROCESSING}";
 
-                    if (File.Exists(processedFile))
+                    if (!File.Exists(processingFile) && !File.Exists(retryFile))
                     {
-                        string corruptedFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}{Constants.EXTENSION_CORRUPTED}";
-                        File.Move(processedFile, corruptedFile);
+                        RemoveProcessingFile(user.Name, file);
                     }
-
-                    RemoveProcessingFile(user.Name, file);
+                    else
+                    {
+                        //TODO enviar alerta
+                    }
                 }
             }
         }
