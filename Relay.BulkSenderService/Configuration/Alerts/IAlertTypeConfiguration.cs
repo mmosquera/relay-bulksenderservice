@@ -3,7 +3,5 @@
     public interface IAlertTypeConfiguration
     {
         string Name { get; set; }
-
-        IAlertTypeConfiguration Clone();
     }
 }
