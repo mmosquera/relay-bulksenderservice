@@ -52,6 +52,7 @@ namespace Relay.BulkSenderService.Classes
 
             var command = new SqlCommand("BulkSender_GetDeliveriesReport", Connection);
             command.CommandType = CommandType.StoredProcedure;
+            command.CommandTimeout = 0;
 
             command.Parameters.Add(new SqlParameter
             {
@@ -107,9 +108,8 @@ namespace Relay.BulkSenderService.Classes
             var items = new List<DBStatusDto>();
 
             var command = new SqlCommand("BulkSender_GetDeliveriesReportByDate", Connection);
-            command.CommandTimeout = 0;
-
             command.CommandType = CommandType.StoredProcedure;
+            command.CommandTimeout = 0;
 
             command.Parameters.Add(new SqlParameter
             {
@@ -237,6 +237,7 @@ namespace Relay.BulkSenderService.Classes
 
             var command = new SqlCommand("BulkSender_GetSumarizedByTemplateReport", Connection);
             command.CommandType = CommandType.StoredProcedure;
+            command.CommandTimeout = 0;
 
             command.Parameters.Add(new SqlParameter
             {
