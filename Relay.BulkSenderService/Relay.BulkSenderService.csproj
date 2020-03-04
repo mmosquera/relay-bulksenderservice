@@ -244,6 +244,7 @@
     <Compile Include="Configuration\HipotecarioPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GireAckConfiguration.cs" />
     <Compile Include="Configuration\IAckConfiguration.cs" />
+    <Compile Include="Configuration\JoinedFieldsPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\ProvinciaPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\CredentialsConfiguration.cs" />
     <Compile Include="Configuration\CsvFileReportTypeConfiguration.cs" />
@@ -319,6 +320,7 @@
     <Compile Include="Processors\PreProcess\ProvinciaPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessWorker.cs" />
     <Compile Include="Classes\ProcessingFile.cs" />
+    <Compile Include="Processors\PreProcess\ZipPreProcessor.cs" />
     <Compile Include="Processors\SMTPProcessorProvincia.cs" />
     <Compile Include="Processors\APIProcessorDuplicates.cs" />
     <Compile Include="Processors\APIProcessorBanorte.cs" />

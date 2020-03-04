@@ -8,7 +8,7 @@ using System.Text;
 
 namespace Relay.BulkSenderService.Processors.PreProcess
 {
-    public class JoinedFieldsPreProcessor : PreProcessor
+    public class JoinedFieldsPreProcessor : ZipPreProcessor
     {
         public JoinedFieldsPreProcessor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
@@ -21,95 +21,127 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 return;
             }
 
-            ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(fileName);
-
-            var headers = new List<string>();
-
-            var lines = new List<Dictionary<string, string>>();
-
-            using (var streamReader = new StreamReader(fileName))
+            try
             {
-                if (templateConfiguration.HasHeaders)
+                string unzipFolder = GetUnzipFolder(fileName, userConfiguration);
+
+                string dataFileName = $@"{unzipFolder}\{Path.GetFileNameWithoutExtension(fileName)}.txt";
+
+                if (!File.Exists(dataFileName))
                 {
-                    streamReader.ReadLine();
+                    return;
                 }
 
-                while (!streamReader.EndOfStream)
-                {
-                    string line = streamReader.ReadLine();
+                ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(dataFileName);
 
-                    if (string.IsNullOrEmpty(line))
+                var headers = new List<string>();
+
+                var lines = new List<Dictionary<string, string>>();
+
+                using (var streamReader = new StreamReader(dataFileName))
+                {
+                    if (templateConfiguration.HasHeaders)
                     {
-                        continue;
+                        streamReader.ReadLine();
                     }
 
-                    string[] lineArray = line.Split(templateConfiguration.FieldSeparator);
-
-                    var fields = new Dictionary<string, string>();
-
-                    for (int i = 0; i < lineArray.Length; i++)
+                    while (!streamReader.EndOfStream)
                     {
-                        FieldConfiguration field = templateConfiguration.Fields.Where(x => x.Position == i).FirstOrDefault();
+                        string line = streamReader.ReadLine();
 
-                        if (field != null)
+                        if (string.IsNullOrEmpty(line))
                         {
-                            if (!field.IsBasic && fields.ContainsKey(field.Name)) //aca pregunto si esta joineado
+                            continue;
+                        }
+
+                        string[] lineArray = line.Split(templateConfiguration.FieldSeparator);
+
+                        var fields = new Dictionary<string, string>();
+
+                        for (int i = 0; i < lineArray.Length; i++)
+                        {
+                            FieldConfiguration field = templateConfiguration.Fields.Where(x => x.Position == i).FirstOrDefault();
+
+                            if (field != null)
                             {
-                                fields.Add(field.Name, lineArray[i]);
-
-                                if (!headers.Contains(field.Name))
+                                if (!field.IsJoined)
                                 {
-                                    headers.Add(field.Name);
-                                }
-                            }
-                            else
-                            {
-                                string[] joinedFields = lineArray[i].Split(';');
-
-                                foreach (string joinedField in joinedFields)
-                                {
-                                    string key = joinedField.Split('=')[0];
-                                    string value = joinedField.Split('=')[1];
-
-                                    if (!fields.ContainsKey(key))
+                                    if (!fields.ContainsKey(field.Name))
                                     {
-                                        fields.Add(key, value);
+                                        fields.Add(field.Name, lineArray[i]);
                                     }
 
-                                    if (!headers.Contains(key))
+                                    if (!headers.Contains(field.Name))
                                     {
-                                        headers.Add(key);
+                                        headers.Add(field.Name);
+                                    }
+                                }
+                                else
+                                {
+                                    string[] joinedFields = lineArray[i].Split(field.JoinedFieldSeparator);
+
+                                    foreach (string joinedField in joinedFields)
+                                    {
+                                        string[] pair = joinedField.Split(field.KeyValueSeparator);
+
+                                        if (pair.Length > 1)
+                                        {
+                                            string key = pair[0];
+                                            string value = pair[1];
+
+                                            if (!fields.ContainsKey(key))
+                                            {
+                                                fields.Add(key, value);
+                                            }
+
+                                            if (!headers.Contains(key))
+                                            {
+                                                headers.Add(key);
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
+
+                        lines.Add(fields);
                     }
-
-                    lines.Add(fields);
                 }
-            }
 
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine(string.Join("|", headers));
+                var stringBuilder = new StringBuilder();
 
-            foreach (var d in lines)
-            {
-                string[] auxArray = new string[headers.Count];
-                for (int i = 0; i < headers.Count; i++)
+                stringBuilder.AppendLine(string.Join(templateConfiguration.FieldSeparator.ToString(), headers));
+
+                foreach (var dictionary in lines)
                 {
-                    string key = headers.ElementAt(i);
-                    if (d.ContainsKey(key))
+                    string[] auxArray = new string[headers.Count];
+
+                    for (int i = 0; i < headers.Count; i++)
                     {
-                        auxArray[i] = d[key];
+                        string key = headers.ElementAt(i);
+
+                        if (dictionary.ContainsKey(key))
+                        {
+                            auxArray[i] = dictionary[key];
+                        }
                     }
+
+                    stringBuilder.AppendLine(string.Join(templateConfiguration.FieldSeparator.ToString(), auxArray));
                 }
-                sb.AppendLine(string.Join("|", auxArray));
+
+                var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+
+                string newFileName = $@"{filePathHelper.GetDownloadsFolder()}\{Path.GetFileNameWithoutExtension(dataFileName)}{Constants.EXTENSION_PROCESSING}";
+
+                using (var streamWriter = new StreamWriter(newFileName))
+                {
+                    streamWriter.Write(stringBuilder.ToString());
+                }
             }
-
-            string newFileName = fileName.Replace(Path.GetExtension(fileName), Constants.EXTENSION_PROCESSING);
-
-            File.Move(fileName, newFileName);
+            catch (Exception e)
+            {
+                _logger.Error($"ERROR JOINED FIELDS PRE PROCESSOR: {e}");
+            }
         }
     }
-
 }

@@ -119,7 +119,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             }
 
             //get from zip file
-            string zipAttachments = $@"{templateConfiguration.AttachmentsFolder}/{Path.GetFileNameWithoutExtension(originalFile)}{Constants.EXTENSION_ZIP}";
+            string zipAttachments = $@"{templateConfiguration.AttachmentsFolder}\{Path.GetFileNameWithoutExtension(originalFile)}{Constants.EXTENSION_ZIP}";
             string localZipFile = $@"{filePathHelper.GetAttachmentsFilesFolder()}\{Path.GetFileNameWithoutExtension(originalFile)}{Constants.EXTENSION_ZIP}";
 
             // TODO: add retries.
