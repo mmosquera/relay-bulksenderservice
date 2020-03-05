@@ -135,6 +135,7 @@ namespace Relay.BulkSenderService.Processors
                     if (!File.Exists(processingFile) && !File.Exists(retryFile))
                     {
                         RemoveProcessingFile(user.Name, file);
+                    RemoveProcessingFile(user.Name, processedFile);
                     }
                     else
                     {
@@ -235,7 +236,9 @@ namespace Relay.BulkSenderService.Processors
             {
                 if (_processingFiles.ContainsKey(userName))
                 {
-                    _processingFiles[userName].RemoveAll(x => x.FileName == fileName);
+                    fileName = Path.GetFileNameWithoutExtension(fileName);
+
+                    _processingFiles[userName].RemoveAll(x => x.FileName.Equals(fileName, StringComparison.InvariantCultureIgnoreCase));
                 }
             }
         }

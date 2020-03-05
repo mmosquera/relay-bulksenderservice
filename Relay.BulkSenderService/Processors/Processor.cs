@@ -107,7 +107,7 @@ namespace Relay.BulkSenderService.Processors
                 var args = new ThreadEventArgs()
                 {
                     Name = user.Name,
-                    FileName = Path.GetFileNameWithoutExtension(fileName)
+                    FileName = fileName
                 };
                 OnProcessFinished(args);
             }
