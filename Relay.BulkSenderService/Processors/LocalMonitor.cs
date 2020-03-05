@@ -119,7 +119,7 @@ namespace Relay.BulkSenderService.Processors
             foreach (string file in processingFiles)
             {
                 List<FileInfo> queueFiles = queueDirectory.GetFiles($"{file}.*").ToList();
-                                
+
                 if (queueFiles.Any())
                 {
                     lock (_lockProcessingFiles)
@@ -128,14 +128,13 @@ namespace Relay.BulkSenderService.Processors
                     }
                 }
                 else
-                {                    
+                {
                     string processingFile = $@"{filePathHelper.GetProcessedFilesFolder()}\{file}{Constants.EXTENSION_PROCESSING}";
                     string retryFile = $@"{filePathHelper.GetRetriesFilesFolder()}\{file}{Constants.EXTENSION_PROCESSING}";
 
                     if (!File.Exists(processingFile) && !File.Exists(retryFile))
                     {
-                        RemoveProcessingFile(user.Name, file);
-                    RemoveProcessingFile(user.Name, processedFile);
+                        RemoveProcessingFile(user.Name, processingFile);
                     }
                     else
                     {
