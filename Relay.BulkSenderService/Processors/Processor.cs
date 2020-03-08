@@ -460,7 +460,7 @@ namespace Relay.BulkSenderService.Processors
                 string newZipDirectory = $@"{localAttachmentFolder}\{subFolder}";
                 Directory.CreateDirectory(newZipDirectory);
 
-                var zipHelper = new ZipHelper();
+                var zipHelper = new ZipHelper(_logger);
                 zipHelper.UnzipFile(localZipAttachments, newZipDirectory);
 
                 ftpHelper.DeleteFile(zipAttachments);

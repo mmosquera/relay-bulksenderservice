@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 
@@ -6,6 +7,13 @@ namespace Relay.BulkSenderService.Classes
 {
     public class ZipHelper
     {
+        private readonly ILog _logger;
+
+        public ZipHelper(ILog logger)
+        {
+            _logger = logger;
+        }
+
         public List<string> UnzipFile(string zipFile, string unzipFolder, string extension = null)
         {
             string newFileName = null;
@@ -38,7 +46,17 @@ namespace Relay.BulkSenderService.Classes
         {
             using (Ionic.Zip.ZipFile zipFile = Ionic.Zip.ZipFile.Read(fileName))
             {
-                zipFile.ExtractAll(folder);
+                foreach (var zipEntry in zipFile.Entries)
+                {
+                    try
+                    {
+                        zipEntry.Extract(folder);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.Error($"ERROR Unzipping folder:{e}");
+                    }
+                }
             }
         }
 

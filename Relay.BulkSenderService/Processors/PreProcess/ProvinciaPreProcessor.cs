@@ -33,10 +33,16 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                 string unzipFolder = $@"{filePathHelper.GetAttachmentsFilesFolder()}\{name}";
 
-                Directory.CreateDirectory(unzipFolder);
+                //TODO: esto es solo para los errores con archivos grandes. si se soluciona habria que sacarlo porque nunca existe.
+                //pongo el zip suelto y en attachments la carpeta ya descomprimida. para generar el processing
+                if (!Directory.Exists(unzipFolder) || Directory.GetFiles(unzipFolder).Length == 0)
+                {
+                    Directory.CreateDirectory(unzipFolder);
 
-                var zipHelper = new ZipHelper();
-                zipHelper.UnzipAll(fileName, unzipFolder);
+                    var zipHelper = new ZipHelper(_logger);
+
+                    zipHelper.UnzipAll(fileName, unzipFolder);
+                }
 
                 File.Delete(fileName);
 

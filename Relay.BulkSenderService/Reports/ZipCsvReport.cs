@@ -25,7 +25,7 @@ namespace Relay.BulkSenderService.Reports
                     streamWriter.Write(_stringBuilder.ToString());
                 }
 
-                var zipHelper = new ZipHelper();
+                var zipHelper = new ZipHelper(null);
                 zipHelper.ZipFiles(new List<string>() { tempCsv }, _reportFileName);
 
                 File.Delete(tempCsv);

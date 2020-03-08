@@ -26,7 +26,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                     string downloadPath = filePathHelper.GetDownloadsFolder();
                     string processedPath = filePathHelper.GetProcessedFilesFolder();
 
-                    List<string> zipEntries = new ZipHelper().UnzipFile(fileName, downloadPath);
+                    List<string> zipEntries = new ZipHelper(_logger).UnzipFile(fileName, downloadPath);
 
                     try
                     {

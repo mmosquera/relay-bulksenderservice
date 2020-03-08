@@ -127,7 +127,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
             if (File.Exists(localZipFile))
             {
-                var zipHelper = new ZipHelper();
+                var zipHelper = new ZipHelper(_logger);
                 zipHelper.UnzipFile(localZipFile, localAttachmentFolder);
 
                 ftpHelper.DeleteFile(zipAttachments);
