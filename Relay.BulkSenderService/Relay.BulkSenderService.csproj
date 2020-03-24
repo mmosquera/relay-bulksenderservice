@@ -237,6 +237,8 @@
     <Compile Include="Classes\Constants.cs" />
     <Compile Include="Classes\FilePathHelper.cs" />
     <Compile Include="Configuration\BanortePreProcessorConfiguration.cs" />
+    <Compile Include="Configuration\CustomFieldConfiguration.cs" />
+    <Compile Include="Configuration\JoinedFieldConfiguration.cs" />
     <Compile Include="Configuration\FullDailyReportTypeConfiguration.cs" />
     <Compile Include="Configuration\DuplicatesPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GirePreProcessorConfiguration.cs" />
@@ -244,7 +246,6 @@
     <Compile Include="Configuration\HipotecarioPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GireAckConfiguration.cs" />
     <Compile Include="Configuration\IAckConfiguration.cs" />
-    <Compile Include="Configuration\JoinedFieldsPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\ProvinciaPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\CredentialsConfiguration.cs" />
     <Compile Include="Configuration\CsvFileReportTypeConfiguration.cs" />
@@ -279,6 +280,7 @@
     <Compile Include="Configuration\ReportName.cs" />
     <Compile Include="Configuration\ResultConfiguration.cs" />
     <Compile Include="Configuration\ResultMessageConfiguration.cs" />
+    <Compile Include="Configuration\TemplateJoinedFieldsConfiguration.cs" />
     <Compile Include="Configuration\TemplateSmtpConfiguration.cs" />
     <Compile Include="Configuration\TemplateDuplicatesConfiguration.cs" />
     <Compile Include="Configuration\TemplateBanorteConfiguration.cs" />
@@ -297,6 +299,8 @@
     <Compile Include="Processors\ApiProcessorConsumer.cs" />
     <Compile Include="Processors\ApiProcessorCustomHeaderBancorProducer.cs" />
     <Compile Include="Processors\ApiProcessorCustomHeaderProducer.cs" />
+    <Compile Include="Processors\ApiProcessorJoinedFields.cs" />
+    <Compile Include="Processors\ApiProcessorJoinedFieldsProducer.cs" />
     <Compile Include="Processors\ApiProcessorGireProducer.cs" />
     <Compile Include="Processors\ApiProcessorKeyIteratorProducer.cs" />
     <Compile Include="Processors\ApiProcessorProducer.cs" />
@@ -315,7 +319,6 @@
     <Compile Include="Processors\PreProcess\GirePreProcessor.cs" />
     <Compile Include="Processors\PreProcess\CredicopPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\HipotecarioPreProcessor.cs" />
-    <Compile Include="Processors\PreProcess\JoinedFieldsPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessor.cs" />
     <Compile Include="Processors\PreProcess\ProvinciaPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessWorker.cs" />

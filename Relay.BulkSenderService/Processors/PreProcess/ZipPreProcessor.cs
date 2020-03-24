@@ -28,7 +28,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
             Directory.CreateDirectory(unzipFolder);
 
-            var zipHelper = new ZipHelper();
+            var zipHelper = new ZipHelper(_logger);
             zipHelper.UnzipAll(fileName, unzipFolder);
 
             File.Delete(fileName);

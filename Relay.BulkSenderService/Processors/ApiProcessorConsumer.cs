@@ -56,7 +56,7 @@ namespace Relay.BulkSenderService.Processors
         {
             int count = 0;
 
-            while (count < configuration.DeliveryRetryCount && !SendEmail(configuration.BaseUrl, configuration.TemplateUrl, userConfiguration.Credentials.ApiKey, userConfiguration.Credentials.AccountId, apiRecipient))
+            while (count < configuration.DeliveryRetryCount && !SendEmailTest(configuration.BaseUrl, configuration.TemplateUrl, userConfiguration.Credentials.ApiKey, userConfiguration.Credentials.AccountId, apiRecipient))
             {
                 count++;
 
