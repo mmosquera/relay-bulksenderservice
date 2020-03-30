@@ -68,7 +68,9 @@ namespace Relay.BulkSenderService.Processors
 
                 SendStartProcessEmail(fileName, user);
 
-                ProcessFile(user, fileName);
+                InitStatusProcess(fileName, user);
+
+                ProcessFile(fileName, user);
 
                 string resultFileName = GenerateResultFile(fileName, user);
                 string errorFileName = GenerateErrorFile(fileName, user);
@@ -89,6 +91,8 @@ namespace Relay.BulkSenderService.Processors
 
                     SendEndProcessEmail(fileName, user);
                 }
+
+                FinishStatusProcess(fileName, user);
 
                 AddReportForFile(resultFileName, user);
 
@@ -111,6 +115,65 @@ namespace Relay.BulkSenderService.Processors
                 };
                 OnProcessFinished(args);
             }
+        }
+
+        private void FinishStatusProcess(string fileName, IUserConfiguration userConfiguration)
+        {
+            if (userConfiguration.Status == null)
+            {
+                return;
+            }
+
+            string name = Path.GetFileNameWithoutExtension(fileName);
+
+            var fileStatus = new FileStatus()
+            {
+                FileName = name,
+                Finished = true,
+                Total = _total,
+                Processed = _processed,
+                LastUpdate = DateTime.UtcNow
+            };
+
+            SaveStatusFile(fileStatus, userConfiguration);
+
+            _lastStatusDate = DateTime.Now;
+        }
+
+        private void InitStatusProcess(string fileName, IUserConfiguration userConfiguration)
+        {
+            if (userConfiguration.Status == null)
+            {
+                return;
+            }
+
+            string name = Path.GetFileNameWithoutExtension(fileName);
+
+            var fileStatus = new FileStatus()
+            {
+                FileName = name,
+                Finished = false,
+                Total = _total,
+                Processed = 0,
+                LastUpdate = DateTime.UtcNow
+            };
+
+            SaveStatusFile(fileStatus, userConfiguration);
+
+            _lastStatusDate = DateTime.Now;
+        }
+
+        private void SaveStatusFile(FileStatus fileStatus, IUserConfiguration userConfiguration)
+        {
+            string jsonContent = JsonConvert.SerializeObject(fileStatus, Formatting.None);
+
+            var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+
+            string statusFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{fileStatus.FileName}.status.tmp";
+
+            var fileWriter = new FileWriter(statusFileName);
+
+            fileWriter.WriteFile(jsonContent);
         }
 
         private void RemoveAttachments(string fileName, IUserConfiguration user)
@@ -258,39 +321,26 @@ namespace Relay.BulkSenderService.Processors
         //TODO: mejorar el tiempo de espera de 5 segundos y 5 minutos.
         private void UpdateStatusFile(string fileName, IUserConfiguration user, CancellationToken cancellationToken)
         {
-            var filePathHelper = new FilePathHelper(_configuration, user.Name);
             string name = Path.GetFileNameWithoutExtension(fileName);
-            string statusFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{name}.status.tmp";
 
-            var fileWriter = new FileWriter(statusFileName);
-
-            bool finished = false;
-
-            while (!finished)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                if (cancellationToken.IsCancellationRequested)
+                if (DateTime.Now.Subtract(_lastStatusDate).TotalMinutes > STATUS_MINUTES)
                 {
-                    finished = true;
-                }
-
-                if (DateTime.Now.Subtract(_lastStatusDate).TotalMinutes > STATUS_MINUTES || finished)
-                {
-                    var filesStatus = new FileStatus()
+                    var fileStatus = new FileStatus()
                     {
                         FileName = name,
-                        Finished = finished,
+                        Finished = false,
                         Total = _total,
                         LastUpdate = DateTime.UtcNow
                     };
 
                     lock (_lockProcessed)
                     {
-                        filesStatus.Processed = _processed;
+                        fileStatus.Processed = _processed;
                     }
 
-                    string jsonContent = JsonConvert.SerializeObject(filesStatus, Formatting.None);
-
-                    fileWriter.WriteFile(jsonContent);
+                    SaveStatusFile(fileStatus, user);
 
                     _lastStatusDate = DateTime.Now;
                 }
@@ -658,7 +708,7 @@ namespace Relay.BulkSenderService.Processors
             return totalLines;
         }
 
-        private void ProcessFile(IUserConfiguration userConfiguration, string fileName)
+        private void ProcessFile(string fileName, IUserConfiguration userConfiguration)
         {
             outboundQueue = new MemoryBulkQueue();
 
@@ -686,8 +736,8 @@ namespace Relay.BulkSenderService.Processors
             var consumerCancellationTokenSource = new CancellationTokenSource();
             CancellationToken consumerCancellationToken = consumerCancellationTokenSource.Token;
 
-            var statusCancellationTokenSource = new CancellationTokenSource();
-            CancellationToken statusCancellationToken = statusCancellationTokenSource.Token;
+            CancellationTokenSource statusCancellationTokenSource = new CancellationTokenSource();
+            Task taskStatus = null;
 
             var tasks = new List<Task>();
 
@@ -705,7 +755,9 @@ namespace Relay.BulkSenderService.Processors
 
             if (userConfiguration.Status != null)
             {
-                Task taskStatus = Task.Factory.StartNew(() => UpdateStatusFile(fileName, userConfiguration, statusCancellationToken));
+                CancellationToken statusCancellationToken = statusCancellationTokenSource.Token;
+
+                taskStatus = Task.Factory.StartNew(() => UpdateStatusFile(fileName, userConfiguration, statusCancellationToken));
             }
 
             try
@@ -731,7 +783,12 @@ namespace Relay.BulkSenderService.Processors
 
                 Task.WaitAll(tasks.ToArray());
 
-                statusCancellationTokenSource.Cancel();
+                if (userConfiguration.Status != null)
+                {
+                    statusCancellationTokenSource.Cancel();
+
+                    taskStatus.Wait();
+                }
             }
         }
 
