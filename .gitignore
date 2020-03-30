@@ -215,3 +215,4 @@ RelayVS2017.favdoc
 #Project files
 /Relay.BulkSenderService/Configs
 /Relay.BulkSenderService/Configs/test
+/Relay.BulkSenderService/App.config.production
