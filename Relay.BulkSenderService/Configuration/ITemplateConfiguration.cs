@@ -1,6 +1,5 @@
 ﻿using Relay.BulkSenderService.Classes;
 using Relay.BulkSenderService.Processors;
-using Relay.BulkSenderService.Processors.PreProcess;
 using System.Collections.Generic;
 
 namespace Relay.BulkSenderService.Configuration

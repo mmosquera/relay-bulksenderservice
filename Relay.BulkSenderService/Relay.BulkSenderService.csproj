@@ -240,6 +240,7 @@
     <Compile Include="Configuration\FullDailyReportTypeConfiguration.cs" />
     <Compile Include="Configuration\DuplicatesPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GirePreProcessorConfiguration.cs" />
+    <Compile Include="Configuration\CredicopPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioPreProcessorConfiguration.cs" />
     <Compile Include="Configuration\GireAckConfiguration.cs" />
     <Compile Include="Configuration\IAckConfiguration.cs" />
@@ -311,6 +312,7 @@
     <Compile Include="Processors\PreProcess\BasicPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\DuplicatesPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\GirePreProcessor.cs" />
+    <Compile Include="Processors\PreProcess\CredicopPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\HipotecarioPreProcessor.cs" />
     <Compile Include="Processors\PreProcess\PreProcessor.cs" />
     <Compile Include="Processors\PreProcess\ProvinciaPreProcessor.cs" />
