@@ -280,6 +280,7 @@
     <Compile Include="Configuration\ReportName.cs" />
     <Compile Include="Configuration\ResultConfiguration.cs" />
     <Compile Include="Configuration\ResultMessageConfiguration.cs" />
+    <Compile Include="Configuration\TemplateCustomListConfiguration.cs" />
     <Compile Include="Configuration\TemplateJoinedFieldsConfiguration.cs" />
     <Compile Include="Configuration\TemplateSmtpConfiguration.cs" />
     <Compile Include="Configuration\TemplateDuplicatesConfiguration.cs" />
@@ -299,7 +300,9 @@
     <Compile Include="Processors\ApiProcessorConsumer.cs" />
     <Compile Include="Processors\ApiProcessorCustomHeaderBancorProducer.cs" />
     <Compile Include="Processors\ApiProcessorCustomHeaderProducer.cs" />
+    <Compile Include="Processors\ApiProcessorCustomList.cs" />
     <Compile Include="Processors\ApiProcessorJoinedFields.cs" />
+    <Compile Include="Processors\ApiProcessorCustomListProducer.cs" />
     <Compile Include="Processors\ApiProcessorJoinedFieldsProducer.cs" />
     <Compile Include="Processors\ApiProcessorGireProducer.cs" />
     <Compile Include="Processors\ApiProcessorKeyIteratorProducer.cs" />

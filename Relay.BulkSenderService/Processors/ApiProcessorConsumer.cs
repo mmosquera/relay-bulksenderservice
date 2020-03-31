@@ -56,7 +56,7 @@ namespace Relay.BulkSenderService.Processors
         {
             int count = 0;
 
-            while (count < configuration.DeliveryRetryCount && !SendEmailTest(configuration.BaseUrl, configuration.TemplateUrl, userConfiguration.Credentials.ApiKey, userConfiguration.Credentials.AccountId, apiRecipient))
+            while (count < configuration.DeliveryRetryCount && !SendEmail(configuration.BaseUrl, configuration.TemplateUrl, userConfiguration.Credentials.ApiKey, userConfiguration.Credentials.AccountId, apiRecipient))
             {
                 count++;
 
@@ -105,8 +105,8 @@ namespace Relay.BulkSenderService.Processors
                 attachments = GetRecipientAttachments(apiRecipient.Attachments)
             };
 
-            string resourceId = "20191022-1932-0811-afb5-3e64c86f3245";
-            string linkResult = $"sent successfully to:{apiRecipient.ToEmail}";
+            string resourceId = "test-resourceid-12345";
+            string linkResult = $"test sent successfully to:{apiRecipient.ToEmail}";
 
             System.Text.RegularExpressions.Regex regex = new System.Text.RegularExpressions.Regex(@"\w+([-+.']\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*");
             bool mailValid = regex.IsMatch(apiRecipient.ToEmail);
