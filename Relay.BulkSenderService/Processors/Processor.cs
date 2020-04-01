@@ -68,6 +68,8 @@ namespace Relay.BulkSenderService.Processors
 
                 SendStartProcessEmail(fileName, user);
 
+                _total = GetTotalLines(fileName, user);
+
                 InitStatusProcess(fileName, user);
 
                 ProcessFile(fileName, user);
@@ -671,7 +673,7 @@ namespace Relay.BulkSenderService.Processors
             return errorsFilePath;
         }
 
-        private int GetTotalLines(IUserConfiguration userConfiguration, string fileName)
+        private int GetTotalLines(string fileName, IUserConfiguration userConfiguration)
         {
             if (!File.Exists(fileName))
             {
@@ -719,9 +721,6 @@ namespace Relay.BulkSenderService.Processors
 
             string resultFileName = $@"{filePathHelper.GetQueueFilesFolder()}\{Path.GetFileNameWithoutExtension(fileName)}.result.tmp";
             resultFileWriter = new FileWriter(resultFileName);
-
-            //get values for status and retries
-            _total = GetTotalLines(userConfiguration, fileName);
 
             List<ProcessError> errorList = GetErrorsFromFile(userConfiguration, fileName);
             _errors = errorList.Count;
