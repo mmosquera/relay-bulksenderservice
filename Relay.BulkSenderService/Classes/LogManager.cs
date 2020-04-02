@@ -1,7 +1,7 @@
-﻿using System;
+﻿using log4net.Config;
+using System;
 using System.Collections.Generic;
 using System.IO;
-using log4net.Config;
 
 namespace Relay.BulkSenderService.Classes
 {

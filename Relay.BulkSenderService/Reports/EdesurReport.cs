@@ -1,9 +1,5 @@
-﻿using Relay.BulkSenderService.Classes;
-using Relay.BulkSenderService.Configuration;
-using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 
 namespace Relay.BulkSenderService.Reports
@@ -15,7 +11,7 @@ namespace Relay.BulkSenderService.Reports
 
         public EdesurReport()
         {
-            _stringBuilder = new StringBuilder();            
+            _stringBuilder = new StringBuilder();
         }
 
         //protected void FillItems()
