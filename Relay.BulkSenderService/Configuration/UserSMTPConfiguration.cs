@@ -57,13 +57,13 @@ namespace Relay.BulkSenderService.Configuration
             {
                 string[] namePartsArray = name.ToUpper().Split(templateConfiguration.FileNamePartSeparator);
 
-                if (templateConfiguration.FileNameParts.All(x => namePartsArray.Contains(x.ToUpper())))
+                if (templateConfiguration.AllFileNameParts.All(x => namePartsArray.Contains(x.ToUpper())))
                 {
                     return templateConfiguration;
                 }
             }
 
-            return Templates.Where(x => x.FileNameParts.Contains("*")).FirstOrDefault();
+            return Templates.Where(x => x.AllFileNameParts.Contains("*")).FirstOrDefault();
         }
 
         public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration, string fileName)

@@ -49,17 +49,44 @@ namespace Relay.BulkSenderService.Configuration
         public ITemplateConfiguration GetTemplateConfiguration(string fileName)
         {
             string name = Path.GetFileNameWithoutExtension(fileName);
-            foreach (ITemplateConfiguration templateConfiguration in this.Templates)
+
+            IEnumerable<ITemplateConfiguration> templatesAllParts = Templates.Where(x => x.AllFileNameParts != null);
+            IEnumerable<ITemplateConfiguration> templatesAnyPart = Templates.Where(x => x.AnyFileNameParts != null);
+            IEnumerable<ITemplateConfiguration> templatesSubParts = Templates.Where(x => x.SubFileNameParts != null);
+
+            foreach (ITemplateConfiguration templateConfiguration in templatesAllParts)
             {
                 string[] namePartsArray = name.ToUpper().Split(templateConfiguration.FileNamePartSeparator);
 
-                if (templateConfiguration.FileNameParts.All(x => namePartsArray.Contains(x.ToUpper())))
+                if (templateConfiguration.AllFileNameParts.All(x => namePartsArray.Contains(x.ToUpper())))
                 {
                     return templateConfiguration;
                 }
             }
 
-            return Templates.Where(x => x.FileNameParts.Contains("*")).FirstOrDefault();
+            foreach (ITemplateConfiguration templateConfiguration in templatesAnyPart)
+            {
+                string[] namePartsArray = name.ToUpper().Split(templateConfiguration.FileNamePartSeparator);
+
+                if (templateConfiguration.AnyFileNameParts.Any(x => namePartsArray.Contains(x.ToUpper())))
+                {
+                    return templateConfiguration;
+                }
+            }
+
+            foreach (ITemplateConfiguration templateConfiguration in templatesSubParts)
+            {
+                string[] namePartsArray = name.ToUpper().Split(templateConfiguration.FileNamePartSeparator);
+
+                if (templateConfiguration.SubFileNameParts.All(x => name.ToUpper().Contains(x.ToUpper())))
+                {
+                    return templateConfiguration;
+                }
+
+                return templatesSubParts.Where(x => x.SubFileNameParts.Contains("*")).FirstOrDefault();
+            }
+
+            return null;
         }
 
         public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration, string fileName)

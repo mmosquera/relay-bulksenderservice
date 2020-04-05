@@ -40,6 +40,9 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                         {
                             Task preProcessorTask = Task.Factory.StartNew(() => PreProcessorWork(user, filterFiles));
 
+                            //To debug preprocessor
+                            //preProcessorTask.Wait();
+
                             AddPreprocessorTask(preProcessorTask, user.Name);
                         }
                     }
