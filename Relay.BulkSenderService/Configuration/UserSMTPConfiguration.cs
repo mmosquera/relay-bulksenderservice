@@ -53,17 +53,16 @@ namespace Relay.BulkSenderService.Configuration
         public ITemplateConfiguration GetTemplateConfiguration(string fileName)
         {
             string name = Path.GetFileNameWithoutExtension(fileName);
-            foreach (ITemplateConfiguration templateConfiguration in this.Templates)
-            {
-                string[] namePartsArray = name.ToUpper().Split(templateConfiguration.FileNamePartSeparator);
 
-                if (templateConfiguration.AllFileNameParts.All(x => namePartsArray.Contains(x.ToUpper())))
+            foreach (ITemplateConfiguration templateConfiguration in Templates.Where(x => !x.FileNameParts.Contains("*")))
+            {
+                if (templateConfiguration.FileNameParts.All(x => name.Contains(x, StringComparison.InvariantCultureIgnoreCase)))
                 {
                     return templateConfiguration;
                 }
             }
 
-            return Templates.Where(x => x.AllFileNameParts.Contains("*")).FirstOrDefault();
+            return Templates.FirstOrDefault(x => x.FileNameParts.Contains("*"));
         }
 
         public PreProcessor GetPreProcessor(ILog logger, IConfiguration configuration, string fileName)
