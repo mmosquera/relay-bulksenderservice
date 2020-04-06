@@ -224,6 +224,7 @@
     <Compile Include="Classes\SftpHelper.cs" />
     <Compile Include="Classes\SMTPRecipient.cs" />
     <Compile Include="Classes\SqlHelper.cs" />
+    <Compile Include="Classes\StringExtensions.cs" />
     <Compile Include="Classes\TemplateGenerator.cs" />
     <Compile Include="Classes\ZipHelper.cs" />
     <Compile Include="Configuration\Alerts\AlertConfiguration.cs" />
