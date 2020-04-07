@@ -50,7 +50,11 @@ namespace Relay.BulkSenderService.Configuration
         {
             string name = Path.GetFileNameWithoutExtension(fileName);
 
-            foreach (ITemplateConfiguration templateConfiguration in Templates.Where(x => !x.FileNameParts.Contains("*")))
+            var orderedTemplates = Templates.Where(x => !x.FileNameParts.Contains("*"))
+                .OrderByDescending(x => x.FileNameParts.Count)
+                .ThenByDescending(x => x.FileNameParts.Max(y => y.Length));
+
+            foreach (ITemplateConfiguration templateConfiguration in orderedTemplates)
             {
                 if (templateConfiguration.FileNameParts.All(x => name.Contains(x, StringComparison.InvariantCultureIgnoreCase)))
                 {
