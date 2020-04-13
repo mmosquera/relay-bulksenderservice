@@ -131,8 +131,15 @@ BEGIN
 			,NULL AS ClickDate
 		FROM dbo.Delivery d
 		WHERE d.UserId = @UserId
-			AND d.CreatedAt BETWEEN @StartDate
-				AND @EndDate
+			AND (
+				d.CreatedAt BETWEEN @StartDate
+					AND @EndDate
+				OR (
+					d.SentAt IS NOT NULL
+					AND d.SentAt BETWEEN @StartDate
+						AND @EndDate
+					)
+				)
 		) xx
 	JOIN Message m ON xx.MessageId = m.Id
 	JOIN EmailAddress ea ON xx.RecipientId = ea.Id
