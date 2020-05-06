@@ -24,36 +24,29 @@ namespace Relay.BulkSenderService.Classes
                 return files;
             }
 
-            try
+            var request = (FtpWebRequest)WebRequest.Create(requestUri);
+            request.Credentials = new NetworkCredential(_ftpUser, _ftpPassword);
+            request.Method = WebRequestMethods.Ftp.ListDirectory;
+            request.UseBinary = true;
+            request.EnableSsl = _isFTPS;
+            request.UsePassive = true;
+            request.KeepAlive = true;
+
+            using (var response = (FtpWebResponse)request.GetResponse())
             {
-                var request = (FtpWebRequest)WebRequest.Create(requestUri);
-                request.Credentials = new NetworkCredential(_ftpUser, _ftpPassword);
-                request.Method = WebRequestMethods.Ftp.ListDirectory;
-                request.UseBinary = true;
-                request.EnableSsl = _isFTPS;
-                request.UsePassive = true;
-                request.KeepAlive = true;
-
-                using (var response = (FtpWebResponse)request.GetResponse())
+                using (var streamReader = new StreamReader(response.GetResponseStream()))
                 {
-                    using (var streamReader = new StreamReader(response.GetResponseStream()))
+                    string line;
+                    while ((line = streamReader.ReadLine()) != null)
                     {
-                        string line;
-                        while ((line = streamReader.ReadLine()) != null)
-                        {
-                            string extension = Path.GetExtension(line);
+                        string extension = Path.GetExtension(line);
 
-                            if (filters.Any(f => extension.Equals(f, StringComparison.InvariantCultureIgnoreCase)))
-                            {
-                                files.Add(Path.GetFileName(line));
-                            }
+                        if (filters.Any(f => extension.Equals(f, StringComparison.InvariantCultureIgnoreCase)))
+                        {
+                            files.Add(Path.GetFileName(line));
                         }
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                _logger.Error($"Error retriving list -- {e}");
             }
 
             return files;

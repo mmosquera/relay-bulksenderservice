@@ -47,11 +47,9 @@ namespace Relay.BulkSenderService.Processors
 
                         IEnumerable<string> extensions = user.FileExtensions != null ? user.FileExtensions : new List<string> { ".csv" };
 
-                        var ftpHelper = user.Ftp.GetFtpHelper(_logger);
-
                         foreach (string folder in downloadFolders)
                         {
-                            List<string> files = ftpHelper.GetFileList(folder, extensions);
+                            List<string> files = GetFileListWithRetries(user, folder, extensions);
 
                             Task.Factory.StartNew(() => DownloadUserFiles(folder, files, user));
                         }
@@ -68,6 +66,31 @@ namespace Relay.BulkSenderService.Processors
 
                 Thread.Sleep(_configuration.FtpListInterval);
             }
+        }
+
+        private List<string> GetFileListWithRetries(IUserConfiguration user, string folder, IEnumerable<string> extensions)
+        {
+            var ftpHelper = user.Ftp.GetFtpHelper(_logger);
+
+            int i = 0;
+
+            while (i < 3)
+            {
+                try
+                {
+                    return ftpHelper.GetFileList(folder, extensions);
+                }
+                catch (Exception e)
+                {
+                    _logger.Error($"FTP ERROR: problems retrieving list -- {e}");
+
+                    i++;
+                }
+            }
+
+            new AdminError(_configuration).Process();
+
+            return new List<string>();
         }
 
         private void ProcessAckFiles(IUserConfiguration userConfiguration, List<string> folders)

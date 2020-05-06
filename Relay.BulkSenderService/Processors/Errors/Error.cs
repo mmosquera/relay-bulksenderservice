@@ -19,7 +19,7 @@ namespace Relay.BulkSenderService.Processors.Errors
         public DateTime Date { get; set; }
         public string Message { get; set; }
 
-        public void Process()
+        public virtual void Process()
         {
             throw new NotImplementedException();
         }
@@ -60,7 +60,7 @@ namespace Relay.BulkSenderService.Processors.Errors
                 }
                 catch (Exception e)
                 {
-                    //_logger.Error($"Error trying to send error process email -- {e}");
+                    //TODO: log error or retry
                 }
             }
         }
