@@ -88,7 +88,8 @@ namespace Relay.BulkSenderService.Processors
                 }
             }
 
-            new AdminError(_configuration).Process();
+            var ftpError = new FtpError();
+            new AdminErrorProcessor(_configuration).ProcessError(ftpError);
 
             return new List<string>();
         }
@@ -207,7 +208,10 @@ namespace Relay.BulkSenderService.Processors
             }
             else
             {
-                new DownloadError(_configuration).SendErrorEmail(file, user.Alerts);
+                var error = new DownloadError();
+                error.AddExtra("User", user.Name);
+                error.AddExtra("FileName", file);
+                new AdminErrorProcessor(_configuration).ProcessError(error);
 
                 _logger.Error($"Download problems with file {file}.");
 
@@ -253,7 +257,11 @@ namespace Relay.BulkSenderService.Processors
 
                 if (AddRepeatedFile(userConfiguration, file))
                 {
-                    new FileRepeatedError(_configuration).SendErrorEmail(fileName, userConfiguration.Alerts);
+                    var error = new FileRepeatedError();
+                    error.AddExtra("user", userConfiguration.Name);
+                    error.AddExtra("file", fileName);
+
+                    ProcessError(error);
                 }
 
                 return false;
@@ -319,6 +327,12 @@ namespace Relay.BulkSenderService.Processors
 
                 ftpHelper.DeleteFile(file);
             }
+        }
+
+        private void ProcessError(IError error)
+        {
+            new AdminErrorProcessor(_configuration).ProcessError(error);
+
         }
     }
 }

@@ -61,7 +61,9 @@ namespace Relay.BulkSenderService.Processors
                 {
                     _logger.Error($"Error to authenticate user:{user.Name}");
 
-                    new LoginError(_configuration).SendErrorEmail(fileName, user.Alerts);
+                    var error = new LoginError();
+                    error.AddExtra("User", user.Name);
+                    new AdminErrorProcessor(_configuration).ProcessError(error);
 
                     return;
                 }
@@ -554,73 +556,46 @@ namespace Relay.BulkSenderService.Processors
         {
             if (user.Alerts != null
                 && user.Alerts.GetStartAlert() != null
-                && user.Alerts.Emails.Count > 0
+                && user.Alerts.Emails.Any()
                 && new FileInfo(file).Directory.Name != Constants.FOLDER_RETRIES)
             {
-                var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
-                smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
-
-                var mailMessage = new MailMessage();
-                mailMessage.Subject = user.Alerts.GetStartAlert().Subject;
-                mailMessage.From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support");
-
-                foreach (string email in user.Alerts.Emails)
-                {
-                    mailMessage.To.Add(email);
-                }
-
-                string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\StartProcess.es.html");
-
-                mailMessage.Body = body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file)).Replace("{{time}}", user.GetUserDateTime().DateTime.ToString());
-                mailMessage.IsBodyHtml = true;
-
                 try
                 {
-                    smtpClient.Send(mailMessage);
+                    string body = File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\StartProcess.es.html");
+                    body = body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file)).Replace("{{time}}", user.GetUserDateTime().DateTime.ToString());
+
+                    new MailSender(_configuration).SendEmail("support@dopplerrelay.com", "Doppler Relay Support", user.Alerts.Emails, user.Alerts.GetStartAlert().Subject, body);
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"Error trying to send starting email -- {e}");
+                    _logger.Error($"Error trying to send start email alert -- {e}");
                 }
             }
         }
 
         private void SendEndProcessEmail(string file, IUserConfiguration user)
         {
-            if (user.Alerts != null && user.Alerts.GetEndAlert() != null && user.Alerts.Emails.Count > 0)
+            if (user.Alerts != null &&
+                user.Alerts.GetEndAlert() != null &&
+                user.Alerts.Emails.Any())
             {
-                var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
-                smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
-
-                var mailMessage = new MailMessage();
-                mailMessage.Subject = user.Alerts.GetEndAlert().Subject;
-                mailMessage.From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support");
-
-                foreach (string email in user.Alerts.Emails)
-                {
-                    mailMessage.To.Add(email);
-                }
-
-                mailMessage.Body = GetBody(file, user, _processed, _errors);
-                mailMessage.IsBodyHtml = true;
-
-                List<string> attachments = GetAttachments(file, user.Name);
-
-                foreach (string attachment in attachments)
-                {
-                    mailMessage.Attachments.Add(new Attachment(attachment)
-                    {
-                        Name = Path.GetFileName(attachment)
-                    });
-                }
-
                 try
                 {
-                    smtpClient.Send(mailMessage);
+                    string body = GetBody(file, user, _processed, _errors);
+
+                    List<string> attachments = GetAttachments(file, user.Name);
+
+                    new MailSender(_configuration).SendEmail(
+                        "support@dopplerrelay.com",
+                        "Doppler Relay Support",
+                        user.Alerts.Emails,
+                        user.Alerts.GetEndAlert().Subject,
+                        body,
+                        attachments);
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"Error trying to send end process email -- {e}");
+                    _logger.Error($"Error trying to send end email alert -- {e}");
                 }
             }
         }
@@ -767,7 +742,8 @@ namespace Relay.BulkSenderService.Processors
             {
                 _logger.Error($"PROCESS FILE ERROR: {e}");
 
-                new UnexpectedError(_configuration).SendErrorEmail(fileName, userConfiguration.Alerts);
+                var error = new UnexpectedError();
+                new AdminErrorProcessor(_configuration).ProcessError(error);
             }
             finally
             {

@@ -1,7 +1,7 @@
 ﻿using Relay.BulkSenderService.Classes;
 using System;
 
-namespace Relay.BulkSenderService.Processors.Errors
+namespace Relay.BulkSenderService.Processors
 {
     public enum ErrorType
     {
@@ -13,7 +13,7 @@ namespace Relay.BulkSenderService.Processors.Errors
         UNEXPECTED = 6,
         DELIVERY = 7
     }
-    public class ProcessError : IError
+    public class ProcessError
     {
         public int LineNumber { get; set; }
         public ErrorType Type { get; set; }
@@ -49,11 +49,6 @@ namespace Relay.BulkSenderService.Processors.Errors
             }
 
             return line;
-        }
-
-        public void Process()
-        {
-
         }
     }
 }

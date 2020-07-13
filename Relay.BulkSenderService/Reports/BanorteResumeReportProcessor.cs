@@ -59,11 +59,23 @@ namespace Relay.BulkSenderService.Reports
         {
             if (user.Alerts != null
                 && user.Alerts.GetReportAlert() != null
-                && user.Alerts.Emails.Count > 0
+                && user.Alerts.Emails.Any()
                 && files != null
-                && files.Count > 0)
+                && files.Any())
             {
-                SendSmtpEmail(user.Alerts.Emails, user.Alerts.GetReportAlert().Subject, File.ReadAllText(files[0]), new List<string>());
+                try
+                {
+                    new MailSender(_configuration).SendEmail(
+                        "support@dopplerrelay.com",
+                        "Doppler Relay Support",
+                        user.Alerts.Emails,
+                        user.Alerts.GetReportAlert().Subject,
+                        File.ReadAllText(files[0]));
+                }
+                catch (Exception e)
+                {
+                    _logger.Error($"Error trying to send report email alert -- {e}");
+                }
             }
         }
 

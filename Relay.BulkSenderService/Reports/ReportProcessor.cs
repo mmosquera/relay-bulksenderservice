@@ -66,50 +66,30 @@ namespace Relay.BulkSenderService.Reports
 
         protected virtual void SendReportAlert(IUserConfiguration user, List<string> files)
         {
-            if (user.Alerts == null || user.Alerts.GetReportAlert() == null || files == null || files.Count == 0)
+            if (user.Alerts == null ||
+                user.Alerts.GetReportAlert() == null ||
+                !user.Alerts.Emails.Any() ||
+                files == null ||
+                files.Count == 0)
             {
                 return;
             }
 
-            ReportAlertTypeConfiguration reportAlert = user.Alerts.GetReportAlert();
-
-            SendSmtpEmail(user.Alerts.Emails, reportAlert.Subject, reportAlert.Message, files);
-        }
-
-        protected void SendSmtpEmail(List<string> toList, string subject, string body, List<string> attachments)
-        {
-            var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
-            smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
-
-            var mailMessage = new MailMessage()
-            {
-                Body = body,
-                IsBodyHtml = true,
-                Subject = subject,
-                From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support")
-            };
-
-            foreach (string to in toList)
-            {
-                mailMessage.To.Add(to);
-            }
-
-            foreach (string file in attachments)
-            {
-                var attachment = new Attachment(file)
-                {
-                    Name = Path.GetFileName(file)
-                };
-
-                mailMessage.Attachments.Add(attachment);
-            }
             try
             {
-                smtpClient.Send(mailMessage);
+                ReportAlertTypeConfiguration reportAlert = user.Alerts.GetReportAlert();
+
+                new MailSender(_configuration).SendEmail(
+                    "support@dopplerrelay.com",
+                    "Doppler Relay Support",
+                    user.Alerts.Emails,
+                    reportAlert.Subject,
+                    reportAlert.Message,
+                    files);
             }
             catch (Exception e)
             {
-                _logger.Error($"Error trying to send smtp email -- {e}");
+                _logger.Error($"Error trying to send report email alert -- {e}");
             }
         }
 

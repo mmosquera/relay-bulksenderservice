@@ -1,70 +1,43 @@
-﻿using Relay.BulkSenderService.Configuration;
-using Relay.BulkSenderService.Configuration.Alerts;
-using System;
-using System.IO;
-using System.Net;
-using System.Net.Mail;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Relay.BulkSenderService.Processors.Errors
 {
     public abstract class Error : IError
     {
-        private readonly IConfiguration _configuration;
+        protected DateTime _date;
+        protected string _message;
+        public Dictionary<string, string> _extras;
 
-        public Error(IConfiguration configuration)
+        public Error()
         {
-            _configuration = configuration;
+            _date = DateTime.UtcNow;
+            _extras = new Dictionary<string, string>();
         }
 
-        public DateTime Date { get; set; }
-        public string Message { get; set; }
-
-        public virtual void Process()
+        public string GetDescription()
         {
-            throw new NotImplementedException();
-        }
+            var description = new StringBuilder();
 
-        public void SendErrorEmail(string file, AlertConfiguration alerts)
-        {
-            if (alerts != null
-                && alerts.GetErrorAlert() != null
-                && alerts.Emails.Count > 0)
+            description.AppendLine(_message);
+
+            description.AppendLine($"Hour:{_date}");
+
+            foreach (KeyValuePair<string, string> extra in _extras)
             {
-                var smtpClient = new SmtpClient(_configuration.SmtpHost, _configuration.SmtpPort);
-                smtpClient.Credentials = new NetworkCredential(_configuration.AdminUser, _configuration.AdminPass);
+                description.AppendLine($"{extra.Key}:{extra.Value}");
+            }
 
-                var mailMessage = new MailMessage()
-                {
-                    Subject = alerts.GetErrorAlert().Subject,
-                    From = new MailAddress("support@dopplerrelay.com", "Doppler Relay Support")
-                };
+            return description.ToString();
+        }
 
-                foreach (string email in alerts.Emails)
-                {
-                    mailMessage.To.Add(email);
-                }
-
-                string body = GetBody();
-
-                if (string.IsNullOrEmpty(body))
-                {
-                    body = "Error processing file {{filename}}.";
-                }
-
-                mailMessage.Body = body.Replace("{{filename}}", Path.GetFileNameWithoutExtension(file));
-                mailMessage.IsBodyHtml = true;
-
-                try
-                {
-                    smtpClient.Send(mailMessage);
-                }
-                catch (Exception e)
-                {
-                    //TODO: log error or retry
-                }
+        public void AddExtra(string name, string value)
+        {
+            if (!_extras.ContainsKey(name))
+            {
+                _extras.Add(name, value);
             }
         }
-
-        protected abstract string GetBody();
     }
 }

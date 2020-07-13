@@ -1,19 +1,10 @@
-﻿using Relay.BulkSenderService.Configuration;
-using System;
-using System.IO;
-
-namespace Relay.BulkSenderService.Processors.Errors
+﻿namespace Relay.BulkSenderService.Processors.Errors
 {
     public class LoginError : Error
     {
-        public LoginError(IConfiguration configuration) : base(configuration)
+        public LoginError() : base()
         {
-
-        }
-
-        protected override string GetBody()
-        {
-            return File.ReadAllText($@"{AppDomain.CurrentDomain.BaseDirectory}\EmailTemplates\ErrorLogin.es.html");
+            _message = $"There are problems to authenticate user with DopplerRelay.";
         }
     }
 }

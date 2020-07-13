@@ -1,16 +1,10 @@
-﻿using Relay.BulkSenderService.Configuration;
-
-namespace Relay.BulkSenderService.Processors.Errors
+﻿namespace Relay.BulkSenderService.Processors.Errors
 {
     public class UnexpectedError : Error
     {
-        public UnexpectedError(IConfiguration configuration) : base(configuration)
+        public UnexpectedError() : base()
         {
-        }
-
-        protected override string GetBody()
-        {
-            return "There is an unexpected error processing file {{filename}}";
+            _message = "There is an unexpected error processing file. Please check the application log.";
         }
     }
 }
