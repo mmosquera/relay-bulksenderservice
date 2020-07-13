@@ -72,9 +72,9 @@ namespace Relay.BulkSenderService.Processors
         {
             var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
-            int i = 0;
+            int i = 1;
 
-            while (i < 3)
+            while (i <= 3)
             {
                 try
                 {
@@ -82,10 +82,12 @@ namespace Relay.BulkSenderService.Processors
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"FTP ERROR: problems retrieving list -- {e}");
+                    _logger.Error($"FTP ERROR: problems retrieving list for user {user.Name} -- {e}");
 
                     i++;
                 }
+
+                Thread.Sleep(i * 1000);
             }
 
             new AdminError(_configuration).Process();
