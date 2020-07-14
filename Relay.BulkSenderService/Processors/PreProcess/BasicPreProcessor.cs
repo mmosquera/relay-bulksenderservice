@@ -128,7 +128,15 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             if (File.Exists(localZipFile))
             {
                 var zipHelper = new ZipHelper(_logger);
-                zipHelper.UnzipFile(localZipFile, localAttachmentFolder);
+                try
+                {
+                    zipHelper.UnzipFile(localZipFile, localAttachmentFolder);
+                }
+                catch (Exception e)
+                {
+                    //TODO: esto hay que moverlo a un proceso de alertas con retry, tambien habria que terminar el proceso del archivo.
+                    _logger.Error($"ERROR trying to unzip file {localZipFile} -- {e}");
+                }
 
                 ftpHelper.DeleteFile(zipAttachments);
                 File.Delete(localZipFile); //TODO add retries.

@@ -6,8 +6,11 @@ namespace Relay.BulkSenderService.Processors.Errors
 {
     public class AdminError : Error
     {
-        public AdminError(IConfiguration configuration) : base(configuration)
+        private string _user;
+
+        public AdminError(IConfiguration configuration, string user) : base(configuration)
         {
+            _user = user;
         }
 
         public override void Process()
@@ -28,7 +31,7 @@ namespace Relay.BulkSenderService.Processors.Errors
 
         protected override string GetBody()
         {
-            return "Problems with bulksender and ftp connection. Please check the application log.";
+            return $"Problems with bulksender and ftp connection for user {_user}. Please check the application log.";
         }
     }
 }

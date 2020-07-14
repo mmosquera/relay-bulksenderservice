@@ -17,12 +17,14 @@ namespace Relay.BulkSenderService.Processors
         private const int MINUTES_TO_DELETE_REPEATED = 60;
         private Dictionary<string, DateTime> _nextRun;
         private Dictionary<string, List<RepeatedFile>> _repeatedFiles;
+        private Dictionary<string, DateTime> _alerts;
         private readonly object _lockRepeatedFiles;
 
         public FtpMonitor(ILog logger, IConfiguration configuration) : base(logger, configuration)
         {
             _nextRun = new Dictionary<string, DateTime>();
             _repeatedFiles = new Dictionary<string, List<RepeatedFile>>();
+            _alerts = new Dictionary<string, DateTime>();
             _lockRepeatedFiles = new object();
         }
 
@@ -72,25 +74,36 @@ namespace Relay.BulkSenderService.Processors
         {
             var ftpHelper = user.Ftp.GetFtpHelper(_logger);
 
-            int i = 1;
+            int i = 0;
 
-            while (i <= 3)
+            while (i < 3)
             {
+                Thread.Sleep(i * 5000);
+
                 try
                 {
                     return ftpHelper.GetFileList(folder, extensions);
                 }
                 catch (Exception e)
                 {
-                    _logger.Error($"FTP ERROR: problems retrieving list for user {user.Name} -- {e}");
+                    _logger.Error($"FTP ERROR: problems retrieving files list for user {user.Name} -- {e}");
 
                     i++;
                 }
-
-                Thread.Sleep(i * 1000);
             }
 
-            new AdminError(_configuration).Process();
+            if (!_alerts.ContainsKey(user.Name))
+            {
+                _alerts.Add(user.Name, DateTime.UtcNow);
+
+                new AdminError(_configuration, user.Name).Process();
+            }
+            else if (DateTime.UtcNow.Subtract(_alerts[user.Name]).TotalMinutes > 60)
+            {
+                _alerts[user.Name] = DateTime.UtcNow;
+
+                new AdminError(_configuration, user.Name).Process();
+            }
 
             return new List<string>();
         }
@@ -245,7 +258,8 @@ namespace Relay.BulkSenderService.Processors
             }
 
             if (!allowDuplicates &&
-                (File.Exists($@"{downloadPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
+                (File.Exists($@"{downloadPath}\{fileName}") ||
+                File.Exists($@"{downloadPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
                 File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
                 File.Exists($@"{processedPath}\{name}{Constants.EXTENSION_PROCESSED}") ||
                 File.Exists($@"{retryPath}\{name}{Constants.EXTENSION_PROCESSING}") ||
