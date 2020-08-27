@@ -84,7 +84,7 @@ namespace Relay.BulkSenderService.Processors
 
                         List<ReportExecution> reports = JsonConvert.DeserializeObject<List<ReportExecution>>(json);
 
-                        bool hasChanges = false;
+                        var processedReports = new List<ReportExecution>();
 
                         foreach (ReportExecution reportExecution in reports.Where(x => !x.Processed && x.RunDate < DateTime.UtcNow))
                         {
@@ -98,7 +98,7 @@ namespace Relay.BulkSenderService.Processors
 
                                 reportProcessor.Process(user, reportExecution);
 
-                                hasChanges = true;
+                                processedReports.Add(reportExecution);
                             }
                             catch (Exception e)
                             {
@@ -106,8 +106,25 @@ namespace Relay.BulkSenderService.Processors
                             }
                         }
 
-                        if (hasChanges)
+                        if (processedReports.Any())
                         {
+                            // vuelvo a levantar el archivo por si tuvo cambios de afuera para no perderlos.
+                            // cuando sea por usuario no deberia tener mas problemas igual deberia ser algo mas seguro
+                            json = File.ReadAllText(file);
+                            reports = JsonConvert.DeserializeObject<List<ReportExecution>>(json);
+
+                            foreach (ReportExecution processedReport in processedReports)
+                            {
+                                var report = reports.FirstOrDefault(x => x.UserName == processedReport.UserName && x.ReportId == processedReport.ReportId);
+
+                                if (report != null)
+                                {
+                                    report.Processed = processedReport.Processed;
+                                    report.ProcessedDate = processedReport.ProcessedDate;
+                                    report.ReportFile = processedReport.ReportFile;
+                                }
+                            }
+
                             json = JsonConvert.SerializeObject(reports);
                             using (var streamWriter = new StreamWriter(file, false))
                             {
