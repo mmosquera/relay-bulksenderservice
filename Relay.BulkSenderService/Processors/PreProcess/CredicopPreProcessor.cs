@@ -156,7 +156,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
         private string GetTemplateId(string name)
         {
-            return _mappings.FirstOrDefault(x => x.TemplateName.Equals(name, StringComparison.InvariantCultureIgnoreCase)).TemplateId;
+            return _mappings.FirstOrDefault(x => x.TemplateName.Equals(name, StringComparison.InvariantCultureIgnoreCase))?.TemplateId;
         }
     }
 }
