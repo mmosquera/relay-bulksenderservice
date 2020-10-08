@@ -213,13 +213,16 @@ namespace Relay.BulkSenderService.Processors
                 {
                     dynamic jsonResult = JsonConvert.DeserializeObject(response.Content);
 
+                    string message = jsonResult.title;
+                    string description = jsonResult.errors?.Count > 0 ? jsonResult.errors[0].detail : string.Empty;
+
                     var errorEventArgs = new QueueErrorEventArgs()
                     {
                         LineNumber = apiRecipient.LineNumber,
                         Type = ErrorType.DELIVERY,
                         Date = DateTime.UtcNow,
-                        Message = jsonResult.title,
-                        Description = jsonResult.ToString(),
+                        Message = message,
+                        Description = description,
                         EnqueueTime = apiRecipient.EnqueueTime,
                         DequeueTime = apiRecipient.DequeueTime,
                         DeliveryTime = DateTime.UtcNow

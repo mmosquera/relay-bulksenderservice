@@ -25,6 +25,11 @@ namespace Relay.BulkSenderService.Processors.Errors
         {
             string line = $"{Date}: {Message}";
 
+            if (!string.IsNullOrEmpty(Description))
+            {
+                line += $" ({Description})";
+            }
+
             if (LineNumber != 0)
             {
                 line += $" processing line:{LineNumber}";
@@ -44,7 +49,14 @@ namespace Relay.BulkSenderService.Processors.Errors
                     line = $"{Message}{separator}{separator}{separator}";
                     break;
                 case ErrorType.DELIVERY:
-                    line = $"{Constants.PROCESS_RESULT_OK}{separator}Send Fail ({Message}){separator}{separator}";
+                    string error = $"Send Fail: {Message}";
+
+                    if (!string.IsNullOrEmpty(Description))
+                    {
+                        error = $"{error} ({Description})";
+                    }
+
+                    line = $"{Constants.PROCESS_RESULT_OK}{separator}{error}{separator}{separator}";
                     break;
             }
 
