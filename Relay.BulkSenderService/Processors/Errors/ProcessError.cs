@@ -38,7 +38,7 @@ namespace Relay.BulkSenderService.Processors.Errors
             return line;
         }
 
-        public string GetErrorLineResult(char separator)
+        public string GetErrorLineResult(char separator, int maxlenght)
         {
             string line = string.Empty;
 
@@ -54,6 +54,11 @@ namespace Relay.BulkSenderService.Processors.Errors
                     if (!string.IsNullOrEmpty(Description))
                     {
                         error = $"{error} ({Description})";
+                    }
+
+                    if (maxlenght > 0 && error.Length > maxlenght)
+                    {
+                        error = error.Substring(0, maxlenght);
                     }
 
                     line = $"{Constants.PROCESS_RESULT_OK}{separator}{error}{separator}{separator}";

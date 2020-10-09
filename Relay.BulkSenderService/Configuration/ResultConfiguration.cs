@@ -4,6 +4,7 @@
     {
         public string Folder { get; set; }
         public IReportName FileName { get; set; }
+        public int MaxDescriptionLength { get; set; }
 
         public string SaveAndGetName(string fileName, string resultsFolder)
         {

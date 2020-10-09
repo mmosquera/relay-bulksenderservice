@@ -269,7 +269,7 @@ namespace Relay.BulkSenderService.Processors
 
                     if (processError != null)
                     {
-                        resultLine = $"{processError.GetErrorLineResult(templateConfiguration.FieldSeparator)}";
+                        resultLine = $"{processError.GetErrorLineResult(templateConfiguration.FieldSeparator, user.Results.MaxDescriptionLength)}";
                     }
 
                     if (!string.IsNullOrEmpty(resultLine))
