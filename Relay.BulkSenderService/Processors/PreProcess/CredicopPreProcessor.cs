@@ -30,7 +30,7 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             Dictionary<int, string> auxHeaders = null;
             Dictionary<int, string> auxValues = null;
 
-            var headers = new List<string>() { "email", "name", "templateid", "replyto", "subject" };
+            var headers = new List<string>() { "email", "name", "cc", "bcc", "templateid", "replyto", "subject" };
 
             try
             {
@@ -66,6 +66,12 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                                         break;
                                     case "ToAddress":
                                         mail.Add("email", value);
+                                        break;
+                                    case "CCAddress":
+                                        mail.Add("cc", value);
+                                        break;
+                                    case "BCCAddress":
+                                        mail.Add("bcc", value);
                                         break;
                                     case "ReplyAddress":
                                         mail.Add("replyto", value);
