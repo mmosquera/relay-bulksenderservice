@@ -19,6 +19,8 @@ namespace Relay.BulkSenderService.Classes
             HasError = false;
             ToEmail = null;
             ToName = null;
+            CCEmail = null;
+            BCCEmail = null;
             FromEmail = null;
             FromName = null;
             ReplyToEmail = null;

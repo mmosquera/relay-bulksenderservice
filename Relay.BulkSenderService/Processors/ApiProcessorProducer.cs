@@ -213,6 +213,18 @@ namespace Relay.BulkSenderService.Processors
                 recipient.ReplyToName = data[replyToName.Position];
             }
 
+            var cc = fields.Find(f => f.Name.Equals("cc", StringComparison.OrdinalIgnoreCase));
+            if (cc != null)
+            {
+                recipient.CCEmail = data[cc.Position];
+            }
+
+            var bcc = fields.Find(f => f.Name.Equals("bcc", StringComparison.OrdinalIgnoreCase));
+            if (bcc != null)
+            {
+                recipient.BCCEmail = data[bcc.Position];
+            }
+
             var templateField = fields.Find(f => f.Name.Equals("templateid", StringComparison.OrdinalIgnoreCase));
             if (string.IsNullOrEmpty(templateId) && templateField != null)
             {

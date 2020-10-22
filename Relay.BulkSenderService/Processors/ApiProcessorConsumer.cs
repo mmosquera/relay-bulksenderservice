@@ -166,16 +166,38 @@ namespace Relay.BulkSenderService.Processors
 
             try
             {
-                object body = new
-                {
-                    from_name = apiRecipient.FromName,
-                    from_email = apiRecipient.FromEmail,
-                    recipients = new[] { new
+                var recipientsList = new List<object>();
+
+                recipientsList.Add(new
                 {
                     email = apiRecipient.ToEmail,
                     name = apiRecipient.ToName,
                     type = "to"
-                }},
+                });
+
+                if (!string.IsNullOrEmpty(apiRecipient.CCEmail))
+                {
+                    recipientsList.Add(new
+                    {
+                        email = apiRecipient.CCEmail,
+                        type = "cc"
+                    });
+                }
+
+                if (!string.IsNullOrEmpty(apiRecipient.BCCEmail))
+                {
+                    recipientsList.Add(new
+                    {
+                        email = apiRecipient.BCCEmail,
+                        type = "bcc"
+                    });
+                }
+
+                object body = new
+                {
+                    from_name = apiRecipient.FromName,
+                    from_email = apiRecipient.FromEmail,
+                    recipients = recipientsList.ToArray(),
                     reply_to = !string.IsNullOrEmpty(apiRecipient.ReplyToEmail) ? new
                     {
                         email = apiRecipient.ReplyToEmail,
