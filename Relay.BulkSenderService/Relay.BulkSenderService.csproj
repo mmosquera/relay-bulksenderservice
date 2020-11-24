@@ -221,6 +221,7 @@
     <Compile Include="Classes\ProcessResult.cs" />
     <Compile Include="Classes\RecipientAttachment.cs" />
     <Compile Include="Classes\RepeatedFile.cs" />
+    <Compile Include="Classes\ReportBuffer.cs" />
     <Compile Include="Classes\SftpHelper.cs" />
     <Compile Include="Classes\SMTPRecipient.cs" />
     <Compile Include="Classes\SqlHelper.cs" />
@@ -258,6 +259,7 @@
     <Compile Include="Configuration\ProvinciaTemplateConfiguration.cs" />
     <Compile Include="Configuration\IStatusConfiguration.cs" />
     <Compile Include="Configuration\FtpStatusConfiguration.cs" />
+    <Compile Include="Configuration\NewStatusProgressReportTypeConfiguration.cs" />
     <Compile Include="Configuration\StatusProgressReportTypeConfiguration.cs" />
     <Compile Include="Configuration\RicohStatusReportTypeConfiguration.cs" />
     <Compile Include="Configuration\HipotecarioCabeceraReportTypeConfiguration.cs" />
@@ -374,7 +376,9 @@
     <Compile Include="Queues\QueueResultEventArgs.cs" />
     <Compile Include="Queues\WindowsBulkQueue.cs" />
     <Compile Include="Reports\BanorteResumeReportProcessor.cs" />
+    <Compile Include="Reports\CsvSplittedReport.cs" />
     <Compile Include="Reports\FullDailyReportProcessor.cs" />
+    <Compile Include="Reports\NewStatusProgressReportProcessor.cs" />
     <Compile Include="Reports\TemplateReport.cs" />
     <Compile Include="Reports\FileCsvReportProcessor.cs" />
     <Compile Include="Reports\StatusProgressReportProcessor.cs" />
