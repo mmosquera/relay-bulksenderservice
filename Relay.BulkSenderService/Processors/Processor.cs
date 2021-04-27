@@ -645,8 +645,6 @@ namespace Relay.BulkSenderService.Processors
             {
                 _logger.Debug($"Upload error file {fileName}");
 
-                var filePathHelper = new FilePathHelper(_configuration, user.Name);
-
                 string ftpFileName = $@"{user.Errors.Folder}/{Path.GetFileName(fileName)}";
 
                 ftpHelper.UploadFile(fileName, ftpFileName);
