@@ -16,6 +16,7 @@ namespace Relay.BulkSenderService.Configuration
         List<string> FileExtensions { get; set; }
         List<string> DownloadFolders { get; set; }
         string AttachmentsFolder { get; set; }
+        string HostedFolder { get; set; }
         ErrorConfiguration Errors { get; set; }
         bool HasDeleteFtp { get; set; }
         IResultConfiguration Results { get; set; }

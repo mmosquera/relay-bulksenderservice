@@ -8,6 +8,7 @@ namespace Relay.BulkSenderService.Configuration
     {
         public List<string> DownloadFolders { get; set; }
         public string AttachmentsFolder { get; set; }
+        public string HostedFolder { get; set; }
         public char FieldSeparator { get; set; }
         public string TemplateId { get; set; }
         public string TemplateName { get; set; }

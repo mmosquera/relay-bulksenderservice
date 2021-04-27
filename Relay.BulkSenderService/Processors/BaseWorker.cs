@@ -114,6 +114,11 @@ namespace Relay.BulkSenderService.Processors
                     templateConfiguration.DownloadFolders = userConfiguration.DownloadFolders;
                 }
 
+                if (string.IsNullOrEmpty(templateConfiguration.HostedFolder))
+                {
+                    templateConfiguration.HostedFolder = userConfiguration.HostedFolder;
+                }
+
                 if (templateConfiguration.PreProcessor == null)
                 {
                     templateConfiguration.PreProcessor = userConfiguration.PreProcessor;

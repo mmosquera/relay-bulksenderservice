@@ -21,6 +21,7 @@
         public const string FOLDER_REPORTS = "Reports";
         public const string FOLDER_RESULTS = "Results";
         public const string FOLDER_RETRIES = "Retries";
+        public const string FOLDER_HOSTED = "Hosted";
 
         public const string EXTENSION_PROCESSING = ".processing";
         public const string EXTENSION_PROCESSED = ".processed";
@@ -28,6 +29,5 @@
         public const string EXTENSION_SENT = ".sent";
         public const string EXTENSION_DOWNLOADING = ".downloading";
         public const string EXTENSION_ZIP = ".zip";
-
     }
 }

@@ -61,6 +61,11 @@ namespace Relay.BulkSenderService.Classes
             return $@"{GetUserFolder()}\{Constants.FOLDER_QUEUES}";
         }
 
+        public string GetHostedFolder()
+        {
+            return $@"{GetUserFolder()}\{Constants.FOLDER_HOSTED}";
+        }
+
         public void CreateUserFolders()
         {
             if (!Directory.Exists(GetUserFolder()))
@@ -101,6 +106,11 @@ namespace Relay.BulkSenderService.Classes
             if (!Directory.Exists(GetQueueFilesFolder()))
             {
                 Directory.CreateDirectory(GetQueueFilesFolder());
+            }
+
+            if (!Directory.Exists(GetHostedFolder()))
+            {
+                Directory.CreateDirectory(GetHostedFolder());
             }
         }
     }

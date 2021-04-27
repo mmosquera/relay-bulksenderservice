@@ -22,6 +22,7 @@ namespace Relay.BulkSenderService.Configuration
         public List<string> FileExtensions { get; set; }
         public List<string> DownloadFolders { get; set; }
         public string AttachmentsFolder { get; set; }
+        public string HostedFolder { get; set; }
         public List<ITemplateConfiguration> Templates { get; set; }
         public CredentialsConfiguration Credentials { get; set; }
         public IFtpConfiguration Ftp { get; set; }
