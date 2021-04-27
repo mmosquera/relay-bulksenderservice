@@ -96,6 +96,14 @@ namespace Relay.BulkSenderService.Processors.PreProcess
                 Directory.CreateDirectory(localAttachmentFolder);
             }
 
+            ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(originalFile);
+
+            if (!string.IsNullOrEmpty(templateConfiguration.HostedFolder))
+            {
+                //TODO refactorizar en nuevos preprocessors
+                GetHostedFiles(attachmentFile, originalFile, userConfiguration);
+            }
+
             //local file 
             string localAttachmentFile = $@"{localAttachmentFolder}\{attachmentFile}";
 
@@ -103,8 +111,6 @@ namespace Relay.BulkSenderService.Processors.PreProcess
             {
                 return;
             }
-
-            ITemplateConfiguration templateConfiguration = userConfiguration.GetTemplateConfiguration(originalFile);
 
             //get from ftp
             string ftpAttachmentFile = $@"{templateConfiguration.AttachmentsFolder}/{attachmentFile}";
@@ -140,6 +146,40 @@ namespace Relay.BulkSenderService.Processors.PreProcess
 
                 ftpHelper.DeleteFile(zipAttachments);
                 File.Delete(localZipFile); //TODO add retries.
+            }
+        }
+
+        protected void GetHostedFiles(string attachmentFile, string fileName, IUserConfiguration userConfiguration)
+        {
+            var filePathHelper = new FilePathHelper(_configuration, userConfiguration.Name);
+
+            string hostedFolder = filePathHelper.GetHostedFolder();
+            string hostedFile = $@"{hostedFolder}\{attachmentFile}";
+
+            if (!File.Exists(hostedFile))
+            {
+                var templateConfiguration = userConfiguration.GetTemplateConfiguration(fileName);
+                string ftpHostedFile = $@"{templateConfiguration.HostedFolder}/{attachmentFile}";
+
+                var ftpHelper = userConfiguration.Ftp.GetFtpHelper(_logger);
+                ftpHelper.DownloadFile(ftpHostedFile, hostedFile);
+
+                if (File.Exists(hostedFile))
+                {
+                    ftpHelper.DeleteFile(ftpHostedFile);
+                }
+            }
+
+            if (File.Exists(hostedFile))
+            {
+                string subFolder = Path.GetFileNameWithoutExtension(fileName);
+                string localAttachmentFolder = filePathHelper.GetAttachmentsFilesFolder(subFolder);
+                string localFile = $@"{localAttachmentFolder}\{attachmentFile}";
+
+                if (!File.Exists(localFile))
+                {
+                    File.Copy(hostedFile, localFile);
+                }
             }
         }
     }
